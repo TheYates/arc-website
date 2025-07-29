@@ -24,7 +24,7 @@ import { CommandSearch } from "@/components/ui/command-search";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
 import { useAuth } from "@/lib/auth";
-import { getPatientsByCaregiver } from "@/lib/api/assignments";
+import { getPatientsByCaregiverClient } from "@/lib/api/client";
 import { Patient, CareLevel, PatientStatus } from "@/lib/types/patients";
 import { formatDate } from "@/lib/utils";
 import {
@@ -95,7 +95,7 @@ export default function CaregiverPatientsPage() {
 
       setIsLoading(true);
       try {
-        const patients = await getPatientsByCaregiver(user.id);
+        const patients = await getPatientsByCaregiverClient(user.id);
         setAssignedPatients(patients);
       } catch (error) {
         console.error("Failed to fetch assigned patients:", error);

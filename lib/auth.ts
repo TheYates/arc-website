@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState } from "react";
+import { authenticateUserClient } from "@/lib/api/client";
 
 export type UserRole =
   | "super_admin"
@@ -166,52 +167,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
 
     try {
-      // Load dynamic users from localStorage
-      const dynamicUsers = getFromStorage(
-        USERS_STORAGE_KEY,
-        {} as Record<string, { password: string; user: User }>
-      );
+      // Use client-side API to authenticate
+      const result = await authenticateUserClient(emailOrUsername, password);
 
-      // Combine demo users and dynamic users
-      const allUsers: Record<string, { password: string; user: User }> = {
-        ...demoUsers,
-        ...dynamicUsers,
-      };
-
-      // Login attempt validation
-
-      const userRecord = allUsers[emailOrUsername];
-
-      if (!userRecord || userRecord.password !== password) {
+      if (!result.success || !result.user) {
         setIsLoading(false);
-        return { success: false, error: "Invalid credentials" };
-      }
-
-      // Update last login
-      userRecord.user.lastLogin = new Date().toISOString();
-
-      // Store updated user data back to localStorage for dynamic users
-      if (dynamicUsers[emailOrUsername]) {
-        const updatedDynamicUsers = {
-          ...dynamicUsers,
-          [emailOrUsername]: userRecord,
+        return {
+          success: false,
+          error: result.error || "Invalid email/username or password",
         };
-        localStorage.setItem(
-          USERS_STORAGE_KEY,
-          JSON.stringify(updatedDynamicUsers)
-        );
       }
 
-      // Set the authenticated user
-      const authenticatedUser = {
-        ...userRecord.user,
-        lastLogin: new Date().toISOString(),
-      };
-
-      setUser(authenticatedUser);
+      setUser(result.user);
 
       // Always store in localStorage for session persistence
-      localStorage.setItem("auth_user", JSON.stringify(authenticatedUser));
+      localStorage.setItem("auth_user", JSON.stringify(result.user));
 
       setIsLoading(false);
       return { success: true };

@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { getPatientById } from "@/lib/api/patients";
 import {
-  getMedications,
-  getMedicationAdministrations,
-  recordMedicationAdministration,
-} from "@/lib/api/medications";
+  getPatientByIdClient,
+  getMedicationsClient,
+  getMedicationAdministrationsClient,
+  recordMedicationAdministrationClient,
+} from "@/lib/api/client";
 import { getVitalSigns, createVitalSigns } from "@/lib/api/vitals";
 import { getMedicalReviews } from "@/lib/api/medical-reviews";
 import { Patient } from "@/lib/types/patients";
@@ -114,15 +114,15 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
 
     const fetchData = async () => {
       try {
-        const patientData = await getPatientById(resolvedParams.id);
+        const patientData = await getPatientByIdClient(resolvedParams.id);
         setPatient(patientData);
 
         if (patientData) {
           // Load medical data
-          const medicationsData = getMedications(resolvedParams.id);
+          const medicationsData = await getMedicationsClient(resolvedParams.id);
           setMedications(medicationsData);
 
-          const administrationsData = getMedicationAdministrations(
+          const administrationsData = await getMedicationAdministrationsClient(
             resolvedParams.id
           );
           setAdministrations(administrationsData);
@@ -225,7 +225,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
   };
 
   // Handle administration form submission
-  const handleAdministrationSubmit = () => {
+  const handleAdministrationSubmit = async () => {
     if (!selectedMedication || !user || !patient) return;
 
     try {
@@ -243,10 +243,12 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
         patientResponse: "good" as any,
       };
 
-      recordMedicationAdministration(administrationData);
+      await recordMedicationAdministrationClient(administrationData);
 
       // Refresh administrations data
-      const updatedAdministrations = getMedicationAdministrations(patient.id);
+      const updatedAdministrations = await getMedicationAdministrationsClient(
+        patient.id
+      );
       setAdministrations(updatedAdministrations);
 
       toast({

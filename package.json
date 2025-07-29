@@ -6,7 +6,11 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "init-db": "node scripts/init-sqlite.js",
+    "setup-sqlite": "pnpm add better-sqlite3 && pnpm run init-db",
+    "test-api": "node scripts/test-api.js",
+    "fix-passwords": "node scripts/fix-passwords.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -38,6 +42,7 @@
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "1.1.6",
     "autoprefixer": "^10.4.20",
+    "better-sqlite3": "^12.2.0",
     "chart.js": "^4.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

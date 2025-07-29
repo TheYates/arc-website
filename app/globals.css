@@ -2,18 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
 @layer base {
   :root {
+    --font-geist-sans: "__GeistSans_edeac8", "__GeistSans_Fallback_edeac8";
+    --font-geist-mono: "__GeistMono_c2b496", "__GeistMono_Fallback_c2b496";
+
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -89,6 +82,26 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
+
+  /* Hide scrollbars while keeping functionality */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+  }
+
+  *::-webkit-scrollbar {
+    display: none; /* WebKit browsers */
+  }
+
+  /* Ensure consistent layout without scrollbar shifts */
+  html {
+    overflow-y: scroll; /* Always reserve scrollbar space */
+    scrollbar-gutter: stable; /* Modern browsers - prevents layout shifts */
+  }
+}
+
+.scroll-hidden::-webkit-scrollbar {
+  display: none;
 }

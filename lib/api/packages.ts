@@ -1,11 +1,16 @@
 // Package API utilities for fetching admin-configured package data
 
-import { ServicePackage, Service, PackageService, PackageDisplayConfig } from "@/lib/types/packages"
+import {
+  ServicePackage,
+  Service,
+  PackageService,
+  PackageDisplayConfig,
+} from "@/lib/types/packages";
 
 // Mock API functions - replace with actual API calls
 export async function getActivePackages(): Promise<ServicePackage[]> {
   // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  await new Promise((resolve) => setTimeout(resolve, 150));
 
   // Mock data - replace with actual API endpoint
   return [
@@ -13,7 +18,8 @@ export async function getActivePackages(): Promise<ServicePackage[]> {
       id: "1",
       name: "ahenefie",
       displayName: "AHENEFIE",
-      description: "24/7 live-in home care with dedicated nursing support and emergency response.",
+      description:
+        "24/7 live-in home care with dedicated nursing support and emergency response.",
       category: "home_care",
       basePriceDaily: 150,
       basePriceMonthly: 4200,
@@ -27,7 +33,8 @@ export async function getActivePackages(): Promise<ServicePackage[]> {
       id: "2",
       name: "adamfo-pa",
       displayName: "ADAMFO PA",
-      description: "Professional daily home visits with flexible scheduling and health monitoring.",
+      description:
+        "Professional daily home visits with flexible scheduling and health monitoring.",
       category: "home_care",
       basePriceDaily: 80,
       basePriceMonthly: 2240,
@@ -41,7 +48,8 @@ export async function getActivePackages(): Promise<ServicePackage[]> {
       id: "3",
       name: "fie-ne-fie",
       displayName: "FIE NE FIE",
-      description: "Live-in nanny service with professional childcare and educational support.",
+      description:
+        "Live-in nanny service with professional childcare and educational support.",
       category: "nanny",
       basePriceDaily: 120,
       basePriceMonthly: 3360,
@@ -64,16 +72,19 @@ export async function getActivePackages(): Promise<ServicePackage[]> {
       createdAt: "2024-01-01T00:00:00Z",
       updatedAt: "2024-01-01T00:00:00Z",
     },
-  ]
+  ];
 }
 
-export async function getPackageServices(packageId: string): Promise<PackageService[]> {
+export async function getPackageServices(
+  packageId: string
+): Promise<PackageService[]> {
   // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 300))
+  await new Promise((resolve) => setTimeout(resolve, 100));
 
   // Mock data - replace with actual API endpoint
   const mockPackageServices: Record<string, PackageService[]> = {
-    "1": [ // AHENEFIE
+    "1": [
+      // AHENEFIE
       {
         id: "ps1",
         packageId: "1",
@@ -190,7 +201,8 @@ export async function getPackageServices(packageId: string): Promise<PackageServ
         },
       },
     ],
-    "2": [ // ADAMFO PA
+    "2": [
+      // ADAMFO PA
       {
         id: "ps6",
         packageId: "2",
@@ -261,32 +273,40 @@ export async function getPackageServices(packageId: string): Promise<PackageServ
         },
       },
     ],
-  }
+  };
 
-  return mockPackageServices[packageId] || []
+  return mockPackageServices[packageId] || [];
 }
 
-export async function getPackageDisplayConfigs(): Promise<PackageDisplayConfig[]> {
-  const packages = await getActivePackages()
-  const displayConfigs: PackageDisplayConfig[] = []
+export async function getPackageDisplayConfigs(): Promise<
+  PackageDisplayConfig[]
+> {
+  const packages = await getActivePackages();
+  const displayConfigs: PackageDisplayConfig[] = [];
 
   for (const pkg of packages) {
-    const packageServices = await getPackageServices(pkg.id)
-    
+    const packageServices = await getPackageServices(pkg.id);
+
     const standardServices = packageServices
-      .filter(ps => ps.inclusionType === "standard" && ps.service)
-      .map(ps => ps.service!.name)
+      .filter((ps) => ps.inclusionType === "standard" && ps.service)
+      .map((ps) => ps.service!.name);
 
     const optionalServices = packageServices
-      .filter(ps => ps.inclusionType === "optional" && ps.service)
-      .map(ps => ({
+      .filter((ps) => ps.inclusionType === "optional" && ps.service)
+      .map((ps) => ({
         name: ps.service!.name,
         price: {
-          daily: ps.additionalPriceDaily ? `GHS ${ps.additionalPriceDaily}` : undefined,
-          monthly: ps.additionalPriceMonthly ? `GHS ${ps.additionalPriceMonthly}` : undefined,
-          hourly: ps.additionalPriceHourly ? `GHS ${ps.additionalPriceHourly}` : undefined,
-        }
-      }))
+          daily: ps.additionalPriceDaily
+            ? `GHS ${ps.additionalPriceDaily}`
+            : undefined,
+          monthly: ps.additionalPriceMonthly
+            ? `GHS ${ps.additionalPriceMonthly}`
+            : undefined,
+          hourly: ps.additionalPriceHourly
+            ? `GHS ${ps.additionalPriceHourly}`
+            : undefined,
+        },
+      }));
 
     const displayConfig: PackageDisplayConfig = {
       id: pkg.id,
@@ -295,7 +315,9 @@ export async function getPackageDisplayConfigs(): Promise<PackageDisplayConfig[]
       description: pkg.description,
       price: {
         daily: pkg.basePriceDaily ? `GHS ${pkg.basePriceDaily}` : undefined,
-        monthly: pkg.basePriceMonthly ? `GHS ${pkg.basePriceMonthly}` : undefined,
+        monthly: pkg.basePriceMonthly
+          ? `GHS ${pkg.basePriceMonthly}`
+          : undefined,
         hourly: pkg.basePriceHourly ? `GHS ${pkg.basePriceHourly}` : undefined,
       },
       features: standardServices,
@@ -304,16 +326,16 @@ export async function getPackageDisplayConfigs(): Promise<PackageDisplayConfig[]
       mostPopular: pkg.isPopular,
       category: pkg.category,
       href: "/get-started",
-    }
+    };
 
-    displayConfigs.push(displayConfig)
+    displayConfigs.push(displayConfig);
   }
 
   // Sort by category and sort order
   return displayConfigs.sort((a, b) => {
     if (a.category !== b.category) {
-      return a.category.localeCompare(b.category)
+      return a.category.localeCompare(b.category);
     }
-    return 0 // Maintain original order within category
-  })
+    return 0; // Maintain original order within category
+  });
 }

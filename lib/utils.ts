@@ -1,6 +1,54 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
+
+/**
+ * Formats a date to the standard app format: "28th July, 2025"
+ * @param date - The date to format
+ * @returns Formatted date string
+ */
+export function formatDate(date: Date): string {
+  const day = date.getDate();
+  const month = date.toLocaleDateString("en-US", { month: "long" });
+  const year = date.getFullYear();
+
+  // Add ordinal suffix to day
+  const getOrdinalSuffix = (day: number): string => {
+    if (day > 3 && day < 21) return "th";
+    switch (day % 10) {
+      case 1:
+        return "st";
+      case 2:
+        return "nd";
+      case 3:
+        return "rd";
+      default:
+        return "th";
+    }
+  };
+
+  return `${day}${getOrdinalSuffix(day)} ${month}, ${year}`;
+}
+
+/**
+ * Formats a date range to the standard app format
+ * @param startDate - The start date
+ * @param endDate - The end date (optional)
+ * @returns Formatted date range string
+ */
+export function formatDateRange(startDate: Date, endDate?: Date): string {
+  if (!endDate) {
+    return `${formatDate(startDate)} - (select end date)`;
+  }
+  return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+}
+
+// Example usage and test cases:
+// formatDate(new Date(2025, 6, 28)) => "28th July, 2025"
+// formatDate(new Date(2025, 6, 1)) => "1st July, 2025"
+// formatDate(new Date(2025, 6, 2)) => "2nd July, 2025"
+// formatDate(new Date(2025, 6, 3)) => "3rd July, 2025"
+// formatDate(new Date(2025, 6, 21)) => "21st July, 2025"

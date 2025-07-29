@@ -1,736 +1,381 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
-import AuthHeader from "@/components/auth-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
+import { getPatientById } from "@/lib/api/patients";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  getMedications,
+  getMedicationAdministrations,
+} from "@/lib/api/medications";
+import { getVitalSigns } from "@/lib/api/vitals";
+import {
+  getMedicalReviews,
+  createMedicalReview,
+} from "@/lib/api/medical-reviews";
+import { Patient } from "@/lib/types/patients";
+import { Medication, MedicationAdministration } from "@/lib/types/medications";
+import { VitalSigns } from "@/lib/types/vitals";
+import { MedicalReview } from "@/lib/types/medical-reviews";
+import { formatDate } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { useAuth } from "@/lib/auth";
 import {
+  Plus,
+  Stethoscope,
+  Pill,
+  Activity,
+  FileText,
+  Eye,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  X,
   ArrowLeft,
   User,
-  Phone,
-  MapPin,
-  AlertTriangle,
   Heart,
-  Pill,
-  FileText,
-  Activity,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Plus,
-  Eye,
-  Edit,
-  Send,
-  Calendar,
-  Stethoscope,
-  ClipboardList,
+  Trash2,
+  Search,
 } from "lucide-react";
+import { RoleHeader } from "@/components/role-header";
+import { useToast } from "@/hooks/use-toast";
 
-interface Patient {
-  id: string;
-  name: string;
-  age: number;
-  gender: string;
-  conditions: string[];
-  careLevel: "low" | "medium" | "high" | "critical";
-  status: "stable" | "improving" | "declining" | "critical";
-  assignedDate: string;
-  lastVisit: string;
-  nextVisit: string;
-  address: string;
-  phone: string;
-  emergencyContact: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
-  vitals: {
-    bloodPressure: string;
-    heartRate: string;
-    temperature: string;
-    oxygenSaturation: string;
-    recordedDate: string;
-  };
-  prescriptions: number;
-  pendingReviews: number;
-  notes: string;
-  riskFactors: string[];
-  allergies: string[];
+import { PrescriptionDialog } from "@/components/medical/prescription-dialog";
+import { PatientSymptomReportForm } from "@/components/medical/patient-symptom-report-form";
+
+interface PageProps {
+  params: Promise<{ id: string }>;
 }
 
-interface CareNote {
-  id: string;
-  patientId: string;
-  type: "general" | "medication" | "vitals" | "behavioral" | "emergency";
-  content: string;
-  priority: "low" | "medium" | "high";
-  createdDate: string;
-  createdBy: string;
-  updatedDate?: string;
-}
-
-interface VitalRecord {
-  id: string;
-  patientId: string;
-  bloodPressure: string;
-  heartRate: string;
-  temperature: string;
-  oxygenSaturation: string;
-  respiratoryRate: string;
-  bloodGlucose?: string;
-  weight?: string;
-  height?: string;
-  bmi?: string;
-  painLevel?: string;
-  recordedDate: string;
-  recordedBy: string;
-}
-
-interface ReviewerRecommendation {
-  id: string;
-  patientId: string;
-  title: string;
-  content: string;
-  priority: "low" | "medium" | "high" | "urgent";
-  category: "medication" | "care_plan" | "vitals" | "general" | "follow_up";
-  status: "draft" | "sent" | "acknowledged" | "completed";
-  createdDate: string;
-  createdBy: string;
-  targetCaregiver?: string;
-  dueDate?: string;
-}
-
-interface Prescription {
-  id: string;
-  patientId: string;
-  medicationName: string;
-  genericName?: string;
-  dosage: string;
-  frequency: string;
-  duration: string;
-  quantity: number;
-  refills: number;
-  instructions: string;
-  indication: string;
-  priority: "low" | "medium" | "high" | "urgent";
-  status:
-    | "draft"
-    | "pending"
-    | "approved"
-    | "dispensed"
-    | "completed"
-    | "cancelled";
-  prescribedBy: string;
-  prescribedDate: string;
-  approvedBy?: string;
-  approvedDate?: string;
-  startDate: string;
-  endDate?: string;
-  notes?: string;
-  reviewerNotes?: string;
-  monitoringRequired: boolean;
-  costEstimate?: number;
-  insuranceCovered: boolean;
-}
-
-// Mock patient data
-const mockPatient: Patient = {
-  id: "1",
-  name: "Sarah Johnson",
-  age: 67,
-  gender: "Female",
-  conditions: ["Hypertension", "Type 2 Diabetes", "Arthritis"],
-  careLevel: "high",
-  status: "stable",
-  assignedDate: "2024-01-15",
-  lastVisit: "2024-01-20",
-  nextVisit: "2024-02-03",
-  address: "123 Oak Street, Accra",
-  phone: "+233 24 123 4567",
-  emergencyContact: {
-    name: "Michael Johnson",
-    relationship: "Son",
-    phone: "+233 24 765 4321",
-  },
-  vitals: {
-    bloodPressure: "140/90",
-    heartRate: "78",
-    temperature: "98.6°F",
-    oxygenSaturation: "97%",
-    recordedDate: "2024-01-20T10:30:00Z",
-  },
-  prescriptions: 5,
-  pendingReviews: 2,
-  notes: "Patient responding well to current treatment plan",
-  riskFactors: ["Family history of heart disease", "Sedentary lifestyle"],
-  allergies: ["Penicillin", "Shellfish"],
-};
-
-// Mock prescriptions data
-const mockPrescriptions: Prescription[] = [
-  {
-    id: "RX001",
-    patientId: "1",
-    medicationName: "Lisinopril",
-    genericName: "ACE Inhibitor",
-    dosage: "10mg",
-    frequency: "Once daily",
-    duration: "30 days",
-    quantity: 30,
-    refills: 2,
-    instructions: "Take with food in the morning",
-    indication: "Hypertension management",
-    priority: "high",
-    status: "pending",
-    prescribedBy: "Dr. Smith",
-    prescribedDate: "2024-01-20T09:00:00Z",
-    startDate: "2024-01-21",
-    endDate: "2024-02-20",
-    monitoringRequired: true,
-    costEstimate: 25.5,
-    insuranceCovered: true,
-  },
-  {
-    id: "RX002",
-    patientId: "1",
-    medicationName: "Metformin",
-    genericName: "Biguanide",
-    dosage: "500mg",
-    frequency: "Twice daily",
-    duration: "30 days",
-    quantity: 60,
-    refills: 3,
-    instructions: "Take with meals",
-    indication: "Type 2 Diabetes management",
-    priority: "high",
-    status: "approved",
-    prescribedBy: "Dr. Smith",
-    prescribedDate: "2024-01-18T14:30:00Z",
-    approvedBy: "Dr. Wilson",
-    approvedDate: "2024-01-19T10:15:00Z",
-    startDate: "2024-01-19",
-    endDate: "2024-02-18",
-    monitoringRequired: false,
-    costEstimate: 15.75,
-    insuranceCovered: true,
-  },
-];
-
-export default function ReviewerPatientDetailPage() {
-  const { user, isLoading: authLoading } = useAuth();
+export default function ReviewerPatientDetailPage({ params }: PageProps) {
+  const resolvedParams = React.use(params);
+  const { user } = useAuth();
+  const { toast } = useToast();
   const router = useRouter();
-  const params = useParams();
-  const patientId = params.id as string;
-
   const [patient, setPatient] = useState<Patient | null>(null);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
-  const [selectedPrescription, setSelectedPrescription] =
-    useState<Prescription | null>(null);
-  const [reviewNotes, setReviewNotes] = useState("");
 
-  // New state for caregiver data and reviewer recommendations
-  const [careNotes, setCareNotes] = useState<CareNote[]>([]);
-  const [vitalRecords, setVitalRecords] = useState<VitalRecord[]>([]);
-  const [reviewerRecommendations, setReviewerRecommendations] = useState<
-    ReviewerRecommendation[]
+  // Medical data states
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [administrations, setAdministrations] = useState<
+    MedicationAdministration[]
   >([]);
-  const [isLoadingNotes, setIsLoadingNotes] = useState(false);
-  const [isLoadingVitals, setIsLoadingVitals] = useState(false);
-  const [isLoadingRecommendations, setIsLoadingRecommendations] =
-    useState(false);
+  const [vitals, setVitals] = useState<VitalSigns[]>([]);
+  const [medicalReviews, setMedicalReviews] = useState<MedicalReview[]>([]);
 
-  // New recommendation form state
-  const [showRecommendationDialog, setShowRecommendationDialog] =
-    useState(false);
-  const [newRecommendation, setNewRecommendation] = useState({
-    title: "",
-    content: "",
-    priority: "medium" as "low" | "medium" | "high" | "urgent",
-    category: "general" as
-      | "medication"
-      | "care_plan"
-      | "vitals"
-      | "general"
-      | "follow_up",
-    targetCaregiver: "",
-    dueDate: "",
-  });
+  // UI states
+  const [showPrescribeDialog, setShowPrescribeDialog] = useState(false);
+  const [showSymptomForm, setShowSymptomForm] = useState(false);
+  const [showCreateReviewDialog, setShowCreateReviewDialog] = useState(false);
 
-  // Dialog states for detailed views
-  const [showPrescriptionDetailDialog, setShowPrescriptionDetailDialog] =
-    useState(false);
-  const [showRecommendationDetailDialog, setShowRecommendationDetailDialog] =
-    useState(false);
-  const [selectedRecommendationDetail, setSelectedRecommendationDetail] =
-    useState<ReviewerRecommendation | null>(null);
+  // Prescription states
+  const [selectedMedication, setSelectedMedication] = useState("");
+  const [prescriptionItems, setPrescriptionItems] = useState<any[]>([]);
+  const [medicationSearchOpen, setMedicationSearchOpen] = useState(false);
+  const [showAddPrescription, setShowAddPrescription] = useState(true);
+
+  // Common medications list
+  const commonMedications = [
+    "Lisinopril",
+    "Metformin",
+    "Amlodipine",
+    "Metoprolol",
+    "Omeprazole",
+    "Simvastatin",
+    "Losartan",
+    "Albuterol",
+    "Gabapentin",
+    "Sertraline",
+    "Ibuprofen",
+    "Acetaminophen",
+    "Aspirin",
+    "Hydrochlorothiazide",
+    "Atorvastatin",
+  ];
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!user || (user.role !== "reviewer" && user.role !== "super_admin")) {
       router.push("/login");
-    }
-    if (user && user.role !== "reviewer") {
-      router.push("/dashboard");
-    }
-    if (user && user.role === "reviewer") {
-      loadPatientData();
-    }
-  }, [user, authLoading, router, patientId]);
-
-  const loadPatientData = async () => {
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // In real app, fetch patient by ID
-    setPatient(mockPatient);
-    setPrescriptions(mockPrescriptions);
-
-    // Load caregiver notes and vitals
-    loadCaregiverData();
-    setIsLoading(false);
-  };
-
-  const loadCaregiverData = async () => {
-    setIsLoadingNotes(true);
-    setIsLoadingVitals(true);
-    setIsLoadingRecommendations(true);
-
-    // Mock caregiver notes
-    const mockCareNotes: CareNote[] = [
-      {
-        id: "cn1",
-        patientId: patientId,
-        type: "general",
-        content:
-          "Patient is responding well to current treatment plan. Blood pressure slightly elevated but within acceptable range. Patient reports feeling more energetic today.",
-        priority: "medium",
-        createdDate: "2024-01-20T14:30:00Z",
-        createdBy: "Nurse Sarah Johnson",
-      },
-      {
-        id: "cn2",
-        patientId: patientId,
-        type: "vitals",
-        content:
-          "Blood pressure trending upward over the past 3 days. Recommend monitoring more frequently and consider medication adjustment.",
-        priority: "high",
-        createdDate: "2024-01-19T16:45:00Z",
-        createdBy: "Nurse John Smith",
-      },
-      {
-        id: "cn3",
-        patientId: patientId,
-        type: "medication",
-        content:
-          "Patient took morning medications as prescribed. No side effects reported. Reminded patient about importance of taking medications with food.",
-        priority: "low",
-        createdDate: "2024-01-19T09:15:00Z",
-        createdBy: "Caregiver Mary Wilson",
-      },
-      {
-        id: "cn4",
-        patientId: patientId,
-        type: "behavioral",
-        content:
-          "Patient seems more anxious today. Discussed relaxation techniques and provided emotional support. Family visit scheduled for tomorrow.",
-        priority: "medium",
-        createdDate: "2024-01-18T11:20:00Z",
-        createdBy: "Nurse Sarah Johnson",
-      },
-    ];
-
-    // Mock vital records
-    const mockVitalRecords: VitalRecord[] = [
-      {
-        id: "vr1",
-        patientId: patientId,
-        bloodPressure: "142/88",
-        heartRate: "76",
-        temperature: "98.4",
-        oxygenSaturation: "97",
-        respiratoryRate: "18",
-        bloodGlucose: "145",
-        weight: "68.5",
-        height: "165",
-        bmi: "25.2",
-        painLevel: "3",
-        recordedDate: "2024-01-20T08:30:00Z",
-        recordedBy: "Nurse Sarah Johnson",
-      },
-      {
-        id: "vr2",
-        patientId: patientId,
-        bloodPressure: "138/85",
-        heartRate: "78",
-        temperature: "98.6",
-        oxygenSaturation: "98",
-        respiratoryRate: "16",
-        bloodGlucose: "132",
-        weight: "68.3",
-        height: "165",
-        bmi: "25.1",
-        painLevel: "2",
-        recordedDate: "2024-01-19T08:30:00Z",
-        recordedBy: "Caregiver Mary Wilson",
-      },
-      {
-        id: "vr3",
-        patientId: patientId,
-        bloodPressure: "145/92",
-        heartRate: "82",
-        temperature: "98.8",
-        oxygenSaturation: "96",
-        respiratoryRate: "20",
-        bloodGlucose: "158",
-        weight: "68.7",
-        height: "165",
-        bmi: "25.3",
-        painLevel: "4",
-        recordedDate: "2024-01-18T08:30:00Z",
-        recordedBy: "Nurse John Smith",
-      },
-    ];
-
-    // Mock reviewer recommendations
-    const mockRecommendations: ReviewerRecommendation[] = [
-      {
-        id: "rr1",
-        patientId: patientId,
-        title: "Blood Pressure Monitoring",
-        content:
-          "Please monitor blood pressure twice daily and report any readings above 150/95. Consider increasing Lisinopril dosage if trend continues.",
-        priority: "high",
-        category: "vitals",
-        status: "sent",
-        createdDate: "2024-01-19T10:00:00Z",
-        createdBy: "Dr. Michael Chen",
-        targetCaregiver: "Nurse Sarah Johnson",
-        dueDate: "2024-01-25",
-      },
-      {
-        id: "rr2",
-        patientId: patientId,
-        title: "Medication Compliance Review",
-        content:
-          "Please ensure patient is taking medications with food as prescribed. Monitor for any gastrointestinal side effects.",
-        priority: "medium",
-        category: "medication",
-        status: "acknowledged",
-        createdDate: "2024-01-18T14:30:00Z",
-        createdBy: "Dr. Michael Chen",
-        targetCaregiver: "Caregiver Mary Wilson",
-      },
-    ];
-
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    setCareNotes(mockCareNotes);
-    setVitalRecords(mockVitalRecords);
-    setReviewerRecommendations(mockRecommendations);
-
-    setIsLoadingNotes(false);
-    setIsLoadingVitals(false);
-    setIsLoadingRecommendations(false);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatDateOnly = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return {
-      date: date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
-      time: date.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "stable":
-        return "bg-blue-100 text-blue-800";
-      case "improving":
-        return "bg-green-100 text-green-800";
-      case "declining":
-        return "bg-orange-100 text-orange-800";
-      case "critical":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-slate-100 text-slate-800";
-    }
-  };
-
-  const getCareLevel = (level: string) => {
-    switch (level) {
-      case "low":
-        return { label: "Low Care", color: "bg-green-100 text-green-800" };
-      case "medium":
-        return { label: "Medium Care", color: "bg-yellow-100 text-yellow-800" };
-      case "high":
-        return { label: "High Care", color: "bg-orange-100 text-orange-800" };
-      case "critical":
-        return { label: "Critical Care", color: "bg-red-100 text-red-800" };
-      default:
-        return { label: "Unknown", color: "bg-slate-100 text-slate-800" };
-    }
-  };
-
-  const getPrescriptionStatusColor = (status: string) => {
-    switch (status) {
-      case "draft":
-        return "bg-slate-100 text-slate-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "approved":
-        return "bg-green-100 text-green-800";
-      case "dispensed":
-        return "bg-blue-100 text-blue-800";
-      case "completed":
-        return "bg-purple-100 text-purple-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-slate-100 text-slate-800";
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "low":
-        return "bg-green-100 text-green-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800";
-      case "high":
-        return "bg-orange-100 text-orange-800";
-      case "urgent":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-slate-100 text-slate-800";
-    }
-  };
-
-  const handlePrescriptionReview = async (
-    prescriptionId: string,
-    action: "approve" | "reject",
-    notes: string
-  ) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    setPrescriptions((prev) =>
-      prev.map((rx) =>
-        rx.id === prescriptionId
-          ? {
-              ...rx,
-              status: action === "approve" ? "approved" : "cancelled",
-              approvedBy:
-                action === "approve"
-                  ? user?.firstName + " " + user?.lastName
-                  : undefined,
-              approvedDate:
-                action === "approve" ? new Date().toISOString() : undefined,
-              reviewerNotes: notes,
-            }
-          : rx
-      )
-    );
-    setSelectedPrescription(null);
-    setReviewNotes("");
-  };
-
-  const handleCreateRecommendation = async () => {
-    if (!newRecommendation.title || !newRecommendation.content) {
-      alert("Please fill in all required fields");
       return;
     }
 
-    const recommendation: ReviewerRecommendation = {
-      id: `rr${Date.now()}`,
-      patientId: patientId,
-      title: newRecommendation.title,
-      content: newRecommendation.content,
-      priority: newRecommendation.priority,
-      category: newRecommendation.category,
-      status: "draft",
-      createdDate: new Date().toISOString(),
-      createdBy: user?.name || "Current Reviewer",
-      targetCaregiver: newRecommendation.targetCaregiver || undefined,
-      dueDate: newRecommendation.dueDate || undefined,
+    const fetchData = async () => {
+      try {
+        const patientData = await getPatientById(resolvedParams.id);
+        setPatient(patientData);
+
+        if (patientData) {
+          // Load medical data
+          const medicationsData = getMedications(resolvedParams.id);
+          setMedications(medicationsData);
+
+          const administrationsData = getMedicationAdministrations(
+            resolvedParams.id
+          );
+          setAdministrations(administrationsData);
+
+          const vitalsData = getVitalSigns(resolvedParams.id);
+          setVitals(vitalsData);
+
+          const reviewsData = getMedicalReviews(resolvedParams.id);
+          setMedicalReviews(reviewsData);
+        }
+      } catch (error) {
+        console.error("Error fetching patient:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load patient data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setReviewerRecommendations((prev) => [recommendation, ...prev]);
+    fetchData();
+  }, [resolvedParams.id, user, router, toast]);
 
-    // Reset form
-    setNewRecommendation({
-      title: "",
-      content: "",
-      priority: "medium",
-      category: "general",
-      targetCaregiver: "",
-      dueDate: "",
+  const handleMedicationSaved = () => {
+    const updatedMedications = getMedications(resolvedParams.id);
+    setMedications(updatedMedications);
+    toast({
+      title: "Success",
+      description: "Medication prescribed successfully",
     });
-
-    setShowRecommendationDialog(false);
-    alert("Recommendation created successfully!");
   };
 
-  if (authLoading || isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <AuthHeader />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Back Button Skeleton */}
-          <div className="mb-6">
-            <Skeleton className="h-10 w-32" />
-          </div>
+  const handleReviewSaved = () => {
+    const updatedReviews = getMedicalReviews(resolvedParams.id);
+    setMedicalReviews(updatedReviews);
+    setShowCreateReviewDialog(false);
+    toast({
+      title: "Success",
+      description: "Medical review created successfully",
+    });
+  };
 
-          {/* Patient Header Skeleton */}
-          <div className="bg-white rounded-lg border border-slate-200 p-6 mb-8">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-4">
-                <Skeleton className="h-16 w-16 rounded-full" />
-                <div>
-                  <Skeleton className="h-8 w-48 mb-2" />
-                  <Skeleton className="h-4 w-32 mb-2" />
-                  <div className="flex space-x-2">
-                    <Skeleton className="h-6 w-16" />
-                    <Skeleton className="h-6 w-20" />
-                  </div>
-                  <div className="mt-3 space-y-1">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-4 w-48" />
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <Skeleton className="h-4 w-20 mb-1" />
-                <Skeleton className="h-5 w-24 mb-2" />
-                <Skeleton className="h-4 w-20 mb-1" />
-                <Skeleton className="h-5 w-24" />
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs Skeleton */}
-          <div className="w-full">
-            <div className="flex space-x-1 mb-6">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-10 w-24" />
-              ))}
-            </div>
-
-            {/* Content Skeleton */}
-            <div className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                {[...Array(4)].map((_, i) => (
-                  <Card key={i}>
-                    <CardHeader>
-                      <Skeleton className="h-6 w-32" />
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  // Helper function to get the latest administration for a medication
+  const getLatestAdministration = (medicationId: string) => {
+    const medicationAdministrations = administrations.filter(
+      (admin) => admin.medicationId === medicationId
     );
-  }
+    if (medicationAdministrations.length === 0) return null;
 
-  if (!user || user.role !== "reviewer") {
+    return medicationAdministrations.sort(
+      (a, b) =>
+        new Date(b.actualTime || b.scheduledTime).getTime() -
+        new Date(a.actualTime || a.scheduledTime).getTime()
+    )[0];
+  };
+
+  // Helper function to get administration status badge
+  const getAdministrationStatusBadge = (status: string) => {
+    const statusColors = {
+      administered: "bg-green-100 text-green-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      missed: "bg-red-100 text-red-800",
+      refused: "bg-orange-100 text-orange-800",
+      partial: "bg-blue-100 text-blue-800",
+      delayed: "bg-purple-100 text-purple-800",
+      cancelled: "bg-gray-100 text-gray-800",
+    };
+
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Alert className="max-w-md">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            You don't have permission to access this page.
-          </AlertDescription>
-        </Alert>
+      statusColors[status as keyof typeof statusColors] ||
+      "bg-gray-100 text-gray-800"
+    );
+  };
+
+  // Helper function to get administration status icon
+  const getAdministrationStatusIcon = (status: string) => {
+    switch (status) {
+      case "administered":
+        return <CheckCircle className="h-3 w-3 text-green-600" />;
+      case "pending":
+        return <Clock className="h-3 w-3 text-yellow-600" />;
+      case "missed":
+        return <AlertTriangle className="h-3 w-3 text-red-600" />;
+      case "refused":
+        return <X className="h-3 w-3 text-orange-600" />;
+      case "partial":
+        return <Activity className="h-3 w-3 text-blue-600" />;
+      case "delayed":
+        return <Clock className="h-3 w-3 text-purple-600" />;
+      case "cancelled":
+        return <X className="h-3 w-3 text-gray-600" />;
+      default:
+        return <Clock className="h-3 w-3 text-gray-600" />;
+    }
+  };
+
+  // Helper functions for prescription management
+  const addMedicationToPrescription = (medicationName: string) => {
+    const newItem = {
+      id: Date.now().toString(),
+      medicationName,
+      dosage: "",
+      frequency: "once_daily",
+      duration: "7",
+      route: "oral",
+      quantity: "0",
+      instructions: "",
+    };
+    setPrescriptionItems((prev) => [...prev, newItem]);
+    setSelectedMedication("");
+    setMedicationSearchOpen(false);
+  };
+
+  const updatePrescriptionItem = (id: string, field: string, value: string) => {
+    setPrescriptionItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const removePrescriptionItem = (id: string) => {
+    setPrescriptionItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const clearPrescription = () => {
+    setPrescriptionItems([]);
+  };
+
+  const savePrescriptions = async () => {
+    if (prescriptionItems.length === 0) {
+      toast({
+        title: "No medications to save",
+        description: "Please add at least one medication to the prescription.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Simulate API call delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Convert prescription items to medication format and add to current medications
+      const newMedications = prescriptionItems.map((item) => ({
+        id: `med_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+        patientId: resolvedParams.id,
+        medicationName: item.medicationName,
+        dosage: item.dosage || "As prescribed",
+        route: item.route,
+        frequency: item.frequency,
+        startDate: new Date().toISOString(),
+        endDate: item.duration
+          ? new Date(
+              Date.now() + parseInt(item.duration) * 24 * 60 * 60 * 1000
+            ).toISOString()
+          : undefined,
+        instructions:
+          item.instructions ||
+          `Take ${item.dosage || "as prescribed"} ${item.frequency.replace(
+            "_",
+            " "
+          )}`,
+        isActive: true,
+        isPRN: item.frequency === "as_needed",
+        priority: "medium" as const,
+        category: "other" as const,
+        prescribedBy: "Dr. Reviewer", // In real app, this would be the current user
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastModifiedBy: "Dr. Reviewer",
+      }));
+
+      // Add new medications to the existing list
+      setMedications((prev) => [...prev, ...newMedications]);
+
+      toast({
+        title: "Prescriptions saved successfully",
+        description: `${prescriptionItems.length} medication(s) have been prescribed for ${patient?.firstName} ${patient?.lastName}.`,
+      });
+
+      // Clear the prescription items after successful save
+      setPrescriptionItems([]);
+
+      // Switch to current medications view to show the newly added medications
+      setShowAddPrescription(false);
+    } catch (error) {
+      toast({
+        title: "Error saving prescriptions",
+        description:
+          "There was an error saving the prescriptions. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
+          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+        </header>
+        <div className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
       </div>
     );
   }
 
   if (!patient) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Alert className="max-w-md">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>Patient not found.</AlertDescription>
-        </Alert>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-96">
+          <CardContent className="p-6 text-center">
+            <h2 className="text-xl font-semibold mb-2">Patient Not Found</h2>
+            <p className="text-muted-foreground mb-4">
+              The patient you're looking for doesn't exist or you don't have
+              access to view them.
+            </p>
+            <Button onClick={() => router.push("/reviewer/patients")}>
+              Back to My Patients
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const careLevel = getCareLevel(patient.careLevel);
-
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AuthHeader />
+    <div className="min-h-screen bg-background w-full">
+      {/* Header Navigation */}
+      <RoleHeader role="reviewer" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Back Button */}
         <div className="mb-6">
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={() => router.push("/reviewer/patients")}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Patients</span>
@@ -738,1046 +383,1101 @@ export default function ReviewerPatientDetailPage() {
         </div>
 
         {/* Patient Header */}
-        <div className="bg-white rounded-lg border border-slate-200 p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-slate-200 p-3 rounded-full">
-                <User className="h-6 w-6 text-slate-600" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-3">
-                  <h1 className="text-xl font-bold text-slate-900">
-                    {patient.name}
-                  </h1>
-                  <span className="text-slate-600 text-sm">
-                    {patient.age} years • {patient.gender}
-                  </span>
-                  <Badge className={getStatusColor(patient.status)}>
-                    {patient.status}
-                  </Badge>
-                  <Badge className={careLevel.color}>{careLevel.label}</Badge>
-                </div>
-                {/* Contact Information - Horizontal Layout */}
-                <div className="flex items-center space-x-6 mt-2">
-                  <div className="flex items-center space-x-1 text-sm text-slate-600">
-                    <Phone className="h-3 w-3" />
-                    <span>{patient.phone}</span>
-                  </div>
-                  <div className="flex items-center space-x-1 text-sm text-slate-600">
-                    <MapPin className="h-3 w-3" />
-                    <span>{patient.address}</span>
-                  </div>
-                </div>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <Avatar className="h-16 w-16">
+              <AvatarFallback className="bg-purple-100 text-purple-600 text-xl">
+                {patient.firstName?.charAt(0)}
+                {patient.lastName?.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-3xl font-bold">
+                {patient.firstName} {patient.lastName}
+              </h1>
+
+              <div className="flex items-center space-x-4 mt-2">
+                <Badge variant="outline" className="capitalize">
+                  {patient.careLevel || "Standard"} Care
+                </Badge>
+                <Badge className="bg-purple-100 text-purple-800 capitalize">
+                  {patient.status || "Active"}
+                </Badge>
               </div>
             </div>
+          </div>
 
-            <div className="text-right">
-              <div className="flex space-x-6">
-                <div>
-                  <p className="text-xs text-slate-600">Last Visit</p>
-                  <p className="text-sm font-medium">
-                    {formatDateOnly(patient.lastVisit)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-600">Next Visit</p>
-                  <p className="text-sm font-medium">
-                    {formatDateOnly(patient.nextVisit)}
-                  </p>
-                </div>
-              </div>
+          {/* Quick Stats */}
+          <div className="flex space-x-6 text-center">
+            <div>
+              <p className="text-2xl font-bold text-green-600">
+                {vitals.length}
+              </p>
+              <p className="text-sm text-muted-foreground">Vitals Recorded</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-blue-600">
+                {medications.filter((m) => m.isActive).length}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Active Medications
+              </p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-orange-600">
+                {medicalReviews.length}
+              </p>
+              <p className="text-sm text-muted-foreground">Medical Reviews</p>
             </div>
           </div>
         </div>
 
-        {/* Main Content - Full Width */}
-        <div className="w-full">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
-              <TabsTrigger value="vitals">Vitals</TabsTrigger>
-              <TabsTrigger value="notes">Caregiver Notes</TabsTrigger>
-              <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
-              <TabsTrigger value="history">Medical History</TabsTrigger>
-            </TabsList>
+        {/* Content Tabs */}
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="vitals">Vitals</TabsTrigger>
+            <TabsTrigger value="medications">Medications</TabsTrigger>
+            <TabsTrigger value="medical-notes">Medical Notes</TabsTrigger>
+          </TabsList>
 
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Current Vitals */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Heart className="h-5 w-5 text-red-500" />
-                      <span>Latest Vitals</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Blood Pressure:</span>
-                      <span className="font-medium">
-                        {patient.vitals.bloodPressure}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Heart Rate:</span>
-                      <span className="font-medium">
-                        {patient.vitals.heartRate} bpm
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Temperature:</span>
-                      <span className="font-medium">
-                        {patient.vitals.temperature}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Oxygen Saturation:</span>
-                      <span className="font-medium">
-                        {patient.vitals.oxygenSaturation}
-                      </span>
-                    </div>
-                    <div className="pt-2 border-t">
-                      <p className="text-xs text-slate-500">
-                        Recorded: {formatDate(patient.vitals.recordedDate)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Medical Conditions */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Activity className="h-5 w-5 text-blue-500" />
-                      <span>Medical Conditions</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {patient.conditions.map((condition, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className="mr-2 mb-2"
-                        >
-                          {condition}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Allergies & Risk Factors */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <AlertTriangle className="h-5 w-5 text-orange-500" />
-                      <span>Allergies & Risks</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <h4 className="font-medium text-slate-900 mb-2">
-                        Allergies:
-                      </h4>
-                      <div className="space-y-1">
-                        {patient.allergies.map((allergy, index) => (
-                          <Badge
-                            key={index}
-                            className="bg-red-100 text-red-800 mr-2"
-                          >
-                            {allergy}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-slate-900 mb-2">
-                        Risk Factors:
-                      </h4>
-                      <div className="space-y-1">
-                        {patient.riskFactors.map((risk, index) => (
-                          <Badge
-                            key={index}
-                            className="bg-orange-100 text-orange-800 mr-2 mb-1"
-                          >
-                            {risk}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Emergency Contact */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Phone className="h-5 w-5 text-green-500" />
-                      <span>Emergency Contact</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Name:</span>
-                      <span className="font-medium">
-                        {patient.emergencyContact.name}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Relationship:</span>
-                      <span className="font-medium">
-                        {patient.emergencyContact.relationship}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Phone:</span>
-                      <span className="font-medium">
-                        {patient.emergencyContact.phone}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Prescriptions Tab */}
-            <TabsContent value="prescriptions" className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-slate-900">
-                  Prescription Management
-                </h3>
-                <Badge className="bg-orange-100 text-orange-800">
-                  {prescriptions.filter((p) => p.status === "pending").length}{" "}
-                  Pending Reviews
-                </Badge>
-              </div>
-
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Patient Information */}
               <Card>
-                <CardContent className="p-0">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <User className="h-5 w-5 mr-2" />
+                    Patient Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p>{patient.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <p>{patient.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Address</p>
+                    <p>{patient.address || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Date of Birth
+                    </p>
+                    <p>{patient.dateOfBirth || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Gender</p>
+                    <p className="capitalize">
+                      {patient.gender || "Not specified"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Care Team */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Heart className="h-5 w-5 mr-2" />
+                    Care Team
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Caregiver
+                    </p>
+                    {patient.assignedCaregiver ? (
+                      <div className="flex items-center space-x-2">
+                        <Eye className="h-4 w-4 text-teal-600" />
+                        <span>{patient.assignedCaregiver.name}</span>
+                      </div>
+                    ) : (
+                      <Badge variant="outline">No caregiver assigned</Badge>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Medical Reviewer
+                    </p>
+                    {patient.assignedReviewer ? (
+                      <div className="flex items-center space-x-2">
+                        <Stethoscope className="h-4 w-4 text-purple-600" />
+                        <span>{patient.assignedReviewer.name}</span>
+                      </div>
+                    ) : (
+                      <Badge variant="outline">No reviewer assigned</Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Activity */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Activity className="h-5 w-5 mr-2" />
+                    Recent Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {vitals.slice(0, 3).map((vital, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between py-2 border-b last:border-0"
+                      >
+                        <div>
+                          <p className="text-sm font-medium">Vitals Recorded</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(new Date(vital.recordedAt))}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-green-600">
+                          <Activity className="h-3 w-3 mr-1" />
+                          Complete
+                        </Badge>
+                      </div>
+                    ))}
+                    {medicalReviews.slice(0, 2).map((review, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between py-2 border-b last:border-0"
+                      >
+                        <div>
+                          <p className="text-sm font-medium">Medical Review</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(new Date(review.createdAt))}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-purple-600">
+                          <FileText className="h-3 w-3 mr-1" />
+                          {review.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Vitals Tab */}
+          <TabsContent value="vitals" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Vital Signs</h2>
+              <span className="text-sm text-muted-foreground">
+                Read-only view • Recorded by caregivers
+              </span>
+            </div>
+
+            {/* Vitals Table - Excel-like format */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Vital Signs Records</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {vitals.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full">
                       <thead>
-                        <tr className="bg-slate-50">
-                          <th className="px-3 py-2 text-left text-xs font-medium">
-                            Medication
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium">
-                            Dosage
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium">
-                            Priority
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium">
-                            Status
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium">
-                            Prescribed By
-                          </th>
+                        <tr className="border-b">
+                          <th className="text-left py-2 px-2">Date/Time</th>
+                          <th className="text-left py-2 px-2">BP (mmHg)</th>
+                          <th className="text-left py-2 px-2">HR (BPM)</th>
+                          <th className="text-left py-2 px-2">Temp (°C)</th>
+                          <th className="text-left py-2 px-2">O2 Sat (%)</th>
+                          <th className="text-left py-2 px-2">Weight (kg)</th>
+                          <th className="text-left py-2 px-2">Blood Sugar</th>
+                          <th className="text-left py-2 px-2">Recorded By</th>
+                          <th className="text-left py-2 px-2">Notes</th>
+                          <th className="text-left py-2 px-2">Alerts</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {prescriptions.map((prescription) => {
-                          const prescribedDateTime = formatDateTime(
-                            prescription.prescribedDate
-                          );
-                          return (
-                            <tr
-                              key={prescription.id}
-                              className="hover:bg-slate-50 cursor-pointer border-b border-slate-100"
-                              onClick={() => {
-                                setSelectedPrescription(prescription);
-                                setShowPrescriptionDetailDialog(true);
-                              }}
-                            >
-                              <td className="px-3 py-2">
-                                <div className="font-medium text-slate-900">
-                                  {prescription.medicationName}
-                                </div>
-                                <div className="text-xs text-slate-600">
-                                  {prescription.indication}
-                                </div>
-                              </td>
-                              <td className="px-3 py-2">
-                                <div className="font-medium">
-                                  {prescription.dosage}
-                                </div>
-                                <div className="text-xs text-slate-600">
-                                  {prescription.frequency}
-                                </div>
-                              </td>
-                              <td className="px-3 py-2">
-                                <Badge
-                                  className={getPriorityColor(
-                                    prescription.priority
-                                  )}
-                                  size="sm"
-                                >
-                                  {prescription.priority}
-                                </Badge>
-                              </td>
-                              <td className="px-3 py-2">
-                                <Badge
-                                  className={getPrescriptionStatusColor(
-                                    prescription.status
-                                  )}
-                                  size="sm"
-                                >
-                                  {prescription.status}
-                                </Badge>
-                              </td>
-                              <td className="px-3 py-2">
+                        {vitals.map((vital) => (
+                          <tr
+                            key={vital.id}
+                            className="border-b hover:bg-gray-50"
+                          >
+                            <td className="py-3 px-2">
+                              <div>
                                 <div className="text-sm font-medium">
-                                  {prescribedDateTime.date}
+                                  {formatDate(new Date(vital.recordedAt))}
                                 </div>
-                                <div className="text-xs text-slate-600">
-                                  by {prescription.prescribedBy}
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(
+                                    vital.recordedAt
+                                  ).toLocaleTimeString()}
                                 </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                              </div>
+                            </td>
+                            <td className="py-3 px-2">
+                              {vital.bloodPressure
+                                ? `${vital.bloodPressure.systolic}/${vital.bloodPressure.diastolic}`
+                                : "-"}
+                            </td>
+                            <td className="py-3 px-2">
+                              {vital.heartRate || "-"}
+                            </td>
+                            <td className="py-3 px-2">
+                              {vital.temperature || "-"}
+                            </td>
+                            <td className="py-3 px-2">
+                              {vital.oxygenSaturation || "-"}
+                            </td>
+                            <td className="py-3 px-2">{vital.weight || "-"}</td>
+                            <td className="py-3 px-2">
+                              {vital.bloodSugar || "-"}
+                            </td>
+                            <td className="py-3 px-2">
+                              <span className="text-sm text-muted-foreground">
+                                Caregiver
+                              </span>
+                            </td>
+                            <td className="py-3 px-2">
+                              <span className="text-xs text-muted-foreground">
+                                {vital.notes || "-"}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2">
+                              {vital.isAlerted && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs"
+                                >
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Alert
+                                </Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
-                </CardContent>
-              </Card>
+                ) : (
+                  <div className="text-center py-8">
+                    <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      No vital signs recorded yet
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Vitals will appear here when recorded by caregivers
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              {/* Prescription Detail Dialog */}
-              <Dialog
-                open={showPrescriptionDetailDialog}
-                onOpenChange={setShowPrescriptionDetailDialog}
-              >
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>
-                      Prescription Details -{" "}
-                      {selectedPrescription?.medicationName}
-                    </DialogTitle>
-                  </DialogHeader>
-                  {selectedPrescription && (
-                    <div className="space-y-4">
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium mb-2">
-                            Medication Details
-                          </h4>
-                          <div className="space-y-2 text-sm">
-                            <div>
-                              <strong>Name:</strong>{" "}
-                              {selectedPrescription.medicationName}
+          {/* Medications Tab */}
+          <TabsContent value="medications" className="space-y-6">
+            {/* Add Prescription Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>
+                      {showAddPrescription
+                        ? "Add Prescription"
+                        : "Current Medications"}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {showAddPrescription
+                        ? "Search and add medications"
+                        : "View and manage current medications"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddPrescription(!showAddPrescription)}
+                  >
+                    {showAddPrescription ? "View Current" : "Add New"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {showAddPrescription ? (
+                  <>
+                    {/* Medication Search - Compact */}
+                    <div className="flex items-center space-x-4">
+                      <div className="relative w-80">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search medications..."
+                          value={selectedMedication}
+                          onChange={(e) => {
+                            setSelectedMedication(e.target.value);
+                            setMedicationSearchOpen(e.target.value.length > 0);
+                          }}
+                          onFocus={() => {
+                            if (selectedMedication.length > 0) {
+                              setMedicationSearchOpen(true);
+                            }
+                          }}
+                          className="pl-10"
+                        />
+                        {medicationSearchOpen &&
+                          selectedMedication.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                              {commonMedications
+                                .filter((med) =>
+                                  med
+                                    .toLowerCase()
+                                    .includes(selectedMedication.toLowerCase())
+                                )
+                                .slice(0, 10)
+                                .map((medication) => (
+                                  <div
+                                    key={medication}
+                                    className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm"
+                                    onClick={() =>
+                                      addMedicationToPrescription(medication)
+                                    }
+                                  >
+                                    {medication}
+                                  </div>
+                                ))}
+                              {commonMedications.filter((med) =>
+                                med
+                                  .toLowerCase()
+                                  .includes(selectedMedication.toLowerCase())
+                              ).length === 0 && (
+                                <div className="px-3 py-2 text-sm text-gray-500">
+                                  No medications found
+                                </div>
+                              )}
                             </div>
-                            {selectedPrescription.genericName && (
-                              <div>
-                                <strong>Generic:</strong>{" "}
-                                {selectedPrescription.genericName}
-                              </div>
-                            )}
-                            <div>
-                              <strong>Dosage:</strong>{" "}
-                              {selectedPrescription.dosage}
-                            </div>
-                            <div>
-                              <strong>Frequency:</strong>{" "}
-                              {selectedPrescription.frequency}
-                            </div>
-                            <div>
-                              <strong>Duration:</strong>{" "}
-                              {selectedPrescription.duration}
-                            </div>
-                            <div>
-                              <strong>Quantity:</strong>{" "}
-                              {selectedPrescription.quantity}
-                            </div>
-                            <div>
-                              <strong>Refills:</strong>{" "}
-                              {selectedPrescription.refills}
-                            </div>
-                          </div>
+                          )}
+                      </div>
+                    </div>
+
+                    {/* Prescription Items Table */}
+                    {prescriptionItems.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">
+                          Prescription Details
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left py-1 px-1 text-xs font-medium text-muted-foreground">
+                                  Medication
+                                </th>
+                                <th className="text-left py-1 px-1 text-xs font-medium text-muted-foreground">
+                                  Dosage
+                                </th>
+                                <th className="text-left py-1 px-1 text-xs font-medium text-muted-foreground">
+                                  Frequency
+                                </th>
+                                <th className="text-left py-1 px-1 text-xs font-medium text-muted-foreground">
+                                  Duration
+                                </th>
+                                <th className="text-left py-1 px-1 text-xs font-medium text-muted-foreground">
+                                  Route
+                                </th>
+                                <th className="text-left py-1 px-1 text-xs font-medium text-muted-foreground">
+                                  Qty
+                                </th>
+                                <th className="text-center py-1 px-1 text-xs font-medium text-muted-foreground">
+                                  Actions
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {prescriptionItems.map((item) => (
+                                <tr key={item.id} className="border-b">
+                                  <td className="py-2 px-1">
+                                    <div className="font-medium text-sm">
+                                      {item.medicationName}
+                                    </div>
+                                  </td>
+                                  <td className="py-2 px-1">
+                                    <Input
+                                      placeholder="e.g., 1 tablet"
+                                      value={item.dosage}
+                                      onChange={(e) =>
+                                        updatePrescriptionItem(
+                                          item.id,
+                                          "dosage",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-28 h-8 text-sm"
+                                    />
+                                  </td>
+                                  <td className="py-2 px-1">
+                                    <Select
+                                      value={item.frequency}
+                                      onValueChange={(value) =>
+                                        updatePrescriptionItem(
+                                          item.id,
+                                          "frequency",
+                                          value
+                                        )
+                                      }
+                                    >
+                                      <SelectTrigger className="w-32 h-8 text-sm">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="once_daily">
+                                          Once daily
+                                        </SelectItem>
+                                        <SelectItem value="twice_daily">
+                                          Twice daily
+                                        </SelectItem>
+                                        <SelectItem value="three_times_daily">
+                                          Three times daily
+                                        </SelectItem>
+                                        <SelectItem value="four_times_daily">
+                                          Four times daily
+                                        </SelectItem>
+                                        <SelectItem value="as_needed">
+                                          As needed
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </td>
+                                  <td className="py-2 px-1">
+                                    <div className="flex items-center space-x-1">
+                                      <Input
+                                        type="number"
+                                        value={item.duration}
+                                        onChange={(e) =>
+                                          updatePrescriptionItem(
+                                            item.id,
+                                            "duration",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-14 h-8 text-sm"
+                                      />
+                                      <span className="text-xs text-muted-foreground">
+                                        days
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-2">
+                                    <Select
+                                      value={item.route}
+                                      onValueChange={(value) =>
+                                        updatePrescriptionItem(
+                                          item.id,
+                                          "route",
+                                          value
+                                        )
+                                      }
+                                    >
+                                      <SelectTrigger className="w-24">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="oral">
+                                          Oral
+                                        </SelectItem>
+                                        <SelectItem value="injection_im">
+                                          IM
+                                        </SelectItem>
+                                        <SelectItem value="injection_iv">
+                                          IV
+                                        </SelectItem>
+                                        <SelectItem value="topical">
+                                          Topical
+                                        </SelectItem>
+                                        <SelectItem value="inhalation">
+                                          Inhaled
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </td>
+                                  <td className="py-3 px-2">
+                                    <Input
+                                      type="number"
+                                      value={item.quantity}
+                                      onChange={(e) =>
+                                        updatePrescriptionItem(
+                                          item.id,
+                                          "quantity",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-16"
+                                    />
+                                  </td>
+                                  <td className="py-3 px-2 text-center">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        removePrescriptionItem(item.id)
+                                      }
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                        <div>
-                          <h4 className="font-medium mb-2">
-                            Prescription Info
-                          </h4>
-                          <div className="space-y-2 text-sm">
-                            <div>
-                              <strong>Indication:</strong>{" "}
-                              {selectedPrescription.indication}
-                            </div>
-                            <div>
-                              <strong>Priority:</strong>
-                              <Badge
-                                className={getPriorityColor(
-                                  selectedPrescription.priority
-                                )}
-                                size="sm"
-                                className="ml-2"
-                              >
-                                {selectedPrescription.priority}
-                              </Badge>
-                            </div>
-                            <div>
-                              <strong>Status:</strong>
-                              <Badge
-                                className={getPrescriptionStatusColor(
-                                  selectedPrescription.status
-                                )}
-                                size="sm"
-                                className="ml-2"
-                              >
-                                {selectedPrescription.status}
-                              </Badge>
-                            </div>
-                            <div>
-                              <strong>Prescribed By:</strong>{" "}
-                              {selectedPrescription.prescribedBy}
-                            </div>
-                            <div>
-                              <strong>Date:</strong>{" "}
-                              {
-                                formatDateTime(
-                                  selectedPrescription.prescribedDate
-                                ).date
-                              }
-                            </div>
-                            {selectedPrescription.monitoringRequired && (
-                              <div className="mt-2">
-                                <Badge className="bg-blue-100 text-blue-800">
-                                  Monitoring Required
-                                </Badge>
-                              </div>
-                            )}
+
+                        {/* General Instructions */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">
+                            General Instructions
+                          </label>
+                          <Textarea
+                            placeholder="Enter any general instructions for this prescription"
+                            className="min-h-[80px]"
+                          />
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex justify-between items-center pt-4 border-t">
+                          <div className="text-sm text-muted-foreground">
+                            Total Items: {prescriptionItems.length}
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              onClick={clearPrescription}
+                            >
+                              Clear
+                            </Button>
+                            <Button
+                              className="bg-purple-600 hover:bg-purple-700"
+                              onClick={savePrescriptions}
+                            >
+                              Save Prescriptions
+                            </Button>
                           </div>
                         </div>
                       </div>
-                      {selectedPrescription.instructions && (
-                        <div>
-                          <h4 className="font-medium mb-2">Instructions</h4>
-                          <p className="text-sm text-slate-700">
-                            {selectedPrescription.instructions}
-                          </p>
-                        </div>
-                      )}
-                      {selectedPrescription.sideEffects && (
-                        <div>
-                          <h4 className="font-medium mb-2">Side Effects</h4>
-                          <p className="text-sm text-slate-700">
-                            {selectedPrescription.sideEffects}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </DialogContent>
-              </Dialog>
-
-              {prescriptions.length === 0 && (
-                <div className="text-center py-8 text-slate-500">
-                  <Pill className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                  <p>No prescriptions found for this patient</p>
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Medical History Tab */}
-            <TabsContent value="history" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Medical History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600">
-                    Medical history and previous treatments will be displayed
-                    here.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Vitals Tab */}
-            <TabsContent value="vitals" className="space-y-3">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center space-x-2 text-base">
-                    <Heart className="h-4 w-4 text-red-500" />
-                    <span>Vital Signs History</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {isLoadingVitals ? (
-                    <div className="space-y-2">
-                      {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-12" />
-                      ))}
-                    </div>
-                  ) : vitalRecords.length > 0 ? (
+                    )}
+                  </>
+                ) : (
+                  /* Current Medications View */
+                  <div className="space-y-4">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full border-collapse">
                         <thead>
-                          <tr className="bg-slate-50">
-                            <th className="px-2 py-1.5 text-left text-xs font-medium">
-                              Date & Time
+                          <tr className="border-b">
+                            <th className="text-left py-2">Medication</th>
+                            <th className="text-left py-2">Dosage</th>
+                            <th className="text-left py-2">Route</th>
+                            <th className="text-left py-2">Frequency</th>
+                            <th className="text-left py-2">Start Date</th>
+                            <th className="text-left py-2">
+                              Last Administration
                             </th>
-                            <th className="px-2 py-1.5 text-left text-xs font-medium">
-                              Temperature
-                            </th>
-                            <th className="px-2 py-1.5 text-left text-xs font-medium">
-                              Blood Pressure
-                            </th>
-                            <th className="px-2 py-1.5 text-left text-xs font-medium">
-                              Pulse Rate
-                            </th>
-                            <th className="px-2 py-1.5 text-left text-xs font-medium">
-                              SpO2
-                            </th>
-                            <th className="px-2 py-1.5 text-left text-xs font-medium">
-                              Respiratory Rate
-                            </th>
-                            <th className="px-2 py-1.5 text-left text-xs font-medium">
-                              Weight
-                            </th>
-                            <th className="px-2 py-1.5 text-left text-xs font-medium">
-                              Height
-                            </th>
-                            <th className="px-2 py-1.5 text-left text-xs font-medium">
-                              Recorded By
-                            </th>
+                            <th className="text-left py-2">Status</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {vitalRecords.map((vital) => (
-                            <tr key={vital.id} className="hover:bg-slate-50">
-                              <td className="px-2 py-1.5 text-sm">
-                                {formatDate(vital.recordedDate)}{" "}
-                                {formatTime(vital.recordedDate)}
-                              </td>
-                              <td className="px-2 py-1.5 text-sm">
-                                {vital.temperature}°F
-                              </td>
-                              <td className="px-2 py-1.5 text-sm">
-                                {vital.bloodPressure}
-                              </td>
-                              <td className="px-2 py-1.5 text-sm">
-                                {vital.heartRate} bpm
-                              </td>
-                              <td className="px-2 py-1.5 text-sm">
-                                {vital.oxygenSaturation}%
-                              </td>
-                              <td className="px-2 py-1.5 text-sm">
-                                {vital.respiratoryRate} /min
-                              </td>
-                              <td className="px-2 py-1.5 text-sm">
-                                {vital.weight ? `${vital.weight} kg` : "-"}
-                              </td>
-                              <td className="px-2 py-1.5 text-sm">
-                                {vital.height ? `${vital.height} cm` : "-"}
-                              </td>
-                              <td className="px-2 py-1.5">
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs px-1 py-0"
-                                >
-                                  {vital.recordedBy}
-                                </Badge>
-                              </td>
-                            </tr>
-                          ))}
+                          {medications
+                            .filter((m) => m.isActive)
+                            .map((medication) => {
+                              const latestAdmin = getLatestAdministration(
+                                medication.id
+                              );
+                              return (
+                                <tr key={medication.id} className="border-b">
+                                  <td className="py-3">
+                                    <div>
+                                      <p className="font-medium">
+                                        {medication.medicationName}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {medication.instructions}
+                                      </p>
+                                    </div>
+                                  </td>
+                                  <td className="py-3">{medication.dosage}</td>
+                                  <td className="py-3 capitalize">
+                                    {medication.route.replace("_", " ")}
+                                  </td>
+                                  <td className="py-3 capitalize">
+                                    {medication.frequency.replace("_", " ")}
+                                  </td>
+                                  <td className="py-3">
+                                    {formatDate(new Date(medication.startDate))}
+                                  </td>
+                                  <td className="py-3">
+                                    {latestAdmin ? (
+                                      <div className="space-y-1">
+                                        <div className="flex items-center space-x-2">
+                                          {getAdministrationStatusIcon(
+                                            latestAdmin.status
+                                          )}
+                                          <Badge
+                                            className={getAdministrationStatusBadge(
+                                              latestAdmin.status
+                                            )}
+                                          >
+                                            {latestAdmin.status}
+                                          </Badge>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                          {latestAdmin.actualTime
+                                            ? formatDate(
+                                                new Date(latestAdmin.actualTime)
+                                              )
+                                            : `Scheduled: ${formatDate(
+                                                new Date(
+                                                  latestAdmin.scheduledTime
+                                                )
+                                              )}`}
+                                        </p>
+                                        {latestAdmin.dosageGiven && (
+                                          <p className="text-xs text-muted-foreground">
+                                            Dose: {latestAdmin.dosageGiven}
+                                          </p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-sm text-muted-foreground">
+                                        No administrations recorded
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-3">
+                                    <Badge className="bg-green-100 text-green-800">
+                                      Active
+                                    </Badge>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                         </tbody>
                       </table>
                     </div>
-                  ) : (
-                    <p className="text-slate-600 text-center py-4 text-sm">
-                      No vital signs recorded yet.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                    {medications.filter((m) => m.isActive).length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No active medications found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            {/* Caregiver Notes Tab */}
-            <TabsContent value="notes" className="space-y-3">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center space-x-2 text-base">
-                    <FileText className="h-4 w-4 text-blue-500" />
-                    <span>Caregiver Notes</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {isLoadingNotes ? (
-                    <div className="space-y-2">
-                      {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-16" />
-                      ))}
-                    </div>
-                  ) : careNotes.length > 0 ? (
-                    <div className="space-y-2">
-                      {careNotes.map((note) => (
-                        <div
-                          key={note.id}
-                          className="border rounded-md p-3 bg-slate-50"
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex items-center space-x-2">
-                              <Clock className="h-3 w-3 text-slate-500" />
-                              <div className="text-xs font-medium">
-                                <span>
-                                  {formatDate(note.createdDate)}{" "}
-                                  {formatTime(note.createdDate)}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Badge
-                                className={`text-xs px-1.5 py-0.5 ${
-                                  note.priority === "high"
-                                    ? "bg-red-100 text-red-800"
-                                    : note.priority === "medium"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-green-100 text-green-800"
-                                }`}
-                              >
-                                {note.priority}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className="text-xs px-1.5 py-0.5"
-                              >
-                                {note.type}
-                              </Badge>
-                            </div>
-                          </div>
-                          <p className="text-sm text-slate-700 mb-2">
-                            {note.content}
-                          </p>
-                          <div className="text-xs text-slate-500">
-                            By: {note.createdBy}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-slate-600 text-center py-4 text-sm">
-                      No caregiver notes available.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Recommendations Tab */}
-            <TabsContent value="recommendations" className="space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-base font-semibold">
-                  Reviewer Recommendations
-                </h3>
+          {/* Medical Notes Tab */}
+          <TabsContent value="medical-notes" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Medical Notes & Reviews</h2>
+              <div className="flex space-x-2">
                 <Button
-                  onClick={() => setShowRecommendationDialog(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-sm px-3 py-1.5"
+                  onClick={() => setShowCreateReviewDialog(true)}
+                  className="bg-purple-600 hover:bg-purple-700"
                 >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Review
+                </Button>
+                <Button
+                  onClick={() => setShowSymptomForm(!showSymptomForm)}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {showSymptomForm ? "Cancel" : "Report Symptoms"}
                 </Button>
               </div>
+            </div>
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center space-x-2 text-base">
-                    <ClipboardList className="h-4 w-4 text-purple-500" />
-                    <span>Recommendations for Caregivers</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0 p-0">
-                  {isLoadingRecommendations ? (
-                    <div className="space-y-2 p-4">
-                      {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-12" />
-                      ))}
-                    </div>
-                  ) : reviewerRecommendations.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="bg-slate-50">
-                            <th className="px-3 py-2 text-left text-xs font-medium">
-                              Title
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium">
-                              Priority
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium">
-                              Category
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium">
-                              Status
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium">
-                              Target
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium">
-                              Created
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reviewerRecommendations.map((recommendation) => (
-                            <tr
-                              key={recommendation.id}
-                              className="hover:bg-slate-50 cursor-pointer border-b border-slate-100"
-                              onClick={() => {
-                                setSelectedRecommendationDetail(recommendation);
-                                setShowRecommendationDetailDialog(true);
-                              }}
-                            >
-                              <td className="px-3 py-2">
-                                <div className="font-medium text-slate-900">
-                                  {recommendation.title}
-                                </div>
-                                <div className="text-xs text-slate-600 truncate max-w-xs">
-                                  {recommendation.content}
-                                </div>
-                              </td>
-                              <td className="px-3 py-2">
-                                <Badge
-                                  className={`text-xs px-1.5 py-0.5 ${
-                                    recommendation.priority === "urgent"
-                                      ? "bg-red-100 text-red-800"
-                                      : recommendation.priority === "high"
-                                      ? "bg-orange-100 text-orange-800"
-                                      : recommendation.priority === "medium"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-green-100 text-green-800"
-                                  }`}
-                                  size="sm"
-                                >
-                                  {recommendation.priority}
-                                </Badge>
-                              </td>
-                              <td className="px-3 py-2">
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs px-1.5 py-0.5"
-                                  size="sm"
-                                >
-                                  {recommendation.category}
-                                </Badge>
-                              </td>
-                              <td className="px-3 py-2">
-                                <Badge
-                                  className={`text-xs px-1.5 py-0.5 ${
-                                    recommendation.status === "completed"
-                                      ? "bg-green-100 text-green-800"
-                                      : recommendation.status === "acknowledged"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : recommendation.status === "sent"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-gray-100 text-gray-800"
-                                  }`}
-                                  size="sm"
-                                >
-                                  {recommendation.status}
-                                </Badge>
-                              </td>
-                              <td className="px-3 py-2 text-sm">
-                                {recommendation.targetCaregiver || "-"}
-                              </td>
-                              <td className="px-3 py-2">
-                                <div className="text-sm">
-                                  {formatDate(recommendation.createdDate)}
-                                </div>
-                                <div className="text-xs text-slate-600">
-                                  by {recommendation.createdBy}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <p className="text-slate-600 text-center py-4 text-sm">
-                      No recommendations created yet.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Medical History Tab */}
-            <TabsContent value="history" className="space-y-6">
+            {showSymptomForm && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Medical History</CardTitle>
+                  <CardTitle>Report Patient Symptoms</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-600">
-                    Medical history and previous treatments will be displayed
-                    here.
-                  </p>
+                  <PatientSymptomReportForm
+                    patientId={resolvedParams.id}
+                    patientName={`${patient.firstName} ${patient.lastName}`}
+                    onSave={() => {
+                      setShowSymptomForm(false);
+                      toast({
+                        title: "Success",
+                        description: "Symptom report submitted successfully",
+                      });
+                    }}
+                    onCancel={() => setShowSymptomForm(false)}
+                  />
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+            )}
+
+            {/* Medical Reviews List */}
+            <div className="space-y-4">
+              {medicalReviews.map((review) => (
+                <Card key={review.id}>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-lg">
+                          {review.title}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          by {review.reviewerName} •{" "}
+                          {formatDate(new Date(review.createdAt))}
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Badge
+                          variant={
+                            review.status === "completed"
+                              ? "default"
+                              : "outline"
+                          }
+                          className={
+                            review.priority === "urgent"
+                              ? "bg-red-100 text-red-800"
+                              : review.priority === "high"
+                              ? "bg-orange-100 text-orange-800"
+                              : review.priority === "medium"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-gray-100 text-gray-800"
+                          }
+                        >
+                          {review.priority} priority
+                        </Badge>
+                        <Badge variant="outline" className="capitalize">
+                          {review.status.replace("_", " ")}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="font-medium text-sm mb-1">Findings</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {review.findings}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm mb-1">Assessment</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {review.assessment}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm mb-1">
+                          Recommendations
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {review.recommendations}
+                        </p>
+                      </div>
+                      {review.followUpRequired && review.followUpDate && (
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Clock className="h-4 w-4 text-blue-600" />
+                          <span>
+                            Follow-up required by{" "}
+                            {formatDate(new Date(review.followUpDate))}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {medicalReviews.length === 0 && (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      No medical reviews yet
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Create your first medical review to get started
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
-      {/* Create Recommendation Dialog */}
+      {/* Prescription Dialog */}
+      {patient && (
+        <PrescriptionDialog
+          open={showPrescribeDialog}
+          onOpenChange={setShowPrescribeDialog}
+          patientId={resolvedParams.id}
+          patientName={`${patient.firstName} ${patient.lastName}`}
+          prescribedBy={user?.id || ""}
+          onSave={handleMedicationSaved}
+        />
+      )}
+
+      {/* Create Review Dialog */}
       <Dialog
-        open={showRecommendationDialog}
-        onOpenChange={setShowRecommendationDialog}
+        open={showCreateReviewDialog}
+        onOpenChange={setShowCreateReviewDialog}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create New Recommendation</DialogTitle>
+            <DialogTitle>Create Medical Review</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Title *
-              </label>
-              <Input
-                placeholder="Enter recommendation title..."
-                value={newRecommendation.title}
-                onChange={(e) =>
-                  setNewRecommendation({
-                    ...newRecommendation,
-                    title: e.target.value,
-                  })
-                }
-              />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Priority
-                </label>
-                <select
-                  className="w-full p-2 border border-slate-300 rounded-md"
-                  value={newRecommendation.priority}
-                  onChange={(e) =>
-                    setNewRecommendation({
-                      ...newRecommendation,
-                      priority: e.target.value as
-                        | "low"
-                        | "medium"
-                        | "high"
-                        | "urgent",
-                    })
-                  }
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Category
-                </label>
-                <select
-                  className="w-full p-2 border border-slate-300 rounded-md"
-                  value={newRecommendation.category}
-                  onChange={(e) =>
-                    setNewRecommendation({
-                      ...newRecommendation,
-                      category: e.target.value as
-                        | "medication"
-                        | "care_plan"
-                        | "vitals"
-                        | "general"
-                        | "follow_up",
-                    })
-                  }
-                >
-                  <option value="general">General</option>
-                  <option value="medication">Medication</option>
-                  <option value="vitals">Vitals</option>
-                  <option value="care_plan">Care Plan</option>
-                  <option value="follow_up">Follow Up</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Target Caregiver
-                </label>
-                <Input
-                  placeholder="Enter caregiver name (optional)..."
-                  value={newRecommendation.targetCaregiver}
-                  onChange={(e) =>
-                    setNewRecommendation({
-                      ...newRecommendation,
-                      targetCaregiver: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Due Date
-                </label>
-                <Input
-                  type="date"
-                  value={newRecommendation.dueDate}
-                  onChange={(e) =>
-                    setNewRecommendation({
-                      ...newRecommendation,
-                      dueDate: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Recommendation Content *
-              </label>
-              <Textarea
-                placeholder="Enter your recommendation details..."
-                rows={4}
-                value={newRecommendation.content}
-                onChange={(e) =>
-                  setNewRecommendation({
-                    ...newRecommendation,
-                    content: e.target.value,
-                  })
-                }
-              />
-            </div>
-
-            <div className="flex space-x-2 pt-4">
-              <Button
-                onClick={handleCreateRecommendation}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-              >
-                Create Recommendation
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowRecommendationDialog(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Recommendation Detail Dialog */}
-      <Dialog
-        open={showRecommendationDetailDialog}
-        onOpenChange={setShowRecommendationDetailDialog}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              Recommendation Details - {selectedRecommendationDetail?.title}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedRecommendationDetail && (
-            <div className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium mb-2">Recommendation Info</h4>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <strong>Title:</strong>{" "}
-                      {selectedRecommendationDetail.title}
-                    </div>
-                    <div>
-                      <strong>Priority:</strong>
-                      <Badge
-                        className={`ml-2 text-xs px-1.5 py-0.5 ${
-                          selectedRecommendationDetail.priority === "urgent"
-                            ? "bg-red-100 text-red-800"
-                            : selectedRecommendationDetail.priority === "high"
-                            ? "bg-orange-100 text-orange-800"
-                            : selectedRecommendationDetail.priority === "medium"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
-                        size="sm"
-                      >
-                        {selectedRecommendationDetail.priority}
-                      </Badge>
-                    </div>
-                    <div>
-                      <strong>Category:</strong>
-                      <Badge
-                        variant="outline"
-                        className="ml-2 text-xs px-1.5 py-0.5"
-                        size="sm"
-                      >
-                        {selectedRecommendationDetail.category}
-                      </Badge>
-                    </div>
-                    <div>
-                      <strong>Status:</strong>
-                      <Badge
-                        className={`ml-2 text-xs px-1.5 py-0.5 ${
-                          selectedRecommendationDetail.status === "completed"
-                            ? "bg-green-100 text-green-800"
-                            : selectedRecommendationDetail.status ===
-                              "acknowledged"
-                            ? "bg-blue-100 text-blue-800"
-                            : selectedRecommendationDetail.status === "sent"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                        size="sm"
-                      >
-                        {selectedRecommendationDetail.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">Assignment Details</h4>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <strong>Created By:</strong>{" "}
-                      {selectedRecommendationDetail.createdBy}
-                    </div>
-                    <div>
-                      <strong>Created Date:</strong>{" "}
-                      {formatDate(selectedRecommendationDetail.createdDate)}{" "}
-                      {formatTime(selectedRecommendationDetail.createdDate)}
-                    </div>
-                    {selectedRecommendationDetail.targetCaregiver && (
-                      <div>
-                        <strong>Target Caregiver:</strong>{" "}
-                        {selectedRecommendationDetail.targetCaregiver}
-                      </div>
-                    )}
-                    {selectedRecommendationDetail.dueDate && (
-                      <div>
-                        <strong>Due Date:</strong>{" "}
-                        {formatDate(selectedRecommendationDetail.dueDate)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Content</h4>
-                <div className="bg-slate-50 p-3 rounded text-sm text-slate-700">
-                  {selectedRecommendationDetail.content}
-                </div>
-              </div>
-            </div>
-          )}
+          <CreateMedicalReviewForm
+            patientId={resolvedParams.id}
+            reviewerId={user?.id || ""}
+            reviewerName={`${user?.firstName} ${user?.lastName}`}
+            onSave={handleReviewSaved}
+            onCancel={() => setShowCreateReviewDialog(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Create Medical Review Form Component
+function CreateMedicalReviewForm({
+  patientId,
+  reviewerId,
+  reviewerName,
+  onSave,
+  onCancel,
+}: {
+  patientId: string;
+  reviewerId: string;
+  reviewerName: string;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    type: "routine_checkup" as any,
+    title: "",
+    findings: "",
+    assessment: "",
+    recommendations: "",
+    treatmentPlan: "",
+    followUpRequired: false,
+    followUpDate: "",
+    priority: "medium" as any,
+    reviewedDate: new Date().toISOString().split("T")[0],
+    notes: "",
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    createMedicalReview({
+      ...formData,
+      patientId,
+      reviewerId,
+      reviewerName,
+    });
+
+    onSave();
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Review Type</label>
+          <select
+            value={formData.type}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, type: e.target.value as any }))
+            }
+            className="w-full p-2 border rounded-md"
+            required
+          >
+            <option value="routine_checkup">Routine Checkup</option>
+            <option value="follow_up">Follow-up</option>
+            <option value="emergency_consultation">
+              Emergency Consultation
+            </option>
+            <option value="medication_review">Medication Review</option>
+            <option value="symptom_evaluation">Symptom Evaluation</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Priority</label>
+          <select
+            value={formData.priority}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                priority: e.target.value as any,
+              }))
+            }
+            className="w-full p-2 border rounded-md"
+            required
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Title</label>
+        <input
+          type="text"
+          value={formData.title}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, title: e.target.value }))
+          }
+          className="w-full p-2 border rounded-md"
+          placeholder="Brief title for this review"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Review Date</label>
+        <input
+          type="date"
+          value={formData.reviewedDate}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, reviewedDate: e.target.value }))
+          }
+          className="w-full p-2 border rounded-md"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Clinical Findings
+        </label>
+        <textarea
+          value={formData.findings}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, findings: e.target.value }))
+          }
+          className="w-full p-2 border rounded-md h-24"
+          placeholder="Document clinical observations, vital signs review, physical examination results..."
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Assessment</label>
+        <textarea
+          value={formData.assessment}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, assessment: e.target.value }))
+          }
+          className="w-full p-2 border rounded-md h-24"
+          placeholder="Medical assessment, diagnosis, condition evaluation..."
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Recommendations
+        </label>
+        <textarea
+          value={formData.recommendations}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              recommendations: e.target.value,
+            }))
+          }
+          className="w-full p-2 border rounded-md h-24"
+          placeholder="Treatment recommendations, medication changes, lifestyle modifications..."
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Treatment Plan (Optional)
+        </label>
+        <textarea
+          value={formData.treatmentPlan}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, treatmentPlan: e.target.value }))
+          }
+          className="w-full p-2 border rounded-md h-20"
+          placeholder="Detailed treatment plan, care instructions..."
+        />
+      </div>
+
+      <div className="flex items-center space-x-4">
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={formData.followUpRequired}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                followUpRequired: e.target.checked,
+              }))
+            }
+            className="mr-2"
+          />
+          Follow-up Required
+        </label>
+
+        {formData.followUpRequired && (
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Follow-up Date
+            </label>
+            <input
+              type="date"
+              value={formData.followUpDate}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  followUpDate: e.target.value,
+                }))
+              }
+              className="p-2 border rounded-md"
+            />
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Additional Notes (Optional)
+        </label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, notes: e.target.value }))
+          }
+          className="w-full p-2 border rounded-md h-16"
+          placeholder="Any additional notes or observations..."
+        />
+      </div>
+
+      <div className="flex justify-end space-x-4 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
+          Create Review
+        </Button>
+      </div>
+    </form>
   );
 }

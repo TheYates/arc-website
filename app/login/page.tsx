@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,44 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
-  const { login } = useAuth();
+  const { login, user, isLoading: authLoading } = useAuth();
   const router = useRouter();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    // Wait for auth to be ready
+    if (authLoading) return;
+
+    setIsAuthReady(true);
+
+    // If user is already logged in, redirect to appropriate page
+    if (user) {
+      redirectBasedOnRole(user.role);
+    }
+  }, [user, authLoading, router]);
+
+  const redirectBasedOnRole = (role: string) => {
+    switch (role) {
+      case "admin":
+      case "super_admin":
+        router.push("/admin");
+        break;
+      case "reviewer":
+        router.push("/reviewer");
+        break;
+      case "care_giver":
+        router.push("/caregiver");
+        break;
+      case "patient":
+        router.push("/patient");
+        break;
+      default:
+        router.push("/");
+        break;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +74,7 @@ export default function LoginPage() {
       const result = await login(emailOrUsername, password);
 
       if (result.success) {
-        router.push("/dashboard");
+        // This should redirect automatically via the useEffect above
       } else {
         setError(result.error || "Login failed");
       }
@@ -50,8 +85,20 @@ export default function LoginPage() {
     }
   };
 
+  // Show loading state while checking authentication
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-400 mx-auto" />
+          <p className="mt-2 text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen  flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -59,16 +106,14 @@ export default function LoginPage() {
             <div className="bg-teal-600 p-3 rounded-lg">
               <Shield className="h-8 w-8 text-white" />
             </div>
-            <span className="text-2xl font-bold ">Alpha Rescue Consult</span>
+            <span className="text-2xl font-bold">Alpha Rescue Consult</span>
           </div>
           <p>Sign in to your account</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl text-center ">
-              Welcome Back
-            </CardTitle>
+            <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -172,16 +217,16 @@ export default function LoginPage() {
               <p className="text-sm">
                 Don't have an account?{" "}
                 <Link
-                  href="/careers"
+                  href="/get-started"
                   className="text-teal-600 hover:text-teal-700 font-medium"
                 >
-                  Apply to work with us
+                  Apply for care services
                 </Link>
               </p>
             </div>
 
             {/* Demo Credentials */}
-            <div className="mt-6 p-4 rounded-lg">
+            <div className="mt-6 p-4 bg-slate-50 rounded-lg">
               <h3 className="text-sm font-semibold mb-2">Demo Credentials:</h3>
               <div className="text-xs space-y-1">
                 <div>

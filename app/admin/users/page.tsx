@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import AuthHeader from "@/components/auth-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -17,445 +20,446 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { useAuth, hasPermission, type User } from "@/lib/auth";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth, User, UserRole, hasPermission } from "@/lib/auth";
+import { getUserAccount } from "@/lib/api/users";
+import { formatDate } from "@/lib/utils";
 import {
-  Users,
-  Plus,
+  Loader2,
   Search,
-  Edit,
-  Trash2,
+  Users,
+  UserCheck,
+  UserX,
   Shield,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
+  Eye,
+  Edit,
+  Mail,
+  Phone,
+  Calendar,
+  Crown,
 } from "lucide-react";
 
-export default function UserManagementPage() {
-  const { user, isLoading: authLoading } = useAuth();
-  const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRole, setSelectedRole] = useState<string>("all");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
+interface UserAccount {
+  user: User;
+  password: string;
+}
 
-  // Mock users data - in real app, this would come from API
-  const mockUsers: User[] = [
-    {
-      id: "1",
-      email: "superadmin@arc.com",
-      username: "superadmin",
-      firstName: "Super",
-      lastName: "Admin",
-      phone: "+233 24 000 0001",
-      address: "ARC Headquarters, Accra",
-      role: "super_admin",
-      isEmailVerified: true,
-      createdAt: "2024-01-01",
-      lastLogin: "2024-01-15",
-      profileComplete: true,
-    },
-    {
-      id: "2",
-      email: "admin@arc.com",
-      username: "admin",
-      firstName: "John",
-      lastName: "Administrator",
-      phone: "+233 24 000 0002",
-      address: "East Legon, Accra",
-      role: "admin",
-      isEmailVerified: true,
-      createdAt: "2024-01-02",
-      lastLogin: "2024-01-14",
-      profileComplete: true,
-    },
-    {
-      id: "3",
-      email: "dr.mensah@arc.com",
-      username: "drmensah",
-      firstName: "Dr. Kwame",
-      lastName: "Mensah",
-      phone: "+233 24 000 0003",
-      address: "Airport Residential, Accra",
-      role: "reviewer",
-      isEmailVerified: true,
-      createdAt: "2024-01-03",
-      lastLogin: "2024-01-13",
-      profileComplete: true,
-    },
-    {
-      id: "4",
-      email: "nurse.ama@arc.com",
-      username: "nurseama",
-      firstName: "Ama",
-      lastName: "Osei",
-      phone: "+233 24 000 0004",
-      address: "Tema, Greater Accra",
-      role: "care_giver",
-      isEmailVerified: true,
-      createdAt: "2024-01-04",
-      lastLogin: "2024-01-12",
-      profileComplete: true,
-    },
-    {
-      id: "5",
-      email: "patient@example.com",
-      username: "patient1",
-      firstName: "Akosua",
-      lastName: "Asante",
-      phone: "+233 24 000 0005",
-      address: "Kumasi, Ashanti Region",
-      role: "patient",
-      isEmailVerified: true,
-      createdAt: "2024-01-05",
-      lastLogin: "2024-01-11",
-      profileComplete: true,
-    },
-    {
-      id: "6",
-      email: "nurse.kwame@arc.com",
-      username: "nursekwame",
-      firstName: "Kwame",
-      lastName: "Boateng",
-      phone: "+233 24 000 0006",
-      address: "Takoradi, Western Region",
-      role: "care_giver",
-      isEmailVerified: false,
-      createdAt: "2024-01-06",
-      lastLogin: "",
-      profileComplete: false,
-    },
-  ];
+export default function UsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("all");
+  const { user } = useAuth();
+  const router = useRouter();
+
+  // Check permissions
+  useEffect(() => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    if (!hasPermission(user.role, "user_management")) {
+      router.push("/");
+      return;
+    }
+  }, [user, router]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/login");
-    }
-    if (user && !hasPermission(user.role, "admin")) {
-      router.push("/dashboard");
-    }
-    setUsers(mockUsers);
-  }, [user, authLoading, router]);
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      try {
+        // Get demo users (hardcoded in auth system) - EXCLUDING patients as they have their own page
+        const demoUsers: User[] = [
+          {
+            id: "1",
+            email: "admin@alpharescue.com",
+            username: "admin",
+            firstName: "Admin",
+            lastName: "User",
+            phone: "+233 XX XXX XXXX",
+            address: "Accra, Ghana",
+            role: "admin",
+            isEmailVerified: true,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            profileComplete: true,
+          },
+          {
+            id: "2",
+            email: "dr.mensah@alpharescue.com",
+            username: "drmensah",
+            firstName: "Dr. Kwame",
+            lastName: "Mensah",
+            phone: "+233 XX XXX XXXX",
+            address: "Kumasi, Ghana",
+            role: "reviewer",
+            isEmailVerified: false, // Demo unverified user
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            profileComplete: false, // Demo incomplete profile
+          },
+          {
+            id: "3",
+            email: "ama.nurse@alpharescue.com",
+            username: "nurseama",
+            firstName: "Ama",
+            lastName: "Asante",
+            phone: "+233 XX XXX XXXX",
+            address: "Tema, Ghana",
+            role: "care_giver",
+            isEmailVerified: true,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            profileComplete: true,
+          },
+        ];
 
-  const filteredUsers = users.filter((u) => {
-    // Hide super admin users from the interface (stealth mode)
-    if (u.role === "super_admin") {
-      return false;
-    }
+        // Get created users from localStorage - EXCLUDING patients
+        const createdUsersData = localStorage.getItem("auth_users");
+        let createdUsers: User[] = [];
 
-    const matchesSearch =
-      u.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.username.toLowerCase().includes(searchTerm.toLowerCase());
+        if (createdUsersData) {
+          try {
+            const userAccounts: UserAccount[] = JSON.parse(createdUsersData);
+            createdUsers = userAccounts
+              .map((account) => account.user)
+              .filter((user) => user.role !== "patient"); // Exclude patients
+          } catch (error) {
+            console.error("Error loading created users:", error);
+          }
+        }
 
-    const matchesRole = selectedRole === "all" || u.role === selectedRole;
-
-    return matchesSearch && matchesRole;
-  });
-
-  const getRoleDisplayName = (role: string) => {
-    const roleNames = {
-      super_admin: "Super Admin",
-      admin: "Administrator",
-      reviewer: "Medical Reviewer",
-      care_giver: "Care Provider",
-      patient: "Patient",
+        // Combine all users (excluding patients - they have their own page)
+        const allUsers = [...demoUsers, ...createdUsers];
+        setUsers(allUsers);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    return roleNames[role as keyof typeof roleNames] || role;
+
+    fetchUsers();
+  }, []);
+
+  const getRoleBadge = (role: UserRole) => {
+    const roleConfig = {
+      super_admin: {
+        label: "Super Admin",
+        className: "bg-purple-100 text-purple-800",
+        icon: <Crown className="h-3 w-3 mr-1" />,
+      },
+      admin: {
+        label: "Admin",
+        className: "bg-red-100 text-red-800",
+        icon: <Shield className="h-3 w-3 mr-1" />,
+      },
+      reviewer: {
+        label: "Reviewer",
+        className: "bg-blue-100 text-blue-800",
+        icon: <Eye className="h-3 w-3 mr-1" />,
+      },
+      care_giver: {
+        label: "Care Giver",
+        className: "bg-green-100 text-green-800",
+        icon: <UserCheck className="h-3 w-3 mr-1" />,
+      },
+      patient: {
+        label: "Patient",
+        className: "bg-gray-100 text-gray-800",
+        icon: <Users className="h-3 w-3 mr-1" />,
+      },
+    };
+
+    const config = roleConfig[role];
+    return (
+      <Badge className={config.className}>
+        {config.icon}
+        {config.label}
+      </Badge>
+    );
   };
 
-  const getRoleBadgeColor = (role: string) => {
-    const colors = {
-      super_admin: "bg-purple-100 text-purple-800",
-      admin: "bg-blue-100 text-blue-800",
-      reviewer: "bg-orange-100 text-orange-800",
-      care_giver: "bg-green-100 text-green-800",
-      patient: "bg-slate-100 text-slate-800",
-    };
-    return colors[role as keyof typeof colors] || "bg-slate-100 text-slate-800";
-  };
-
-  const getStatusIcon = (user: User) => {
+  const getStatusBadge = (user: User) => {
     if (!user.isEmailVerified) {
-      return <XCircle className="h-4 w-4 text-red-500" />;
+      return <Badge variant="destructive">Unverified</Badge>;
     }
     if (!user.profileComplete) {
-      return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      return (
+        <Badge className="bg-amber-100 text-amber-800">
+          Incomplete Profile
+        </Badge>
+      );
     }
-    return <CheckCircle className="h-4 w-4 text-green-500" />;
+    return <Badge className="bg-green-100 text-green-800">Active</Badge>;
   };
 
-  const getStatusText = (user: User) => {
-    if (!user.isEmailVerified) return "Email Not Verified";
-    if (!user.profileComplete) return "Profile Incomplete";
-    return "Active";
-  };
-
-  const canDeleteUser = (targetUser: User) => {
-    if (!user) return false;
-    if (targetUser.role === "super_admin") return false; // Super admin cannot be deleted
-    if (targetUser.id === user.id) return false; // Cannot delete self
-    return hasPermission(user.role, "admin");
-  };
-
-  const canEditUser = (targetUser: User) => {
-    if (!user) return false;
-    if (targetUser.role === "super_admin" && user.role !== "super_admin")
+  const filteredUsers = users.filter((user) => {
+    // Filter by role
+    if (roleFilter !== "all" && user.role !== roleFilter) {
       return false;
-    return hasPermission(user.role, "admin");
+    }
+
+    // Filter by tab
+    if (activeTab !== "all") {
+      if (
+        activeTab === "admins" &&
+        !["super_admin", "admin"].includes(user.role)
+      )
+        return false;
+      if (
+        activeTab === "staff" &&
+        !["reviewer", "care_giver"].includes(user.role)
+      )
+        return false;
+      if (activeTab === "unverified" && user.isEmailVerified) return false;
+    }
+
+    // Search term filtering
+    if (searchTerm) {
+      const searchTermLower = searchTerm.toLowerCase();
+      return (
+        user.firstName.toLowerCase().includes(searchTermLower) ||
+        user.lastName.toLowerCase().includes(searchTermLower) ||
+        user.email.toLowerCase().includes(searchTermLower) ||
+        user.username.toLowerCase().includes(searchTermLower)
+      );
+    }
+
+    return true;
+  });
+
+  const formatUserDate = (dateString: string) => {
+    if (!dateString) return "Never";
+    const date = new Date(dateString);
+    return formatDate(date);
   };
 
-  if (authLoading) {
+  if (!user || !hasPermission(user.role, "user_management")) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="flex justify-center items-center h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading...</p>
+          <UserX className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <div className="text-muted-foreground">
+            You don't have permission to view this page
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  if (!user || !hasPermission(user.role, "admin")) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Alert className="max-w-md">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            You don't have permission to access this page.
-          </AlertDescription>
-        </Alert>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AuthHeader />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">User Management</h1>
-          <p className="text-slate-600 mt-2">
-            Manage system users and their permissions
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">User Management</h1>
+          <p className="text-muted-foreground">
+            Manage user accounts and permissions
           </p>
         </div>
+      </div>
 
-        {/* Stats Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Users className="h-8 w-8 text-blue-500" />
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {users.filter((u) => u.role !== "super_admin").length}
-                  </p>
-                  <p className="text-sm text-slate-600">Total Users</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Shield className="h-8 w-8 text-purple-500" />
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {users.filter((u) => u.role === "admin").length}
-                  </p>
-                  <p className="text-sm text-slate-600">Administrators</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Users className="h-8 w-8 text-green-500" />
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {users.filter((u) => u.role === "care_giver").length}
-                  </p>
-                  <p className="text-sm text-slate-600">Care Providers</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Users className="h-8 w-8 text-orange-500" />
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {users.filter((u) => u.role === "reviewer").length}
-                  </p>
-                  <p className="text-sm text-slate-600">Reviewers</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Users className="h-8 w-8 text-slate-500" />
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {users.filter((u) => u.role === "patient").length}
-                  </p>
-                  <p className="text-sm text-slate-600">Patients</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters and Actions */}
-        <Card className="mb-8">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="h-5 w-5" />
-                <span>All Users</span>
-              </CardTitle>
-              <Dialog
-                open={isCreateDialogOpen}
-                onOpenChange={setIsCreateDialogOpen}
+      {/* User Statistics */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {[
+              {
+                role: "all",
+                label: "Total Staff",
+                icon: <Users className="h-4 w-4" />,
+                count: users.length,
+              },
+              {
+                role: "admin",
+                label: "Admins",
+                icon: <Shield className="h-4 w-4" />,
+                count: users.filter((u) =>
+                  ["super_admin", "admin"].includes(u.role)
+                ).length,
+              },
+              {
+                role: "care_giver",
+                label: "Care Givers",
+                icon: <UserCheck className="h-4 w-4" />,
+                count: users.filter((u) => u.role === "care_giver").length,
+              },
+              {
+                role: "reviewer",
+                label: "Reviewers",
+                icon: <Eye className="h-4 w-4" />,
+                count: users.filter((u) => u.role === "reviewer").length,
+              },
+              {
+                role: "unverified",
+                label: "Unverified",
+                icon: <Users className="h-4 w-4" />,
+                count: users.filter((u) => !u.isEmailVerified).length,
+              },
+            ].map((item) => (
+              <div
+                key={item.role}
+                className="flex flex-col items-center p-3 border rounded-lg bg-background"
               >
-                <DialogTrigger asChild>
-                  <Button className="bg-teal-600 hover:bg-teal-700 text-white">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add User
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create New User</DialogTitle>
-                  </DialogHeader>
-                  <div className="p-4">
-                    <p className="text-slate-600">
-                      User creation form would go here. In the real application,
-                      this would include fields for all user information and
-                      role assignment.
-                    </p>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                <div className="p-1.5 rounded-full bg-primary/10 mb-2">
+                  {item.icon}
+                </div>
+                <div className="text-lg font-bold">{item.count}</div>
+                <div className="text-xs text-muted-foreground">
+                  {item.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs
+        defaultValue="all"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-4"
+      >
+        <TabsList className="grid grid-cols-4 w-full">
+          <TabsTrigger value="all">All Staff</TabsTrigger>
+          <TabsTrigger value="admins">Admins</TabsTrigger>
+          <TabsTrigger value="staff">Care Team</TabsTrigger>
+          <TabsTrigger value="unverified">Unverified</TabsTrigger>
+        </TabsList>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+              <CardTitle>Staff Accounts</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
+                📝 <strong>Verification:</strong> Users verify their email via
+                verification link sent during account creation.
+                <br />
+                🏥 <strong>Patients:</strong> Managed separately on the{" "}
+                <a
+                  href="/admin/patients"
+                  className="text-blue-600 hover:underline"
+                >
+                  Patients page
+                </a>
+                .
+              </CardDescription>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search users..."
+                    className="pl-9 w-full sm:w-[250px]"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger className="w-full sm:w-[150px]">
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="reviewer">Reviewer</SelectItem>
+                    <SelectItem value="care_giver">Care Giver</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Search users..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-              <select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                className="px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              >
-                <option value="all">All Roles</option>
-                <option value="admin">Administrator</option>
-                <option value="reviewer">Medical Reviewer</option>
-                <option value="care_giver">Care Provider</option>
-                <option value="patient">Patient</option>
-              </select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Users Table */}
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Login</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium text-slate-900">
-                          {u.firstName} {u.lastName}
-                        </div>
-                        <div className="text-sm text-slate-600">{u.email}</div>
-                        <div className="text-sm text-slate-500">
-                          @{u.username}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getRoleBadgeColor(u.role)}>
-                        {getRoleDisplayName(u.role)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(u)}
-                        <span className="text-sm text-slate-600">
-                          {getStatusText(u)}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-slate-600">
-                        {u.lastLogin
-                          ? new Date(u.lastLogin).toLocaleDateString()
-                          : "Never"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        {canEditUser(u) && (
-                          <Button size="sm" variant="outline">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {canDeleteUser(u) && (
+            ) : filteredUsers.length === 0 ? (
+              <div className="text-center py-10">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <div className="text-muted-foreground">No users found</div>
+              </div>
+            ) : (
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Last Login</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Users className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-medium">
+                                {user.firstName} {user.lastName}
+                              </div>
+                              <div className="text-sm text-muted-foreground flex items-center">
+                                <Mail className="h-3 w-3 mr-1" />
+                                {user.email}
+                              </div>
+                              <div className="text-sm text-muted-foreground flex items-center">
+                                <span className="text-xs">
+                                  @{user.username}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{getRoleBadge(user.role)}</TableCell>
+                        <TableCell>{getStatusBadge(user)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <span>{formatUserDate(user.createdAt)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <span>{formatUserDate(user.lastLogin)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
                           <Button
-                            size="sm"
                             variant="outline"
-                            className="text-red-600 hover:text-red-700 bg-transparent"
+                            size="sm"
+                            onClick={() =>
+                              router.push(`/admin/users/${user.id}`)
+                            }
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Edit className="h-4 w-4 mr-1" />
+                            View
                           </Button>
-                        )}
-                        {u.role === "super_admin" && (
-                          <Badge variant="outline" className="text-xs">
-                            Protected
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
-      </div>
+      </Tabs>
     </div>
   );
 }

@@ -1,101 +1,195 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, Users, Clock, Award } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Heart,
+  Users,
+  Clock,
+  Award,
+  Loader2,
+  MapPin,
+  Briefcase,
+  DollarSign,
+  FileText,
+} from "lucide-react";
+import {
+  getPublishedJobPositions,
+  createCareerApplication,
+} from "@/lib/api/careers";
+import { JobPosition } from "@/lib/types/careers";
 
 export default function CareersPage() {
-  const positions = [
-    {
-      title: "Live-in Care Specialist",
-      type: "Full-time",
-      location: "Accra, Ghana",
-      description:
-        "Provide comprehensive 24/7 home care services to families in need. Work closely with families to ensure comfort and quality care.",
-      requirements: [
-        "Nursing certification",
-        "2+ years experience",
-        "Excellent communication skills",
-        "Compassionate nature",
-      ],
-      salary: "GHS 2,500 - 3,500/month",
-      category: "Healthcare",
-    },
-    {
-      title: "Professional Nanny",
-      type: "Full-time / Part-time",
-      location: "Greater Accra",
-      description:
-        "Care for children with love, patience, and professional expertise. Support child development and educational activities.",
-      requirements: [
-        "Childcare certification",
-        "First aid training",
-        "References required",
-        "Educational background",
-      ],
-      salary: "GHS 1,800 - 2,800/month",
-      category: "Childcare",
-    },
-    {
-      title: "Home Visit Nurse",
-      type: "Contract",
-      location: "Multiple locations",
-      description:
-        "Provide daily nursing care and health monitoring services. Travel to client homes for professional medical support.",
-      requirements: [
-        "Valid nursing license",
-        "Transportation",
-        "Flexible schedule",
-        "Professional demeanor",
-      ],
-      salary: "GHS 120 - 180/visit",
-      category: "Healthcare",
-    },
-    {
-      title: "Event Medical Coordinator",
-      type: "Contract",
-      location: "Nationwide",
-      description:
-        "Coordinate medical coverage for events, conferences, and gatherings. Ensure safety protocols and emergency preparedness.",
-      requirements: [
-        "Medical background",
-        "Event management experience",
-        "Leadership skills",
-        "Emergency response training",
-      ],
-      salary: "GHS 800 - 1,200/event",
-      category: "Event Medical",
-    },
-    {
-      title: "Senior Childcare Specialist",
-      type: "Full-time",
-      location: "East Legon, Accra",
-      description:
-        "Lead childcare services with advanced educational support. Mentor junior staff and develop care programs.",
-      requirements: [
-        "Bachelor's in Education/Child Development",
-        "5+ years experience",
-        "Leadership experience",
-        "Training certification",
-      ],
-      salary: "GHS 3,000 - 4,000/month",
-      category: "Childcare",
-    },
-    {
-      title: "Emergency Response Nurse",
-      type: "Full-time",
-      location: "Greater Accra",
-      description:
-        "Provide rapid response medical care and emergency support. Available for urgent home visits and medical emergencies.",
-      requirements: [
-        "Emergency nursing certification",
-        "Valid driver's license",
-        "24/7 availability",
-        "Critical care experience",
-      ],
-      salary: "GHS 3,500 - 4,500/month",
-      category: "Healthcare",
-    },
-  ];
+  const [positions, setPositions] = useState<JobPosition[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showGeneralApplicationDialog, setShowGeneralApplicationDialog] =
+    useState(false);
+  const [showJobApplicationDialog, setShowJobApplicationDialog] =
+    useState(false);
+  const [selectedJob, setSelectedJob] = useState<JobPosition | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [applicationData, setApplicationData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    resumeFile: null as File | null,
+    coverLetterFile: null as File | null,
+  });
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const jobs = await getPublishedJobPositions();
+        setPositions(jobs);
+      } catch (error) {
+        console.error("Failed to fetch job positions:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, []);
+
+  const handleGeneralApplicationSubmit = async () => {
+    try {
+      if (
+        !applicationData.firstName ||
+        !applicationData.lastName ||
+        !applicationData.email
+      ) {
+        alert("Please fill in required fields (Name and Email)");
+        return;
+      }
+
+      setIsSubmitting(true);
+
+      // For now, we'll store file names (in a real app, you'd upload to a file server)
+      const resumeUrl = applicationData.resumeFile
+        ? `/uploads/${applicationData.resumeFile.name}`
+        : undefined;
+      const coverLetterText = applicationData.coverLetterFile
+        ? `Uploaded file: ${applicationData.coverLetterFile.name}`
+        : "I am writing to express my strong interest in joining your team. With my background and passion for providing excellent care, I believe I would be a valuable addition to your organization. I am committed to delivering compassionate, professional service and would welcome the opportunity to discuss how my skills can contribute to your mission.";
+
+      await createCareerApplication({
+        firstName: applicationData.firstName,
+        lastName: applicationData.lastName,
+        email: applicationData.email,
+        phone: applicationData.phone,
+        resumeUrl: resumeUrl,
+        coverLetter: coverLetterText,
+        // General application - no specific position
+      });
+
+      // Reset form and close dialog
+      setApplicationData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        resumeFile: null,
+        coverLetterFile: null,
+      });
+      setShowGeneralApplicationDialog(false);
+
+      // Show success dialog
+      setSuccessMessage(
+        "Thank you! Your general application has been submitted successfully."
+      );
+      setShowSuccessDialog(true);
+    } catch (error) {
+      console.error("Failed to submit application:", error);
+      alert(
+        "There was an error submitting your application. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleJobApplicationSubmit = async () => {
+    try {
+      if (
+        !applicationData.firstName ||
+        !applicationData.lastName ||
+        !applicationData.email ||
+        !selectedJob
+      ) {
+        alert("Please fill in required fields (Name and Email)");
+        return;
+      }
+
+      setIsSubmitting(true);
+
+      // For now, we'll store file names (in a real app, you'd upload to a file server)
+      const resumeUrl = applicationData.resumeFile
+        ? `/uploads/${applicationData.resumeFile.name}`
+        : undefined;
+      const coverLetterText = applicationData.coverLetterFile
+        ? `Uploaded file: ${applicationData.coverLetterFile.name}`
+        : "I am excited to apply for this position. My experience and dedication to providing quality care make me an ideal candidate. I am eager to contribute to your team and would appreciate the opportunity to discuss how my skills align with your needs.";
+
+      await createCareerApplication({
+        firstName: applicationData.firstName,
+        lastName: applicationData.lastName,
+        email: applicationData.email,
+        phone: applicationData.phone,
+        resumeUrl: resumeUrl,
+        coverLetter: coverLetterText,
+        positionId: selectedJob.id,
+        positionTitle: selectedJob.title,
+      });
+
+      // Reset form and close dialog
+      const jobTitle = selectedJob.title;
+      setApplicationData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        resumeFile: null,
+        coverLetterFile: null,
+      });
+      setShowJobApplicationDialog(false);
+      setSelectedJob(null);
+
+      // Show success dialog
+      setSuccessMessage(
+        `Thank you! Your application for ${jobTitle} has been submitted successfully.`
+      );
+      setShowSuccessDialog(true);
+    } catch (error) {
+      console.error("Failed to submit application:", error);
+      alert(
+        "There was an error submitting your application. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleApplyToJob = (job: JobPosition) => {
+    setSelectedJob(job);
+    setShowJobApplicationDialog(true);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -193,53 +287,122 @@ export default function CareersPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {positions.map((position, index) => (
-              <Card
-                key={index}
-                className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300"
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-slate-600" />
+            </div>
+          ) : positions.length === 0 ? (
+            <div className="text-center py-16">
+              <Briefcase className="h-16 w-16 mx-auto text-slate-400 mb-4" />
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                No Openings Available
+              </h3>
+              <p className="text-slate-600 mb-6">
+                We don't have any open positions at the moment, but we're always
+                looking for talented professionals.
+              </p>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-teal-600 text-teal-600"
+                onClick={() => setShowGeneralApplicationDialog(true)}
               >
-                <CardHeader className="pb-4">
-                  <div className="mb-2">
-                    <CardTitle className="text-lg text-slate-900 mb-2">
-                      {position.title}
-                    </CardTitle>
-                    <div className="space-y-1">
-                      <p className="text-sm text-slate-600">
-                        {position.type} • {position.location}
-                      </p>
-                      <p className="text-sm font-semibold text-teal-600">
-                        {position.salary}
-                      </p>
-                      <span className="inline-block px-2 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full">
-                        {position.category}
-                      </span>
+                Submit General Application
+              </Button>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {positions.map((position) => (
+                <Card
+                  key={position.id}
+                  className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300"
+                >
+                  <CardHeader className="pb-4">
+                    <div className="mb-2">
+                      <CardTitle className="text-lg text-slate-900 mb-2">
+                        {position.title}
+                      </CardTitle>
+                      <div className="space-y-2">
+                        <div className="flex items-center text-sm text-slate-600">
+                          <Briefcase className="h-4 w-4 mr-2" />
+                          {position.type}
+                        </div>
+                        <div className="flex items-center text-sm text-slate-600">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          {position.location}
+                        </div>
+                        <div className="flex items-center text-sm font-semibold text-teal-600">
+                          <DollarSign className="h-4 w-4 mr-2" />
+                          {position.salary}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="outline">{position.category}</Badge>
+                          {position.numberOfPositions &&
+                            position.numberOfPositions > 1 && (
+                              <Badge variant="secondary">
+                                {position.numberOfPositions} positions
+                              </Badge>
+                            )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
-                  <p className="text-slate-600 mb-4 text-sm leading-relaxed">
-                    {position.description}
-                  </p>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-slate-900 mb-2 text-sm">
-                      Requirements:
-                    </h4>
-                    <ul className="list-disc list-inside text-slate-600 space-y-1 text-sm">
-                      {position.requirements.map((req, reqIndex) => (
-                        <li key={reqIndex}>{req}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="mt-6 pt-4 border-t border-slate-200">
-                    <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
-                      Apply Now
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex flex-col">
+                    <p className="text-slate-600 mb-4 text-sm leading-relaxed">
+                      {position.description}
+                    </p>
+
+                    {position.requirements &&
+                      position.requirements.length > 0 && (
+                        <div className="flex-1 mb-4">
+                          <h4 className="font-semibold text-slate-900 mb-2 text-sm">
+                            Requirements:
+                          </h4>
+                          <ul className="list-disc list-inside text-slate-600 space-y-1 text-sm">
+                            {position.requirements.map((req, reqIndex) => (
+                              <li key={reqIndex}>{req}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                    {position.benefits && position.benefits.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="font-semibold text-slate-900 mb-2 text-sm">
+                          Benefits:
+                        </h4>
+                        <ul className="list-disc list-inside text-slate-600 space-y-1 text-sm">
+                          {position.benefits.map((benefit, benefitIndex) => (
+                            <li key={benefitIndex}>{benefit}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {position.remoteWorkOptions && (
+                      <div className="mb-4">
+                        <h4 className="font-semibold text-slate-900 mb-1 text-sm">
+                          Remote Work:
+                        </h4>
+                        <p className="text-slate-600 text-sm">
+                          {position.remoteWorkOptions}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mt-auto pt-4 border-t border-slate-200">
+                      <Button
+                        className="w-full bg-teal-600 hover:bg-teal-700 text-white"
+                        onClick={() => handleApplyToJob(position)}
+                      >
+                        Apply Now
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
           {/* Additional CTA */}
           <div className="text-center mt-16">
@@ -256,6 +419,7 @@ export default function CareersPage() {
                 size="lg"
                 variant="outline"
                 className="border-teal-600 text-teal-600"
+                onClick={() => setShowGeneralApplicationDialog(true)}
               >
                 Submit General Application
               </Button>
@@ -263,6 +427,306 @@ export default function CareersPage() {
           </div>
         </div>
       </section>
+
+      {/* General Application Dialog */}
+      <Dialog
+        open={showGeneralApplicationDialog}
+        onOpenChange={setShowGeneralApplicationDialog}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <FileText className="h-5 w-5 mr-2" />
+              Submit General Application
+            </DialogTitle>
+            <DialogDescription>
+              Tell us about yourself and your interest in joining our team.
+              We'll keep your information on file for future opportunities.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  value={applicationData.firstName}
+                  onChange={(e) =>
+                    setApplicationData({
+                      ...applicationData,
+                      firstName: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  value={applicationData.lastName}
+                  onChange={(e) =>
+                    setApplicationData({
+                      ...applicationData,
+                      lastName: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={applicationData.email}
+                  onChange={(e) =>
+                    setApplicationData({
+                      ...applicationData,
+                      email: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={applicationData.phone}
+                  onChange={(e) =>
+                    setApplicationData({
+                      ...applicationData,
+                      phone: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="resume">Resume (PDF, DOC, DOCX)</Label>
+              <Input
+                id="resume"
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setApplicationData({
+                    ...applicationData,
+                    resumeFile: file,
+                  });
+                }}
+                className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="coverLetter">Cover Letter (PDF, DOC, DOCX)</Label>
+              <Input
+                id="coverLetter"
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setApplicationData({
+                    ...applicationData,
+                    coverLetterFile: file,
+                  });
+                }}
+                className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowGeneralApplicationDialog(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleGeneralApplicationSubmit}
+              disabled={isSubmitting}
+              className="bg-teal-600 hover:bg-teal-700"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Application"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Job-Specific Application Dialog */}
+      <Dialog
+        open={showJobApplicationDialog}
+        onOpenChange={setShowJobApplicationDialog}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Briefcase className="h-5 w-5 mr-2" />
+              Apply for {selectedJob?.title}
+            </DialogTitle>
+            <DialogDescription>
+              Submit your application for this position. We'll review your
+              information and get back to you soon.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="job-firstName">First Name *</Label>
+                <Input
+                  id="job-firstName"
+                  value={applicationData.firstName}
+                  onChange={(e) =>
+                    setApplicationData({
+                      ...applicationData,
+                      firstName: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="job-lastName">Last Name *</Label>
+                <Input
+                  id="job-lastName"
+                  value={applicationData.lastName}
+                  onChange={(e) =>
+                    setApplicationData({
+                      ...applicationData,
+                      lastName: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="job-email">Email *</Label>
+                <Input
+                  id="job-email"
+                  type="email"
+                  value={applicationData.email}
+                  onChange={(e) =>
+                    setApplicationData({
+                      ...applicationData,
+                      email: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="job-phone">Phone</Label>
+                <Input
+                  id="job-phone"
+                  value={applicationData.phone}
+                  onChange={(e) =>
+                    setApplicationData({
+                      ...applicationData,
+                      phone: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="job-resume">Resume (PDF, DOC, DOCX)</Label>
+              <Input
+                id="job-resume"
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setApplicationData({
+                    ...applicationData,
+                    resumeFile: file,
+                  });
+                }}
+                className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="job-coverLetter">
+                Cover Letter (PDF, DOC, DOCX)
+              </Label>
+              <Input
+                id="job-coverLetter"
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setApplicationData({
+                    ...applicationData,
+                    coverLetterFile: file,
+                  });
+                }}
+                className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+              />
+            </div>
+
+            {/* Show Job Details */}
+            {selectedJob && (
+              <div className="mt-4 p-4 bg-slate-50 rounded-lg">
+                <h4 className="font-semibold text-slate-900 mb-2">
+                  Position Details:
+                </h4>
+                <div className="text-sm text-slate-600 space-y-1">
+                  <p>
+                    <strong>Location:</strong> {selectedJob.location}
+                  </p>
+                  <p>
+                    <strong>Type:</strong> {selectedJob.type}
+                  </p>
+                  <p>
+                    <strong>Salary:</strong> {selectedJob.salary}
+                  </p>
+                  <p>
+                    <strong>Category:</strong> {selectedJob.category}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowJobApplicationDialog(false);
+                setSelectedJob(null);
+              }}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleJobApplicationSubmit}
+              disabled={isSubmitting}
+              className="bg-teal-600 hover:bg-teal-700"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Application"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

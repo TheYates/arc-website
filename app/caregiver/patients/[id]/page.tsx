@@ -1,23 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
-import AuthHeader from "@/components/auth-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
+import { getPatientById } from "@/lib/api/patients";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  getMedications,
+  getMedicationAdministrations,
+  recordMedicationAdministration,
+} from "@/lib/api/medications";
+import { getVitalSigns, createVitalSigns } from "@/lib/api/vitals";
+import { getMedicalReviews } from "@/lib/api/medical-reviews";
+import { Patient } from "@/lib/types/patients";
+import { Medication, MedicationAdministration } from "@/lib/types/medications";
+import { VitalSigns } from "@/lib/types/vitals";
+import { MedicalReview } from "@/lib/types/medical-reviews";
+import { formatDate } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -26,2007 +30,1288 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useAuth } from "@/lib/auth";
 import {
-  ArrowLeft,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
   User,
-  Phone,
-  MapPin,
-  Calendar,
-  AlertTriangle,
-  Heart,
-  Activity,
-  Pill,
-  FileText,
   Plus,
+  Stethoscope,
+  Pill,
+  Activity,
+  FileText,
+  Eye,
   Clock,
-  Save,
+  AlertTriangle,
+  ArrowLeft,
+  Heart,
+  CheckCircle,
+  X,
+  ChevronDown,
+  MoreVertical,
 } from "lucide-react";
+import { RoleHeader } from "@/components/role-header";
+import { useToast } from "@/hooks/use-toast";
 
-// Utility function to format dates and times for caregiver role
-const formatDateTime = (dateString: string) => {
-  const date = new Date(dateString);
-  const fullDate = date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const time = date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-  return { fullDate, time };
-};
+import { PatientSymptomReportForm } from "@/components/medical/patient-symptom-report-form";
 
-const formatDateOnly = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};
-
-const formatCompactDateTime = (dateString: string) => {
-  const date = new Date(dateString);
-  const compactDate = date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-  const time = date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-  return `${compactDate} at ${time}`;
-};
-
-interface Patient {
-  id: string;
-  name: string;
-  age: number;
-  gender: string;
-  conditions: string[];
-  careLevel: "low" | "medium" | "high" | "critical";
-  status: "stable" | "improving" | "declining" | "critical";
-  assignedDate: string;
-  lastVisit: string;
-  nextVisit: string;
-  address: string;
-  phone: string;
-  emergencyContact: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
-  vitals: {
-    bloodPressure: string;
-    heartRate: string;
-    temperature: string;
-    oxygenSaturation: string;
-    recordedDate: string;
-  };
-  medications: number;
-  notes: string;
-  riskFactors: string[];
-  allergies: string[];
+interface PageProps {
+  params: Promise<{ id: string }>;
 }
 
-interface QuickVitals {
-  bloodPressureSystolic: string;
-  bloodPressureDiastolic: string;
-  heartRate: string;
-  temperature: string;
-  oxygenSaturation: string;
-  respiratoryRate: string;
-  bloodGlucose: string;
-  weight: string;
-  height: string;
-  painLevel: string;
-}
-
-interface QuickMedication {
-  medicationName: string;
-  dosage: string;
-  administeredTime: string;
-  notes: string;
-}
-
-interface QuickNote {
-  type: "general" | "medication" | "vitals" | "behavioral" | "emergency";
-  content: string;
-  priority: "low" | "medium" | "high";
-}
-
-interface VitalRecord {
-  id: string;
-  patientId: string;
-  // Basic vitals
-  bloodPressure: string;
-  heartRate: string;
-  temperature: string;
-  oxygenSaturation: string;
-  // Extended vitals
-  respiratoryRate: string;
-  bloodGlucose?: string;
-  weight?: string;
-  height?: string;
-  bmi?: string;
-  painLevel?: string; // 1-10 scale
-  // Metadata
-  recordedDate: string;
-  recordedBy: string;
-}
-
-interface PrescribedMedication {
-  id: string;
-  patientId: string;
-  medicationName: string;
-  dosage: string;
-  frequency: string;
-  instructions: string;
-  prescribedBy: string;
-  prescribedDate: string;
-  startDate: string;
-  endDate?: string;
-  isActive: boolean;
-}
-
-interface MedicationAdministration {
-  id: string;
-  prescriptionId: string;
-  patientId: string;
-  scheduledTime: string;
-  administeredTime?: string;
-  administeredBy?: string;
-  status: "pending" | "administered" | "missed" | "refused" | "delayed";
-  notes?: string;
-  sideEffects?: string[];
-}
-
-interface CareNote {
-  id: string;
-  patientId: string;
-  type: "general" | "medication" | "vitals" | "behavioral" | "emergency";
-  content: string;
-  priority: "low" | "medium" | "high";
-  createdDate: string;
-  createdBy: string;
-  updatedDate?: string;
-}
-
-export default function PatientDetailPage() {
-  const { user, isLoading: authLoading } = useAuth();
+export default function CaregiverPatientDetailPage({ params }: PageProps) {
+  const resolvedParams = React.use(params);
+  const { user, logout } = useAuth();
+  const { toast } = useToast();
   const router = useRouter();
-  const params = useParams();
-  const patientId = params.id as string;
-
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Comprehensive data states
-  const [vitalRecords, setVitalRecords] = useState<VitalRecord[]>([]);
-  const [prescribedMedications, setPrescribedMedications] = useState<
-    PrescribedMedication[]
-  >([]);
-  const [medicationAdministrations, setMedicationAdministrations] = useState<
+  // Medical data states
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [administrations, setAdministrations] = useState<
     MedicationAdministration[]
   >([]);
-  const [careNotes, setCareNotes] = useState<CareNote[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [vitals, setVitals] = useState<VitalSigns[]>([]);
+  const [medicalReviews, setMedicalReviews] = useState<MedicalReview[]>([]);
 
-  // Quick entry states
-  const [quickVitals, setQuickVitals] = useState<QuickVitals>({
-    bloodPressureSystolic: "",
-    bloodPressureDiastolic: "",
-    heartRate: "",
-    temperature: "",
-    oxygenSaturation: "",
-    respiratoryRate: "",
-    bloodGlucose: "",
-    weight: "",
-    height: "",
-    painLevel: "",
+  // UI states
+  const [showVitalsForm, setShowVitalsForm] = useState(false);
+  const [showSymptomForm, setShowSymptomForm] = useState(false);
+  const [showAdminDialog, setShowAdminDialog] = useState(false);
+  const [selectedMedication, setSelectedMedication] =
+    useState<Medication | null>(null);
+  const [adminFormData, setAdminFormData] = useState({
+    status: "administered",
+    actualTime: new Date().toISOString().slice(0, 16),
+    dosageGiven: "",
+    notes: "",
   });
 
-  const [quickNote, setQuickNote] = useState<QuickNote>({
-    type: "general",
-    content: "",
-    priority: "medium",
-  });
-
-  // Allergy management state
-  const [newAllergy, setNewAllergy] = useState("");
-  const [isAddingAllergy, setIsAddingAllergy] = useState(false);
-
-  // Medication confirmation dialog state
-  const [confirmationDialog, setConfirmationDialog] = useState<{
-    isOpen: boolean;
-    administrationId: string;
-    action: "administered" | "missed" | "refused";
-    medicationName: string;
-  }>({
-    isOpen: false,
-    administrationId: "",
-    action: "administered",
-    medicationName: "",
-  });
-
-  // Pagination state
-  const [vitalsPage, setVitalsPage] = useState(1);
-  const [medicationsPage, setMedicationsPage] = useState(1);
-  const [notesPage, setNotesPage] = useState(1);
-  const [historyPage, setHistoryPage] = useState(1);
-  const itemsPerPage = 5;
-
-  // Mock patient data - in real app, this would come from API
-  const mockPatients: Patient[] = [
-    {
-      id: "5",
-      name: "Akosua Asante",
-      age: 67,
-      gender: "female",
-      conditions: ["Hypertension", "Diabetes Type 2", "Arthritis"],
-      careLevel: "medium",
-      status: "stable",
-      assignedDate: "2024-01-10",
-      lastVisit: "2024-01-15",
-      nextVisit: "2024-01-17",
-      address: "123 Accra Street, Accra",
-      phone: "+233 24 000 0005",
-      emergencyContact: {
-        name: "Kwame Asante",
-        relationship: "Son",
-        phone: "+233 24 111 1111",
-      },
-      vitals: {
-        bloodPressure: "135/85",
-        heartRate: "82",
-        temperature: "36.7°C",
-        oxygenSaturation: "97%",
-        recordedDate: "2024-01-15T10:30:00Z",
-      },
-      medications: 4,
-      notes:
-        "Patient is responding well to current treatment plan. Blood pressure slightly elevated but within acceptable range.",
-      riskFactors: ["Fall Risk", "Medication Compliance"],
-      allergies: ["Penicillin", "Shellfish"],
-    },
-    {
-      id: "6",
-      name: "Kofi Mensah",
-      age: 72,
-      gender: "male",
-      conditions: ["Type 2 Diabetes", "Diabetic Neuropathy", "Hypertension"],
-      careLevel: "medium",
-      status: "stable",
-      assignedDate: "2024-01-05",
-      lastVisit: "2024-01-16",
-      nextVisit: "2024-01-18",
-      address: "456 Tema Avenue, Tema",
-      phone: "+233 24 000 0006",
-      emergencyContact: {
-        name: "Ama Mensah",
-        relationship: "Wife",
-        phone: "+233 24 222 2222",
-      },
-      vitals: {
-        bloodPressure: "140/85",
-        heartRate: "78",
-        temperature: "36.8°C",
-        oxygenSaturation: "98%",
-        recordedDate: "2024-01-16T08:15:00Z",
-      },
-      medications: 3,
-      notes:
-        "Blood sugar levels stable. Neuropathy pain managed well with current medications.",
-      riskFactors: ["Diabetes", "Neuropathy"],
-      allergies: ["Aspirin"],
-    },
-  ];
+  const isCaregiver =
+    user?.role === "care_giver" || user?.role === "super_admin";
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!user || (user.role !== "care_giver" && user.role !== "super_admin")) {
       router.push("/login");
-    }
-    if (user && user.role !== "care_giver") {
-      router.push("/dashboard");
-    }
-    if (user && user.role === "care_giver") {
-      loadPatient();
-    }
-  }, [user, authLoading, router, patientId]);
-
-  const loadPatient = async () => {
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const foundPatient = mockPatients.find((p) => p.id === patientId);
-    setPatient(foundPatient || null);
-
-    // Load comprehensive data
-    if (foundPatient) {
-      await loadPatientData(foundPatient.id);
+      return;
     }
 
-    setIsLoading(false);
-  };
+    const fetchData = async () => {
+      try {
+        const patientData = await getPatientById(resolvedParams.id);
+        setPatient(patientData);
 
-  const loadPatientData = async (patientId: string) => {
-    setIsLoadingData(true);
+        if (patientData) {
+          // Load medical data
+          const medicationsData = getMedications(resolvedParams.id);
+          setMedications(medicationsData);
 
-    // Mock vital records
-    const mockVitals: VitalRecord[] = [
-      {
-        id: "v1",
-        patientId,
-        bloodPressure: "135/85",
-        heartRate: "82",
-        temperature: "36.7",
-        oxygenSaturation: "97",
-        respiratoryRate: "16",
-        weight: "68",
-        height: "165",
-        recordedDate: "2024-01-15T10:30:00Z",
-        recordedBy: "Nurse Sarah",
-      },
-      {
-        id: "v2",
-        patientId,
-        bloodPressure: "140/88",
-        heartRate: "85",
-        temperature: "36.8",
-        oxygenSaturation: "96",
-        respiratoryRate: "18",
-        bloodGlucose: "110",
-        weight: "70",
-        painLevel: "3",
-        recordedDate: "2024-01-14T08:15:00Z",
-        recordedBy: "Nurse John",
-      },
-    ];
+          const administrationsData = getMedicationAdministrations(
+            resolvedParams.id
+          );
+          setAdministrations(administrationsData);
 
-    // Mock prescribed medications
-    const mockPrescriptions: PrescribedMedication[] = [
-      {
-        id: "p1",
-        patientId,
-        medicationName: "Metformin",
-        dosage: "500mg",
-        frequency: "Twice daily (morning and evening)",
-        instructions: "Take with meals to reduce stomach upset",
-        prescribedBy: "Dr. Smith",
-        prescribedDate: "2024-01-10T09:00:00Z",
-        startDate: "2024-01-10",
-        endDate: "2024-02-10",
-        isActive: true,
-      },
-      {
-        id: "p2",
-        patientId,
-        medicationName: "Lisinopril",
-        dosage: "10mg",
-        frequency: "Once daily (morning)",
-        instructions:
-          "Take at the same time each day, preferably in the morning",
-        prescribedBy: "Dr. Smith",
-        prescribedDate: "2024-01-10T09:00:00Z",
-        startDate: "2024-01-10",
-        isActive: true,
-      },
-    ];
+          const vitalsData = getVitalSigns(resolvedParams.id);
+          setVitals(vitalsData);
 
-    // Mock medication administrations
-    const mockAdministrations: MedicationAdministration[] = [
-      {
-        id: "a1",
-        prescriptionId: "p1",
-        patientId,
-        scheduledTime: "2024-01-15T08:00:00Z",
-        administeredTime: "2024-01-15T08:15:00Z",
-        administeredBy: "Nurse Sarah",
-        status: "administered",
-        notes: "Taken with breakfast, no side effects",
-      },
-      {
-        id: "a2",
-        prescriptionId: "p1",
-        patientId,
-        scheduledTime: "2024-01-15T20:00:00Z",
-        administeredTime: "2024-01-15T20:10:00Z",
-        administeredBy: "Nurse Sarah",
-        status: "administered",
-        notes: "Taken with dinner",
-      },
-      {
-        id: "a3",
-        prescriptionId: "p2",
-        patientId,
-        scheduledTime: "2024-01-15T08:00:00Z",
-        administeredTime: "2024-01-15T08:15:00Z",
-        administeredBy: "Nurse Sarah",
-        status: "administered",
-        notes: "For blood pressure control",
-      },
-      {
-        id: "a4",
-        prescriptionId: "p1",
-        patientId,
-        scheduledTime: "2024-01-16T08:00:00Z",
-        status: "pending",
-      },
-      {
-        id: "a5",
-        prescriptionId: "p2",
-        patientId,
-        scheduledTime: "2024-01-16T08:00:00Z",
-        status: "pending",
-      },
-    ];
-
-    // Mock care notes
-    const mockNotes: CareNote[] = [
-      {
-        id: "n1",
-        patientId,
-        type: "general",
-        content:
-          "Patient is responding well to current treatment plan. Blood pressure slightly elevated but within acceptable range.",
-        priority: "medium",
-        createdDate: "2024-01-15T14:30:00Z",
-        createdBy: "Nurse Sarah",
-      },
-      {
-        id: "n2",
-        patientId,
-        type: "vitals",
-        content:
-          "Blood pressure trending upward. Recommend monitoring more frequently.",
-        priority: "high",
-        createdDate: "2024-01-14T16:45:00Z",
-        createdBy: "Nurse John",
-      },
-    ];
-
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    setVitalRecords(mockVitals);
-    setPrescribedMedications(mockPrescriptions);
-    setMedicationAdministrations(mockAdministrations);
-    setCareNotes(mockNotes);
-    setIsLoadingData(false);
-  };
-
-  const handleQuickVitalsSubmit = async () => {
-    if (!patient) return;
-
-    // Create new vital record
-    const newVital: VitalRecord = {
-      id: `v${Date.now()}`,
-      patientId: patient.id,
-      bloodPressure: `${quickVitals.bloodPressureSystolic}/${quickVitals.bloodPressureDiastolic}`,
-      heartRate: quickVitals.heartRate,
-      temperature: quickVitals.temperature,
-      oxygenSaturation: quickVitals.oxygenSaturation,
-      respiratoryRate: quickVitals.respiratoryRate,
-      bloodGlucose: quickVitals.bloodGlucose || undefined,
-      weight: quickVitals.weight || undefined,
-      height: quickVitals.height || undefined,
-      bmi:
-        quickVitals.weight && quickVitals.height
-          ? (
-              parseFloat(quickVitals.weight) /
-              Math.pow(parseFloat(quickVitals.height) / 100, 2)
-            ).toFixed(1)
-          : undefined,
-      painLevel: quickVitals.painLevel || undefined,
-      recordedDate: new Date().toISOString(),
-      recordedBy: "Current Caregiver",
+          const reviewsData = getMedicalReviews(resolvedParams.id);
+          setMedicalReviews(reviewsData);
+        }
+      } catch (error) {
+        console.error("Error fetching patient:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load patient data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    // Add to vital records list
-    setVitalRecords((prev) => [newVital, ...prev]);
+    fetchData();
+  }, [resolvedParams.id, user, router, toast]);
 
-    // Reset form
-    setQuickVitals({
-      bloodPressureSystolic: "",
-      bloodPressureDiastolic: "",
-      heartRate: "",
-      temperature: "",
-      oxygenSaturation: "",
-      respiratoryRate: "",
-      bloodGlucose: "",
-      weight: "",
-      height: "",
-      painLevel: "",
-    });
-
-    // Show success message
-    alert("Vitals recorded successfully!");
-  };
-
-  const openConfirmationDialog = (
-    administrationId: string,
-    action: "administered" | "missed" | "refused"
-  ) => {
-    const administration = medicationAdministrations.find(
-      (admin) => admin.id === administrationId
-    );
-    const prescription = prescribedMedications.find(
-      (p) => p.id === administration?.prescriptionId
-    );
-
-    setConfirmationDialog({
-      isOpen: true,
-      administrationId,
-      action,
-      medicationName: prescription?.medicationName || "Unknown medication",
+  const handleVitalsSaved = () => {
+    const updatedVitals = getVitalSigns(resolvedParams.id);
+    setVitals(updatedVitals);
+    setShowVitalsForm(false);
+    toast({
+      title: "Success",
+      description: "Vital signs recorded successfully",
     });
   };
 
-  const handleMedicationAdministration = async (
-    administrationId: string,
-    status: "administered" | "missed" | "refused",
-    notes?: string
-  ) => {
-    if (!patient) return;
-
-    // Update the administration record
-    setMedicationAdministrations((prev) =>
-      prev.map((admin) =>
-        admin.id === administrationId
-          ? {
-              ...admin,
-              status,
-              administeredTime:
-                status === "administered"
-                  ? new Date().toISOString()
-                  : undefined,
-              administeredBy:
-                status === "administered" ? "Current Caregiver" : undefined,
-              notes: notes || admin.notes,
-            }
-          : admin
-      )
+  // Helper function to get the latest administration for a medication
+  const getLatestAdministration = (medicationId: string) => {
+    const medicationAdministrations = administrations.filter(
+      (admin) => admin.medicationId === medicationId
     );
+    if (medicationAdministrations.length === 0) return null;
 
-    // Close dialog and show success message
-    setConfirmationDialog({
-      isOpen: false,
-      administrationId: "",
-      action: "administered",
-      medicationName: "",
-    });
-    const statusText =
-      status === "administered"
-        ? "administered"
-        : status === "missed"
-        ? "marked as missed"
-        : "marked as refused";
-    alert(`Medication ${statusText} successfully!`);
+    return medicationAdministrations.sort(
+      (a, b) =>
+        new Date(b.actualTime || b.scheduledTime).getTime() -
+        new Date(a.actualTime || a.scheduledTime).getTime()
+    )[0];
   };
 
-  const handleQuickMedicationSubmit = async () => {
-    // This function is now used for marking medications as administered
-    // The actual medication entry is handled by the administration workflow
-    alert(
-      "Please use the medication schedule below to mark medications as administered."
+  // Helper function to get administration status badge
+  const getAdministrationStatusBadge = (status: string) => {
+    const statusColors = {
+      administered: "bg-green-100 text-green-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      missed: "bg-red-100 text-red-800",
+      refused: "bg-orange-100 text-orange-800",
+      partial: "bg-blue-100 text-blue-800",
+      delayed: "bg-purple-100 text-purple-800",
+      cancelled: "bg-gray-100 text-gray-800",
+    };
+
+    return (
+      statusColors[status as keyof typeof statusColors] ||
+      "bg-gray-100 text-gray-800"
     );
   };
 
-  const handleQuickNoteSubmit = async () => {
-    if (!patient) return;
-
-    // Create new care note
-    const newNote: CareNote = {
-      id: `n${Date.now()}`,
-      patientId: patient.id,
-      type: quickNote.type,
-      content: quickNote.content,
-      priority: quickNote.priority,
-      createdDate: new Date().toISOString(),
-      createdBy: "Current Caregiver",
-    };
-
-    // Add to care notes list
-    setCareNotes((prev) => [newNote, ...prev]);
-
-    // Reset form
-    setQuickNote({
-      type: "general",
-      content: "",
-      priority: "medium",
-    });
-
-    // Show success message
-    alert("Care note added successfully!");
-  };
-
-  const handleAddAllergy = async () => {
-    if (!patient || !newAllergy.trim()) return;
-
-    // Update patient allergies (in real app, this would be an API call)
-    const updatedPatient = {
-      ...patient,
-      allergies: [...patient.allergies, newAllergy.trim()],
-    };
-
-    // Reset form
-    setNewAllergy("");
-    setIsAddingAllergy(false);
-
-    // Show success message
-    alert("Allergy added successfully!");
-  };
-
-  // Pagination helper functions
-  const getPaginatedData = <T,>(data: T[], page: number) => {
-    const startIndex = (page - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return {
-      data: data.slice(startIndex, endIndex),
-      totalPages: Math.ceil(data.length / itemsPerPage),
-      hasNext: endIndex < data.length,
-      hasPrev: page > 1,
-    };
-  };
-
-  const PaginationControls = ({
-    currentPage,
-    totalPages,
-    onPageChange,
-    hasNext,
-    hasPrev,
-  }: {
-    currentPage: number;
-    totalPages: number;
-    onPageChange: (page: number) => void;
-    hasNext: boolean;
-    hasPrev: boolean;
-  }) => (
-    <div className="flex items-center justify-between mt-4">
-      <p className="text-sm text-slate-600">
-        Page {currentPage} of {totalPages}
-      </p>
-      <div className="flex space-x-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={!hasPrev}
-        >
-          Previous
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={!hasNext}
-        >
-          Next
-        </Button>
-      </div>
-    </div>
-  );
-
-  const getStatusColor = (status: string) => {
+  // Helper function to get administration status icon
+  const getAdministrationStatusIcon = (status: string) => {
     switch (status) {
-      case "stable":
-        return "bg-green-100 text-green-800";
-      case "improving":
-        return "bg-blue-100 text-blue-800";
-      case "declining":
-        return "bg-yellow-100 text-yellow-800";
-      case "critical":
-        return "bg-red-100 text-red-800";
+      case "administered":
+        return <CheckCircle className="h-3 w-3 text-green-600" />;
+      case "pending":
+        return <Clock className="h-3 w-3 text-yellow-600" />;
+      case "missed":
+        return <AlertTriangle className="h-3 w-3 text-red-600" />;
+      case "refused":
+        return <X className="h-3 w-3 text-orange-600" />;
+      case "partial":
+        return <Activity className="h-3 w-3 text-blue-600" />;
+      case "delayed":
+        return <Clock className="h-3 w-3 text-purple-600" />;
+      case "cancelled":
+        return <X className="h-3 w-3 text-gray-600" />;
       default:
-        return "bg-slate-100 text-slate-800";
+        return <Clock className="h-3 w-3 text-gray-600" />;
     }
   };
 
-  const getCareLevel = (level: string) => {
-    switch (level) {
-      case "low":
-        return { color: "bg-green-100 text-green-800", label: "Low Care" };
-      case "medium":
-        return { color: "bg-yellow-100 text-yellow-800", label: "Medium Care" };
-      case "high":
-        return { color: "bg-orange-100 text-orange-800", label: "High Care" };
-      case "critical":
-        return { color: "bg-red-100 text-red-800", label: "Critical Care" };
-      default:
-        return { color: "bg-slate-100 text-slate-800", label: "Unknown" };
+  // Handle opening administration dialog
+  const handleAdministrationClick = (medication: Medication) => {
+    setSelectedMedication(medication);
+    setAdminFormData({
+      status: "administered",
+      actualTime: new Date().toLocaleString(),
+      dosageGiven: medication.dosage,
+      notes: "",
+    });
+    setShowAdminDialog(true);
+  };
+
+  // Handle administration form submission
+  const handleAdministrationSubmit = () => {
+    if (!selectedMedication || !user || !patient) return;
+
+    try {
+      const currentTime = new Date().toISOString();
+      const administrationData = {
+        medicationId: selectedMedication.id,
+        patientId: patient.id,
+        caregiverId: user.id,
+        scheduledTime: currentTime,
+        actualTime:
+          adminFormData.status === "administered" ? currentTime : undefined,
+        status: adminFormData.status as any,
+        dosageGiven: adminFormData.dosageGiven || undefined,
+        notes: adminFormData.notes || undefined,
+        patientResponse: "good" as any,
+      };
+
+      recordMedicationAdministration(administrationData);
+
+      // Refresh administrations data
+      const updatedAdministrations = getMedicationAdministrations(patient.id);
+      setAdministrations(updatedAdministrations);
+
+      toast({
+        title: "Administration Recorded",
+        description: `${selectedMedication.medicationName} administration has been recorded.`,
+      });
+
+      // Reset form and close dialog
+      setShowAdminDialog(false);
+      setSelectedMedication(null);
+      setAdminFormData({
+        status: "administered",
+        actualTime: new Date().toLocaleString(),
+        dosageGiven: "",
+        notes: "",
+      });
+    } catch (error) {
+      console.error("Administration error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to record administration",
+        variant: "destructive",
+      });
     }
   };
 
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8">
-            <Skeleton className="h-10 w-32 mb-4" />
-            <div className="flex items-center space-x-4">
-              <Skeleton className="h-16 w-16 rounded-full" />
-              <div>
-                <Skeleton className="h-8 w-48 mb-2" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-              <Skeleton className="h-96" />
-            </div>
-            <div>
-              <Skeleton className="h-96" />
-            </div>
-          </div>
+      <div className="min-h-screen bg-background">
+        <RoleHeader role="caregiver" />
+        <div className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-96 w-full" />
         </div>
-      </div>
-    );
-  }
-
-  if (!user || user.role !== "care_giver") {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Alert className="max-w-md">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            You don't have permission to access this page.
-          </AlertDescription>
-        </Alert>
       </div>
     );
   }
 
   if (!patient) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Alert className="max-w-md">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>Patient not found.</AlertDescription>
-        </Alert>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-96">
+          <CardContent className="p-6 text-center">
+            <h2 className="text-xl font-semibold mb-2">Patient Not Found</h2>
+            <p className="text-muted-foreground mb-4">
+              The patient you're looking for doesn't exist or you don't have
+              access to view them.
+            </p>
+            <Button onClick={() => router.push("/caregiver/patients")}>
+              Back to My Patients
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const careLevel = getCareLevel(patient.careLevel);
-
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AuthHeader />
+    <div className="min-h-screen bg-background w-full">
+      {/* Header Navigation */}
+      <RoleHeader role="caregiver" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Navigation */}
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Back Button */}
         <div className="mb-6">
           <Button
             variant="ghost"
             onClick={() => router.push("/caregiver/patients")}
-            className="flex items-center space-x-2"
+            className="text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to My Patients</span>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to My Patients
           </Button>
         </div>
 
         {/* Patient Header */}
-        <div className="bg-white rounded-lg border border-slate-200 p-6 mb-8">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="bg-slate-200 p-4 rounded-full">
-                <User className="h-8 w-8 text-slate-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">
-                  {patient.name}
-                </h1>
-                <p className="text-slate-600">
-                  {patient.age} years • {patient.gender}
-                </p>
-                <div className="flex items-center space-x-4 mt-2">
-                  <Badge className={getStatusColor(patient.status)}>
-                    {patient.status}
-                  </Badge>
-                  <Badge className={careLevel.color}>{careLevel.label}</Badge>
-                </div>
-                {/* Contact Information */}
-                <div className="mt-3 space-y-1">
-                  <div className="flex items-center space-x-2 text-sm text-slate-600">
-                    <Phone className="h-3 w-3" />
-                    <span>{patient.phone}</span>
-                  </div>
-                  <div className="flex items-start space-x-2 text-sm text-slate-600">
-                    <MapPin className="h-3 w-3 mt-0.5" />
-                    <span>{patient.address}</span>
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    Emergency: {patient.emergencyContact.name} (
-                    {patient.emergencyContact.relationship}) -{" "}
-                    {patient.emergencyContact.phone}
-                  </div>
-                </div>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <Avatar className="h-16 w-16">
+              <AvatarFallback className="bg-teal-100 text-teal-600 text-xl">
+                {patient.firstName?.charAt(0)}
+                {patient.lastName?.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-3xl font-bold">
+                {patient.firstName} {patient.lastName}
+              </h1>
+              <div className="flex items-center space-x-4 mt-2">
+                <Badge variant="outline" className="capitalize">
+                  {patient.careLevel || "Standard"} Care
+                </Badge>
+                <Badge className="bg-teal-100 text-teal-800 capitalize">
+                  {patient.status || "Active"}
+                </Badge>
               </div>
             </div>
+          </div>
 
-            <div className="text-right">
-              <p className="text-sm text-slate-600">Last Visit</p>
-              <p className="font-medium">{formatDateOnly(patient.lastVisit)}</p>
-              <p className="text-sm text-slate-600 mt-2">Next Visit</p>
-              <p className="font-medium">{formatDateOnly(patient.nextVisit)}</p>
+          {/* Quick Stats */}
+          <div className="flex space-x-6 text-center">
+            <div>
+              <p className="text-2xl font-bold text-green-600">
+                {vitals.length}
+              </p>
+              <p className="text-sm text-muted-foreground">Vitals Recorded</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-blue-600">
+                {medications.filter((m) => m.isActive).length}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Active Medications
+              </p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-orange-600">
+                {medicalReviews.length}
+              </p>
+              <p className="text-sm text-muted-foreground">Medical Reviews</p>
             </div>
           </div>
         </div>
 
-        {/* Main Content - Full Width */}
-        <div className="w-full">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="vitals">Vital Signs</TabsTrigger>
-              <TabsTrigger value="medications">Medications</TabsTrigger>
-              <TabsTrigger value="notes">Care Notes</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-            </TabsList>
+        {/* Content Tabs */}
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="vitals">Vitals</TabsTrigger>
+            <TabsTrigger value="medications">Medications</TabsTrigger>
+            <TabsTrigger value="medical-notes">Medical Notes</TabsTrigger>
+          </TabsList>
 
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Current Vitals */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Heart className="h-5 w-5 text-red-500" />
-                      <span>Latest Vitals</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Blood Pressure:</span>
-                      <span className="font-medium">
-                        {patient.vitals.bloodPressure}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Heart Rate:</span>
-                      <span className="font-medium">
-                        {patient.vitals.heartRate} bpm
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Temperature:</span>
-                      <span className="font-medium">
-                        {patient.vitals.temperature}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Oxygen Sat:</span>
-                      <span className="font-medium">
-                        {patient.vitals.oxygenSaturation}
-                      </span>
-                    </div>
-                    <div className="text-xs text-slate-500 mt-2">
-                      <strong>Recorded:</strong>{" "}
-                      {formatDateTime(patient.vitals.recordedDate).fullDate} at{" "}
-                      {formatDateTime(patient.vitals.recordedDate).time}
-                    </div>
-                  </CardContent>
-                </Card>
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Patient Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <User className="h-5 w-5 mr-2" />
+                    Patient Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p>{patient.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <p>{patient.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Address</p>
+                    <p>{patient.address || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Date of Birth
+                    </p>
+                    <p>{patient.dateOfBirth || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Gender</p>
+                    <p className="capitalize">
+                      {patient.gender || "Not specified"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Medical Conditions */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Activity className="h-5 w-5 text-blue-500" />
-                      <span>Medical Conditions</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {patient.conditions.map((condition, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className="mr-2 mb-2"
-                        >
-                          {condition}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Risk Factors */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <AlertTriangle className="h-5 w-5 text-orange-500" />
-                      <span>Risk Factors</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {patient.riskFactors.map((risk, index) => (
-                        <Badge
-                          key={index}
-                          variant="destructive"
-                          className="mr-2 mb-2"
-                        >
-                          {risk}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Allergies */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
+              {/* Care Team */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Heart className="h-5 w-5 mr-2" />
+                    Care Team
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Caregiver
+                    </p>
+                    {patient.assignedCaregiver ? (
                       <div className="flex items-center space-x-2">
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                        <span>Allergies</span>
+                        <Eye className="h-4 w-4 text-teal-600" />
+                        <span>{patient.assignedCaregiver.name}</span>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsAddingAllergy(true)}
-                        className="text-xs"
+                    ) : (
+                      <Badge variant="outline">No caregiver assigned</Badge>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Medical Reviewer
+                    </p>
+                    {patient.assignedReviewer ? (
+                      <div className="flex items-center space-x-2">
+                        <Stethoscope className="h-4 w-4 text-purple-600" />
+                        <span>{patient.assignedReviewer.name}</span>
+                      </div>
+                    ) : (
+                      <Badge variant="outline">No reviewer assigned</Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Activity */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Activity className="h-5 w-5 mr-2" />
+                    Recent Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {vitals.slice(0, 3).map((vital, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between py-2 border-b last:border-0"
                       >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Add Allergy
-                      </Button>
-                    </CardTitle>
+                        <div>
+                          <p className="text-sm font-medium">Vitals Recorded</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(new Date(vital.recordedAt))}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-green-600">
+                          <Activity className="h-3 w-3 mr-1" />
+                          Complete
+                        </Badge>
+                      </div>
+                    ))}
+                    {medicalReviews.slice(0, 2).map((review, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between py-2 border-b last:border-0"
+                      >
+                        <div>
+                          <p className="text-sm font-medium">Medical Review</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(new Date(review.createdAt))}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-purple-600">
+                          <FileText className="h-3 w-3 mr-1" />
+                          {review.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Vitals Tab */}
+          <TabsContent value="vitals" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Vital Signs</h2>
+              <Button
+                onClick={() => setShowVitalsForm(!showVitalsForm)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {showVitalsForm ? "Cancel" : "Record Vitals"}
+              </Button>
+            </div>
+
+            {showVitalsForm && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Record New Vital Signs</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <QuickVitalsEntry
+                    patientId={resolvedParams.id}
+                    patientName={`${patient.firstName} ${patient.lastName}`}
+                    caregiverId={user?.id || ""}
+                    onSave={handleVitalsSaved}
+                    onCancel={() => setShowVitalsForm(false)}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Vitals Table - Excel-like format */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Vital Signs Records</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {vitals.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 px-2">Date/Time</th>
+                          <th className="text-left py-2 px-2">BP (mmHg)</th>
+                          <th className="text-left py-2 px-2">HR (BPM)</th>
+                          <th className="text-left py-2 px-2">Temp (°C)</th>
+                          <th className="text-left py-2 px-2">O2 Sat (%)</th>
+                          <th className="text-left py-2 px-2">Weight (kg)</th>
+                          <th className="text-left py-2 px-2">Blood Sugar</th>
+                          <th className="text-left py-2 px-2">Notes</th>
+                          <th className="text-left py-2 px-2">Alerts</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {vitals.map((vital) => (
+                          <tr
+                            key={vital.id}
+                            className="border-b hover:bg-gray-50"
+                          >
+                            <td className="py-3 px-2">
+                              <div>
+                                <div className="text-sm font-medium">
+                                  {formatDate(new Date(vital.recordedAt))}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(
+                                    vital.recordedAt
+                                  ).toLocaleTimeString()}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-2">
+                              {vital.bloodPressure
+                                ? `${vital.bloodPressure.systolic}/${vital.bloodPressure.diastolic}`
+                                : "-"}
+                            </td>
+                            <td className="py-3 px-2">
+                              {vital.heartRate || "-"}
+                            </td>
+                            <td className="py-3 px-2">
+                              {vital.temperature || "-"}
+                            </td>
+                            <td className="py-3 px-2">
+                              {vital.oxygenSaturation || "-"}
+                            </td>
+                            <td className="py-3 px-2">{vital.weight || "-"}</td>
+                            <td className="py-3 px-2">
+                              {vital.bloodSugar || "-"}
+                            </td>
+                            <td className="py-3 px-2">
+                              <span className="text-xs text-muted-foreground">
+                                {vital.notes || "-"}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2">
+                              {vital.isAlerted && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs"
+                                >
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Alert
+                                </Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      No vital signs recorded yet
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Record the first set of vitals above
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Medications Tab */}
+          <TabsContent value="medications" className="space-y-6">
+            {/* Current Medications with Administration */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Current Medications & Administration</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  View prescribed medications and record administration
+                </p>
+              </CardHeader>
+              <CardContent>
+                {medications.filter((m) => m.isActive).length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2">Medication</th>
+                          <th className="text-left py-2">Dosage</th>
+                          <th className="text-left py-2">Route</th>
+                          <th className="text-left py-2">Frequency</th>
+                          <th className="text-left py-2">Start Date</th>
+                          <th className="text-left py-2">
+                            Last Administration
+                          </th>
+                          <th className="text-left py-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {medications
+                          .filter((m) => m.isActive)
+                          .map((medication) => {
+                            const latestAdmin = getLatestAdministration(
+                              medication.id
+                            );
+                            return (
+                              <tr key={medication.id} className="border-b">
+                                <td className="py-3">
+                                  <div>
+                                    <p className="font-medium">
+                                      {medication.medicationName}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {medication.instructions}
+                                    </p>
+                                  </div>
+                                </td>
+                                <td className="py-3">{medication.dosage}</td>
+                                <td className="py-3 capitalize">
+                                  {medication.route?.replace("_", " ") ||
+                                    "Oral"}
+                                </td>
+                                <td className="py-3 capitalize">
+                                  {medication.frequency.replace("_", " ")}
+                                </td>
+                                <td className="py-3">
+                                  {formatDate(new Date(medication.startDate))}
+                                </td>
+                                <td className="py-3">
+                                  {latestAdmin ? (
+                                    <div className="space-y-1">
+                                      <div className="flex items-center space-x-2">
+                                        {getAdministrationStatusIcon(
+                                          latestAdmin.status
+                                        )}
+                                        <Badge
+                                          className={getAdministrationStatusBadge(
+                                            latestAdmin.status
+                                          )}
+                                        >
+                                          {latestAdmin.status}
+                                        </Badge>
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">
+                                        {latestAdmin.actualTime
+                                          ? formatDate(
+                                              new Date(latestAdmin.actualTime)
+                                            )
+                                          : `Scheduled: ${formatDate(
+                                              new Date(
+                                                latestAdmin.scheduledTime
+                                              )
+                                            )}`}
+                                      </p>
+                                      {latestAdmin.dosageGiven && (
+                                        <p className="text-xs text-muted-foreground">
+                                          Dose: {latestAdmin.dosageGiven}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">
+                                      No administrations yet
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-3">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        className="bg-teal-600 hover:bg-teal-700"
+                                      >
+                                        <Pill className="h-3 w-3 mr-1" />
+                                        Record Administration
+                                        <ChevronDown className="h-3 w-3 ml-1" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleAdministrationClick(medication)
+                                        }
+                                      >
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Mark as Administered
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setSelectedMedication(medication);
+                                          setAdminFormData({
+                                            status: "missed",
+                                            actualTime:
+                                              new Date().toLocaleString(),
+                                            dosageGiven: "",
+                                            notes: "",
+                                          });
+                                          setShowAdminDialog(true);
+                                        }}
+                                      >
+                                        <X className="h-4 w-4 mr-2" />
+                                        Mark as Missed
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setSelectedMedication(medication);
+                                          setAdminFormData({
+                                            status: "refused",
+                                            actualTime:
+                                              new Date().toLocaleString(),
+                                            dosageGiven: "",
+                                            notes: "",
+                                          });
+                                          setShowAdminDialog(true);
+                                        }}
+                                      >
+                                        <AlertTriangle className="h-4 w-4 mr-2" />
+                                        Mark as Refused
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Pill className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">
+                      No active medications prescribed yet.
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Medications prescribed by reviewers will appear here.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Medical Notes Tab */}
+          <TabsContent value="medical-notes" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Medical Notes & Reviews</h2>
+              <Button
+                onClick={() => setShowSymptomForm(!showSymptomForm)}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {showSymptomForm ? "Cancel" : "Report Symptoms"}
+              </Button>
+            </div>
+
+            {showSymptomForm && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Report Patient Symptoms</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PatientSymptomReportForm
+                    patientId={resolvedParams.id}
+                    patientName={`${patient.firstName} ${patient.lastName}`}
+                    onSave={() => {
+                      setShowSymptomForm(false);
+                      toast({
+                        title: "Success",
+                        description: "Symptom report submitted successfully",
+                      });
+                    }}
+                    onCancel={() => setShowSymptomForm(false)}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Medical Reviews List (Read-only for Caregivers) */}
+            <div className="space-y-4">
+              {medicalReviews.map((review) => (
+                <Card key={review.id}>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-lg">
+                          {review.title}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          by {review.reviewerName} •{" "}
+                          {formatDate(new Date(review.createdAt))}
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Badge
+                          variant={
+                            review.status === "completed"
+                              ? "default"
+                              : "outline"
+                          }
+                          className={
+                            review.priority === "urgent"
+                              ? "bg-red-100 text-red-800"
+                              : review.priority === "high"
+                              ? "bg-orange-100 text-orange-800"
+                              : review.priority === "medium"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-gray-100 text-gray-800"
+                          }
+                        >
+                          {review.priority} priority
+                        </Badge>
+                        <Badge variant="outline" className="capitalize">
+                          {review.status.replace("_", " ")}
+                        </Badge>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {/* Add Allergy Form */}
-                      {isAddingAllergy && (
-                        <div className="border rounded-lg p-3 bg-slate-50">
-                          <div className="flex space-x-2">
-                            <Input
-                              placeholder="Enter allergy (e.g., Penicillin, Peanuts)"
-                              value={newAllergy}
-                              onChange={(e) => setNewAllergy(e.target.value)}
-                              className="flex-1"
-                            />
-                            <Button
-                              size="sm"
-                              onClick={handleAddAllergy}
-                              className="bg-red-600 hover:bg-red-700 text-white"
-                            >
-                              Add
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setIsAddingAllergy(false);
-                                setNewAllergy("");
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
+                      <div>
+                        <h4 className="font-medium text-sm mb-1">Findings</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {review.findings}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm mb-1">Assessment</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {review.assessment}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm mb-1">
+                          Recommendations
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {review.recommendations}
+                        </p>
+                      </div>
+                      {review.followUpRequired && review.followUpDate && (
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Clock className="h-4 w-4 text-blue-600" />
+                          <span>
+                            Follow-up required by{" "}
+                            {formatDate(new Date(review.followUpDate))}
+                          </span>
                         </div>
                       )}
-
-                      {/* Existing Allergies */}
-                      <div className="flex flex-wrap gap-2">
-                        {patient.allergies.length > 0 ? (
-                          patient.allergies.map((allergy, index) => (
-                            <Badge
-                              key={index}
-                              className="bg-red-100 text-red-800"
-                            >
-                              {allergy}
-                            </Badge>
-                          ))
-                        ) : (
-                          <p className="text-slate-500">No known allergies</p>
-                        )}
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              </div>
+              ))}
 
-              {/* Recent Notes */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <FileText className="h-5 w-5 text-green-500" />
-                    <span>Recent Care Notes</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-700">{patient.notes}</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
+              {medicalReviews.length === 0 && (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      No medical reviews yet
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Medical reviews will appear here when created by reviewers
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
 
-            {/* Comprehensive Vitals Tab */}
-            <TabsContent value="vitals" className="space-y-6">
-              {/* Quick Entry Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Plus className="h-5 w-5 text-teal-600" />
-                    <span>Record New Vital Signs</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
+        {/* Administration Dialog */}
+        <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader className="pb-3">
+              <DialogTitle className="flex items-center text-lg">
+                <Pill className="h-4 w-4 mr-2 text-teal-600" />
+                Record Administration
+              </DialogTitle>
+            </DialogHeader>
+
+            {selectedMedication && (
+              <div className="space-y-3">
+                {/* Medication Info - Compact */}
+                <div className="bg-gray-50 p-2 rounded">
+                  <div className="flex justify-between items-start">
                     <div>
-                      <Label htmlFor="systolic">
-                        Blood Pressure (Systolic)
-                      </Label>
-                      <Input
-                        id="systolic"
-                        type="number"
-                        placeholder="120"
-                        value={quickVitals.bloodPressureSystolic}
-                        onChange={(e) =>
-                          setQuickVitals({
-                            ...quickVitals,
-                            bloodPressureSystolic: e.target.value,
-                          })
-                        }
-                      />
+                      <h4 className="font-medium text-sm">
+                        {selectedMedication.medicationName}
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedMedication.dosage} •{" "}
+                        {selectedMedication.route?.replace("_", " ") || "Oral"}
+                      </p>
                     </div>
-                    <div>
-                      <Label htmlFor="diastolic">
-                        Blood Pressure (Diastolic)
-                      </Label>
-                      <Input
-                        id="diastolic"
-                        type="number"
-                        placeholder="80"
-                        value={quickVitals.bloodPressureDiastolic}
-                        onChange={(e) =>
-                          setQuickVitals({
-                            ...quickVitals,
-                            bloodPressureDiastolic: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="heartRate">Heart Rate (bpm)</Label>
-                      <Input
-                        id="heartRate"
-                        type="number"
-                        placeholder="72"
-                        value={quickVitals.heartRate}
-                        onChange={(e) =>
-                          setQuickVitals({
-                            ...quickVitals,
-                            heartRate: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="temperature">Temperature (°C)</Label>
-                      <Input
-                        id="temperature"
-                        type="number"
-                        step="0.1"
-                        placeholder="36.5"
-                        value={quickVitals.temperature}
-                        onChange={(e) =>
-                          setQuickVitals({
-                            ...quickVitals,
-                            temperature: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="oxygen">Oxygen Saturation (%)</Label>
-                      <Input
-                        id="oxygen"
-                        type="number"
-                        placeholder="98"
-                        value={quickVitals.oxygenSaturation}
-                        onChange={(e) =>
-                          setQuickVitals({
-                            ...quickVitals,
-                            oxygenSaturation: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="respiratory">
-                        Respiratory Rate (breaths/min)
-                      </Label>
-                      <Input
-                        id="respiratory"
-                        type="number"
-                        placeholder="16"
-                        value={quickVitals.respiratoryRate}
-                        onChange={(e) =>
-                          setQuickVitals({
-                            ...quickVitals,
-                            respiratoryRate: e.target.value,
-                          })
-                        }
-                      />
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Time</p>
+                      <p className="text-xs font-mono">
+                        {adminFormData.actualTime}
+                      </p>
                     </div>
                   </div>
+                </div>
 
-                  {/* Extended Vitals Section */}
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium text-slate-700 mb-3">
-                      Extended Vitals (Optional)
-                    </h4>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="bloodGlucose">
-                          Blood Glucose (mg/dL)
-                        </Label>
-                        <Input
-                          id="bloodGlucose"
-                          type="number"
-                          placeholder="95"
-                          value={quickVitals.bloodGlucose}
-                          onChange={(e) =>
-                            setQuickVitals({
-                              ...quickVitals,
-                              bloodGlucose: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="weight">Weight (kg)</Label>
-                        <Input
-                          id="weight"
-                          type="number"
-                          step="0.1"
-                          placeholder="70"
-                          value={quickVitals.weight}
-                          onChange={(e) =>
-                            setQuickVitals({
-                              ...quickVitals,
-                              weight: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="height">Height (cm)</Label>
-                        <Input
-                          id="height"
-                          type="number"
-                          placeholder="170"
-                          value={quickVitals.height}
-                          onChange={(e) =>
-                            setQuickVitals({
-                              ...quickVitals,
-                              height: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="painLevel">Pain Level (1-10)</Label>
-                        <Input
-                          id="painLevel"
-                          type="number"
-                          min="1"
-                          max="10"
-                          placeholder="1"
-                          value={quickVitals.painLevel}
-                          onChange={(e) =>
-                            setQuickVitals({
-                              ...quickVitals,
-                              painLevel: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <Button onClick={handleQuickVitalsSubmit} className="w-full">
-                    <Save className="h-4 w-4 mr-2" />
-                    Record Vital Signs
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Vitals History */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Heart className="h-5 w-5 text-red-500" />
-                    <span>Vital Signs History</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingData ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-16" />
-                      ))}
-                    </div>
-                  ) : vitalRecords.length > 0 ? (
-                    <>
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Date & Time</TableHead>
-                              <TableHead>Blood Pressure</TableHead>
-                              <TableHead>Heart Rate</TableHead>
-                              <TableHead>Temperature</TableHead>
-                              <TableHead>Oxygen Sat</TableHead>
-                              <TableHead>Respiratory Rate</TableHead>
-                              <TableHead>Blood Glucose</TableHead>
-                              <TableHead>Weight</TableHead>
-                              <TableHead>BMI</TableHead>
-                              <TableHead>Pain Level</TableHead>
-                              <TableHead>Recorded By</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {getPaginatedData(
-                              vitalRecords,
-                              vitalsPage
-                            ).data.map((vital) => (
-                              <TableRow key={vital.id}>
-                                <TableCell className="font-medium text-center">
-                                  <div>
-                                    {
-                                      formatDateTime(vital.recordedDate)
-                                        .fullDate
-                                    }
-                                  </div>
-                                  <div className="text-xs text-slate-500">
-                                    {formatDateTime(vital.recordedDate).time}
-                                  </div>
-                                </TableCell>
-                                <TableCell>{vital.bloodPressure}</TableCell>
-                                <TableCell>{vital.heartRate} bpm</TableCell>
-                                <TableCell>{vital.temperature}°C</TableCell>
-                                <TableCell>{vital.oxygenSaturation}%</TableCell>
-                                <TableCell>
-                                  {vital.respiratoryRate} /min
-                                </TableCell>
-                                <TableCell>
-                                  {vital.bloodGlucose
-                                    ? `${vital.bloodGlucose} mg/dL`
-                                    : "-"}
-                                </TableCell>
-                                <TableCell>
-                                  {vital.weight ? `${vital.weight} kg` : "-"}
-                                </TableCell>
-                                <TableCell>
-                                  {vital.bmi ? vital.bmi : "-"}
-                                </TableCell>
-                                <TableCell>
-                                  {vital.painLevel
-                                    ? `${vital.painLevel}/10`
-                                    : "-"}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">
-                                    {vital.recordedBy}
-                                  </Badge>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                      <PaginationControls
-                        currentPage={vitalsPage}
-                        totalPages={
-                          getPaginatedData(vitalRecords, vitalsPage).totalPages
-                        }
-                        onPageChange={setVitalsPage}
-                        hasNext={
-                          getPaginatedData(vitalRecords, vitalsPage).hasNext
-                        }
-                        hasPrev={
-                          getPaginatedData(vitalRecords, vitalsPage).hasPrev
-                        }
-                      />
-                    </>
-                  ) : (
-                    <div className="text-center py-8 text-slate-500">
-                      <Heart className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                      <p>No vital signs recorded yet</p>
-                      <p className="text-sm">
-                        Use the form above to record the first vital signs
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Comprehensive Medications Tab */}
-            <TabsContent value="medications" className="space-y-6">
-              {/* Prescribed Medications */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Pill className="h-5 w-5 text-blue-500" />
-                    <span>Prescribed Medications</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingData ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-20" />
-                      ))}
-                    </div>
-                  ) : prescribedMedications.length > 0 ? (
-                    <div className="space-y-4">
-                      {prescribedMedications.map((prescription) => (
-                        <div
-                          key={prescription.id}
-                          className="border rounded-lg p-4"
-                        >
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <h4 className="font-medium text-lg">
-                                {prescription.medicationName}
-                              </h4>
-                              <p className="text-sm text-slate-600">
-                                {prescription.dosage} • {prescription.frequency}
-                              </p>
-                              <p className="text-xs text-slate-500">
-                                Prescribed by {prescription.prescribedBy} on{" "}
-                                {formatDateOnly(prescription.prescribedDate)}
-                              </p>
-                            </div>
-                            <Badge
-                              className={
-                                prescription.isActive
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }
-                            >
-                              {prescription.isActive ? "Active" : "Inactive"}
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-slate-700 bg-blue-50 p-2 rounded mb-3">
-                            <strong>Instructions:</strong>{" "}
-                            {prescription.instructions}
-                          </div>
-
-                          {/* Scheduled Administrations for this prescription */}
-                          <div className="mt-4">
-                            <h5 className="font-medium text-sm mb-2">
-                              Scheduled Administrations:
-                            </h5>
-                            <div className="space-y-2">
-                              {medicationAdministrations
-                                .filter(
-                                  (admin) =>
-                                    admin.prescriptionId === prescription.id
-                                )
-                                .sort(
-                                  (a, b) =>
-                                    new Date(b.scheduledTime).getTime() -
-                                    new Date(a.scheduledTime).getTime()
-                                )
-                                .slice(0, 3) // Show last 3 administrations
-                                .map((administration) => (
-                                  <div
-                                    key={administration.id}
-                                    className="flex items-center justify-between p-2 bg-slate-50 rounded"
-                                  >
-                                    <div className="flex items-center space-x-2">
-                                      <Clock className="h-3 w-3 text-slate-500" />
-                                      <span className="text-sm">
-                                        {formatCompactDateTime(
-                                          administration.scheduledTime
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <Badge
-                                        className={
-                                          administration.status ===
-                                          "administered"
-                                            ? "bg-green-100 text-green-800"
-                                            : administration.status ===
-                                              "pending"
-                                            ? "bg-yellow-100 text-yellow-800"
-                                            : administration.status === "missed"
-                                            ? "bg-red-100 text-red-800"
-                                            : "bg-gray-100 text-gray-800"
-                                        }
-                                      >
-                                        {administration.status}
-                                      </Badge>
-                                      {administration.status === "pending" && (
-                                        <div className="flex space-x-1">
-                                          <Button
-                                            size="sm"
-                                            onClick={() =>
-                                              openConfirmationDialog(
-                                                administration.id,
-                                                "administered"
-                                              )
-                                            }
-                                            className="h-6 px-2 text-xs bg-green-600 hover:bg-green-700"
-                                          >
-                                            ✓ Given
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() =>
-                                              openConfirmationDialog(
-                                                administration.id,
-                                                "missed"
-                                              )
-                                            }
-                                            className="h-6 px-2 text-xs"
-                                          >
-                                            Missed
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() =>
-                                              openConfirmationDialog(
-                                                administration.id,
-                                                "refused"
-                                              )
-                                            }
-                                            className="h-6 px-2 text-xs"
-                                          >
-                                            Refused
-                                          </Button>
-                                        </div>
-                                      )}
-                                      {administration.status ===
-                                        "administered" &&
-                                        administration.administeredBy && (
-                                          <Badge
-                                            variant="outline"
-                                            className="text-xs"
-                                          >
-                                            {administration.administeredBy}
-                                          </Badge>
-                                        )}
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-slate-500">
-                      <Pill className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                      <p>No medications prescribed yet</p>
-                      <p className="text-sm">
-                        Medications will appear here when prescribed by a
-                        reviewer
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Administration History */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Clock className="h-5 w-5 text-green-500" />
-                    <span>Administration History</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingData ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-16" />
-                      ))}
-                    </div>
-                  ) : medicationAdministrations.filter(
-                      (admin) => admin.status !== "pending"
-                    ).length > 0 ? (
-                    <>
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Medication</TableHead>
-                              <TableHead>Scheduled Time</TableHead>
-                              <TableHead>Administered Time</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Administered By</TableHead>
-                              <TableHead>Notes</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {getPaginatedData(
-                              medicationAdministrations
-                                .filter((admin) => admin.status !== "pending")
-                                .sort(
-                                  (a, b) =>
-                                    new Date(b.scheduledTime).getTime() -
-                                    new Date(a.scheduledTime).getTime()
-                                ),
-                              medicationsPage
-                            ).data.map((administration) => {
-                              const prescription = prescribedMedications.find(
-                                (p) => p.id === administration.prescriptionId
-                              );
-                              return (
-                                <TableRow key={administration.id}>
-                                  <TableCell className="font-medium">
-                                    {prescription?.medicationName} (
-                                    {prescription?.dosage})
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    {formatCompactDateTime(
-                                      administration.scheduledTime
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    {administration.administeredTime
-                                      ? formatCompactDateTime(
-                                          administration.administeredTime
-                                        )
-                                      : "-"}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge
-                                      className={
-                                        administration.status === "administered"
-                                          ? "bg-green-100 text-green-800"
-                                          : administration.status === "missed"
-                                          ? "bg-red-100 text-red-800"
-                                          : "bg-gray-100 text-gray-800"
-                                      }
-                                    >
-                                      {administration.status}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    {administration.administeredBy ? (
-                                      <Badge variant="outline">
-                                        {administration.administeredBy}
-                                      </Badge>
-                                    ) : (
-                                      <span className="text-slate-400">-</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="max-w-xs">
-                                    {administration.notes ? (
-                                      <span className="text-sm text-slate-600">
-                                        {administration.notes}
-                                      </span>
-                                    ) : (
-                                      <span className="text-slate-400">-</span>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </div>
-                      <PaginationControls
-                        currentPage={medicationsPage}
-                        totalPages={
-                          getPaginatedData(
-                            medicationAdministrations.filter(
-                              (admin) => admin.status !== "pending"
-                            ),
-                            medicationsPage
-                          ).totalPages
-                        }
-                        onPageChange={setMedicationsPage}
-                        hasNext={
-                          getPaginatedData(
-                            medicationAdministrations.filter(
-                              (admin) => admin.status !== "pending"
-                            ),
-                            medicationsPage
-                          ).hasNext
-                        }
-                        hasPrev={
-                          getPaginatedData(
-                            medicationAdministrations.filter(
-                              (admin) => admin.status !== "pending"
-                            ),
-                            medicationsPage
-                          ).hasPrev
-                        }
-                      />
-                    </>
-                  ) : (
-                    <div className="text-center py-8 text-slate-500">
-                      <Clock className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                      <p>No administration history yet</p>
-                      <p className="text-sm">
-                        History will appear as medications are administered
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Comprehensive Notes Tab */}
-            <TabsContent value="notes" className="space-y-6">
-              {/* Quick Entry Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Plus className="h-5 w-5 text-teal-600" />
-                    <span>Add Care Note</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="noteType">Note Type</Label>
-                      <select
-                        id="noteType"
-                        className="w-full p-2 border border-slate-300 rounded-md"
-                        value={quickNote.type}
-                        onChange={(e) =>
-                          setQuickNote({
-                            ...quickNote,
-                            type: e.target.value as any,
-                          })
-                        }
+                {/* Status Selection - Horizontal */}
+                <div>
+                  <Label className="text-sm font-medium">Status</Label>
+                  <RadioGroup
+                    value={adminFormData.status}
+                    onValueChange={(value) =>
+                      setAdminFormData({ ...adminFormData, status: value })
+                    }
+                    className="flex gap-4 mt-2"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <RadioGroupItem value="administered" id="administered" />
+                      <Label
+                        htmlFor="administered"
+                        className="flex items-center text-sm"
                       >
-                        <option value="general">General Care</option>
-                        <option value="medication">Medication Related</option>
-                        <option value="vitals">Vitals Related</option>
-                        <option value="behavioral">Behavioral</option>
-                        <option value="emergency">Emergency</option>
-                      </select>
+                        <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
+                        Administered
+                      </Label>
                     </div>
-                    <div>
-                      <Label htmlFor="priority">Priority</Label>
-                      <select
-                        id="priority"
-                        className="w-full p-2 border border-slate-300 rounded-md"
-                        value={quickNote.priority}
-                        onChange={(e) =>
-                          setQuickNote({
-                            ...quickNote,
-                            priority: e.target.value as any,
-                          })
-                        }
+                    <div className="flex items-center space-x-1">
+                      <RadioGroupItem value="missed" id="missed" />
+                      <Label
+                        htmlFor="missed"
+                        className="flex items-center text-sm"
                       >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
+                        <X className="h-3 w-3 mr-1 text-red-600" />
+                        Missed
+                      </Label>
                     </div>
-                  </div>
+                    <div className="flex items-center space-x-1">
+                      <RadioGroupItem value="refused" id="refused" />
+                      <Label
+                        htmlFor="refused"
+                        className="flex items-center text-sm"
+                      >
+                        <AlertTriangle className="h-3 w-3 mr-1 text-orange-600" />
+                        Refused
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {/* Dosage (for administered) - Compact */}
+                {adminFormData.status === "administered" && (
                   <div>
-                    <Label htmlFor="noteContent">Care Note</Label>
-                    <Textarea
-                      id="noteContent"
-                      placeholder="Enter your care note here..."
-                      rows={4}
-                      value={quickNote.content}
+                    <Label
+                      htmlFor="dosageGiven"
+                      className="text-sm font-medium"
+                    >
+                      Dosage Given
+                    </Label>
+                    <Input
+                      id="dosageGiven"
+                      placeholder="e.g., 10mg, 1 tablet"
+                      value={adminFormData.dosageGiven}
                       onChange={(e) =>
-                        setQuickNote({
-                          ...quickNote,
-                          content: e.target.value,
+                        setAdminFormData({
+                          ...adminFormData,
+                          dosageGiven: e.target.value,
                         })
                       }
+                      className="mt-1 h-8"
                     />
                   </div>
-                  <Button onClick={handleQuickNoteSubmit} className="w-full">
-                    <Save className="h-4 w-4 mr-2" />
-                    Add Care Note
-                  </Button>
-                </CardContent>
-              </Card>
+                )}
 
-              {/* Notes History */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <FileText className="h-5 w-5 text-green-500" />
-                    <span>Care Notes History</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingData ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-20" />
-                      ))}
-                    </div>
-                  ) : careNotes.length > 0 ? (
-                    <>
-                      <div className="space-y-4">
-                        {getPaginatedData(careNotes, notesPage).data.map(
-                          (note) => (
-                            <div
-                              key={note.id}
-                              className="border rounded-lg p-4"
-                            >
-                              <div className="flex justify-between items-start mb-3">
-                                <div className="flex items-center space-x-2">
-                                  <Clock className="h-4 w-4 text-slate-500" />
-                                  <div className="text-sm font-medium text-center">
-                                    <div>
-                                      {
-                                        formatDateTime(note.createdDate)
-                                          .fullDate
-                                      }
-                                    </div>
-                                    <div className="text-xs text-slate-500">
-                                      {formatDateTime(note.createdDate).time}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Badge
-                                    className={
-                                      note.priority === "high"
-                                        ? "bg-red-100 text-red-800"
-                                        : note.priority === "medium"
-                                        ? "bg-yellow-100 text-yellow-800"
-                                        : "bg-green-100 text-green-800"
-                                    }
-                                  >
-                                    {note.priority} priority
-                                  </Badge>
-                                  <Badge variant="outline">{note.type}</Badge>
-                                  <Badge variant="outline">
-                                    {note.createdBy}
-                                  </Badge>
-                                </div>
-                              </div>
-                              <div className="text-slate-700">
-                                {note.content}
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                      <PaginationControls
-                        currentPage={notesPage}
-                        totalPages={
-                          getPaginatedData(careNotes, notesPage).totalPages
-                        }
-                        onPageChange={setNotesPage}
-                        hasNext={getPaginatedData(careNotes, notesPage).hasNext}
-                        hasPrev={getPaginatedData(careNotes, notesPage).hasPrev}
-                      />
-                    </>
-                  ) : (
-                    <div className="text-center py-8 text-slate-500">
-                      <FileText className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                      <p>No care notes recorded yet</p>
-                      <p className="text-sm">
-                        Use the form above to add the first care note
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* History Tab */}
-            <TabsContent value="history" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Activity className="h-5 w-5 text-purple-500" />
-                    <span>Complete Care History</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingData ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <Skeleton key={i} className="h-16" />
-                      ))}
-                    </div>
-                  ) : (
-                    (() => {
-                      const allHistory = [
-                        ...vitalRecords.map((v) => ({
-                          ...v,
-                          type: "vital",
-                          date: v.recordedDate,
-                        })),
-                        ...medicationAdministrations
-                          .filter((admin) => admin.status !== "pending")
-                          .map((m) => {
-                            const prescription = prescribedMedications.find(
-                              (p) => p.id === m.prescriptionId
-                            );
-                            return {
-                              ...m,
-                              type: "medication",
-                              date: m.administeredTime || m.scheduledTime,
-                              medicationName: prescription?.medicationName,
-                              dosage: prescription?.dosage,
-                            };
-                          }),
-                        ...careNotes.map((n) => ({
-                          ...n,
-                          type: "note",
-                          date: n.createdDate,
-                        })),
-                      ];
-
-                      const sortedHistory = allHistory.sort(
-                        (a, b) =>
-                          new Date(b.date).getTime() -
-                          new Date(a.date).getTime()
-                      );
-
-                      if (sortedHistory.length === 0) {
-                        return (
-                          <div className="text-center py-8 text-slate-500">
-                            <Activity className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                            <p>No care history available yet</p>
-                            <p className="text-sm">
-                              Start recording vitals, medications, or notes to
-                              build the history
-                            </p>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <>
-                          <div className="space-y-4">
-                            {getPaginatedData(
-                              sortedHistory,
-                              historyPage
-                            ).data.map((item) => (
-                              <div
-                                key={`${item.type}-${item.id}`}
-                                className="border rounded-lg p-4"
-                              >
-                                <div className="flex items-center space-x-2 mb-2">
-                                  {item.type === "vital" && (
-                                    <Heart className="h-4 w-4 text-red-500" />
-                                  )}
-                                  {item.type === "medication" && (
-                                    <Pill className="h-4 w-4 text-blue-500" />
-                                  )}
-                                  {item.type === "note" && (
-                                    <FileText className="h-4 w-4 text-green-500" />
-                                  )}
-                                  <div className="text-sm font-medium text-center">
-                                    <div>
-                                      {formatDateTime(item.date).fullDate}
-                                    </div>
-                                    <div className="text-xs text-slate-500">
-                                      {formatDateTime(item.date).time}
-                                    </div>
-                                  </div>
-                                  <Badge variant="outline">
-                                    {item.type === "vital"
-                                      ? "Vital Signs"
-                                      : item.type === "medication"
-                                      ? "Medication"
-                                      : "Care Note"}
-                                  </Badge>
-                                </div>
-                                <div className="text-sm text-slate-700">
-                                  {item.type === "vital" &&
-                                    `BP: ${(item as any).bloodPressure}, HR: ${
-                                      (item as any).heartRate
-                                    } bpm`}
-                                  {item.type === "medication" &&
-                                    `${(item as any).medicationName} - ${
-                                      (item as any).dosage
-                                    } (${(item as any).status})`}
-                                  {item.type === "note" &&
-                                    (item as any).content}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          <PaginationControls
-                            currentPage={historyPage}
-                            totalPages={
-                              getPaginatedData(sortedHistory, historyPage)
-                                .totalPages
-                            }
-                            onPageChange={setHistoryPage}
-                            hasNext={
-                              getPaginatedData(sortedHistory, historyPage)
-                                .hasNext
-                            }
-                            hasPrev={
-                              getPaginatedData(sortedHistory, historyPage)
-                                .hasPrev
-                            }
-                          />
-                        </>
-                      );
-                    })()
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Medication Confirmation Dialog */}
-        <Dialog
-          open={confirmationDialog.isOpen}
-          onOpenChange={(open) =>
-            !open &&
-            setConfirmationDialog({
-              isOpen: false,
-              administrationId: "",
-              action: "administered",
-              medicationName: "",
-            })
-          }
-        >
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Confirm Medication Action</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-slate-600">
-                Are you sure you want to mark{" "}
-                <strong>{confirmationDialog.medicationName}</strong> as{" "}
-                <strong>{confirmationDialog.action}</strong>?
-              </p>
-              <div className="flex space-x-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    setConfirmationDialog({
-                      isOpen: false,
-                      administrationId: "",
-                      action: "administered",
-                      medicationName: "",
-                    })
-                  }
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() =>
-                    handleMedicationAdministration(
-                      confirmationDialog.administrationId,
-                      confirmationDialog.action
-                    )
-                  }
-                  className={
-                    confirmationDialog.action === "administered"
-                      ? "bg-green-600 hover:bg-green-700"
-                      : confirmationDialog.action === "missed"
-                      ? "bg-yellow-600 hover:bg-yellow-700"
-                      : "bg-red-600 hover:bg-red-700"
-                  }
-                >
-                  Confirm{" "}
-                  {confirmationDialog.action === "administered"
-                    ? "Given"
-                    : confirmationDialog.action}
-                </Button>
+                {/* Notes - Compact */}
+                <div>
+                  <Label htmlFor="notes" className="text-sm font-medium">
+                    Notes (Optional)
+                  </Label>
+                  <Input
+                    id="notes"
+                    placeholder="Any additional notes..."
+                    value={adminFormData.notes}
+                    onChange={(e) =>
+                      setAdminFormData({
+                        ...adminFormData,
+                        notes: e.target.value,
+                      })
+                    }
+                    className="mt-1 h-8"
+                  />
+                </div>
               </div>
-            </div>
+            )}
+
+            <DialogFooter className="pt-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowAdminDialog(false)}
+                size="sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAdministrationSubmit}
+                className="bg-teal-600 hover:bg-teal-700"
+                size="sm"
+              >
+                Record Administration
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
+    </div>
+  );
+}
+
+// Quick Vitals Entry Component - Table/Excel style
+function QuickVitalsEntry({
+  patientId,
+  patientName,
+  caregiverId,
+  onSave,
+  onCancel,
+}: {
+  patientId: string;
+  patientName: string;
+  caregiverId: string;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const { toast } = useToast();
+  const [vitals, setVitals] = useState({
+    systolic: "",
+    diastolic: "",
+    heartRate: "",
+    temperature: "",
+    oxygenSaturation: "",
+    weight: "",
+    bloodSugar: "",
+    notes: "",
+  });
+
+  const handleInputChange = (field: string, value: string) => {
+    setVitals((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    // Basic validation
+    const hasAtLeastOneVital = Object.values(vitals).some(
+      (value) => value.trim() !== ""
+    );
+
+    if (!hasAtLeastOneVital) {
+      toast({
+        title: "No Data Entered",
+        description: "Please enter at least one vital sign measurement.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Mock API call - replace with actual createVitalSigns call
+    const vitalData = {
+      patientId,
+      caregiverId,
+      recordedAt: new Date().toISOString(),
+      bloodPressure:
+        vitals.systolic && vitals.diastolic
+          ? {
+              systolic: parseInt(vitals.systolic),
+              diastolic: parseInt(vitals.diastolic),
+            }
+          : undefined,
+      heartRate: vitals.heartRate ? parseInt(vitals.heartRate) : undefined,
+      temperature: vitals.temperature
+        ? parseFloat(vitals.temperature)
+        : undefined,
+      oxygenSaturation: vitals.oxygenSaturation
+        ? parseInt(vitals.oxygenSaturation)
+        : undefined,
+      weight: vitals.weight ? parseFloat(vitals.weight) : undefined,
+      bloodSugar: vitals.bloodSugar ? parseInt(vitals.bloodSugar) : undefined,
+      notes: vitals.notes || undefined,
+    };
+
+    // Call actual API to save vitals
+    try {
+      await createVitalSigns(vitalData as any);
+      toast({
+        title: "Vitals Recorded",
+        description: "Vital signs have been successfully recorded.",
+      });
+      onSave();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to record vital signs. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="text-sm text-muted-foreground">
+        Enter vitals for {patientName} • {new Date().toLocaleString()}
+      </div>
+
+      {/* Table-style input using shadcn Table */}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-center">
+              BP Systolic
+              <br />
+              <span className="text-xs text-muted-foreground">(mmHg)</span>
+            </TableHead>
+            <TableHead className="text-center">
+              BP Diastolic
+              <br />
+              <span className="text-xs text-muted-foreground">(mmHg)</span>
+            </TableHead>
+            <TableHead className="text-center">
+              Heart Rate
+              <br />
+              <span className="text-xs text-muted-foreground">(BPM)</span>
+            </TableHead>
+            <TableHead className="text-center">
+              Temperature
+              <br />
+              <span className="text-xs text-muted-foreground">(°C)</span>
+            </TableHead>
+            <TableHead className="text-center">
+              O2 Sat
+              <br />
+              <span className="text-xs text-muted-foreground">(%)</span>
+            </TableHead>
+            <TableHead className="text-center">
+              Weight
+              <br />
+              <span className="text-xs text-muted-foreground">(kg)</span>
+            </TableHead>
+            <TableHead className="text-center">
+              Blood Sugar
+              <br />
+              <span className="text-xs text-muted-foreground">(mg/dL)</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow>
+            <TableCell className="p-2">
+              <input
+                type="number"
+                placeholder="120"
+                value={vitals.systolic}
+                onChange={(e) => handleInputChange("systolic", e.target.value)}
+                className="w-full border-0 bg-transparent text-center focus:ring-2 focus:ring-teal-500 rounded px-2 py-1"
+              />
+            </TableCell>
+            <TableCell className="p-2">
+              <input
+                type="number"
+                placeholder="80"
+                value={vitals.diastolic}
+                onChange={(e) => handleInputChange("diastolic", e.target.value)}
+                className="w-full border-0 bg-transparent text-center focus:ring-2 focus:ring-teal-500 rounded px-2 py-1"
+              />
+            </TableCell>
+            <TableCell className="p-2">
+              <input
+                type="number"
+                placeholder="72"
+                value={vitals.heartRate}
+                onChange={(e) => handleInputChange("heartRate", e.target.value)}
+                className="w-full border-0 bg-transparent text-center focus:ring-2 focus:ring-teal-500 rounded px-2 py-1"
+              />
+            </TableCell>
+            <TableCell className="p-2">
+              <input
+                type="number"
+                step="0.1"
+                placeholder="36.5"
+                value={vitals.temperature}
+                onChange={(e) =>
+                  handleInputChange("temperature", e.target.value)
+                }
+                className="w-full border-0 bg-transparent text-center focus:ring-2 focus:ring-teal-500 rounded px-2 py-1"
+              />
+            </TableCell>
+            <TableCell className="p-2">
+              <input
+                type="number"
+                placeholder="98"
+                value={vitals.oxygenSaturation}
+                onChange={(e) =>
+                  handleInputChange("oxygenSaturation", e.target.value)
+                }
+                className="w-full border-0 bg-transparent text-center focus:ring-2 focus:ring-teal-500 rounded px-2 py-1"
+              />
+            </TableCell>
+            <TableCell className="p-2">
+              <input
+                type="number"
+                step="0.1"
+                placeholder="70.0"
+                value={vitals.weight}
+                onChange={(e) => handleInputChange("weight", e.target.value)}
+                className="w-full border-0 bg-transparent text-center focus:ring-2 focus:ring-teal-500 rounded px-2 py-1"
+              />
+            </TableCell>
+            <TableCell className="p-2">
+              <input
+                type="number"
+                placeholder="95"
+                value={vitals.bloodSugar}
+                onChange={(e) =>
+                  handleInputChange("bloodSugar", e.target.value)
+                }
+                className="w-full border-0 bg-transparent text-center focus:ring-2 focus:ring-teal-500 rounded px-2 py-1"
+              />
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+
+      {/* Notes section */}
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Notes (Optional)
+        </label>
+        <textarea
+          placeholder="Any observations or notes about the patient's condition..."
+          value={vitals.notes}
+          onChange={(e) => handleInputChange("notes", e.target.value)}
+          className="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          rows={2}
+        />
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex justify-end space-x-3 pt-4">
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} className="bg-teal-600 hover:bg-teal-700">
+          Save Vitals
+        </Button>
       </div>
     </div>
   );

@@ -2,558 +2,550 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import AuthHeader from "@/components/auth-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/lib/auth";
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { CommandSearch } from "@/components/ui/command-search";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { RoleHeader } from "@/components/role-header";
+import { useAuth } from "@/lib/auth";
+import { getPatientsByReviewer } from "@/lib/api/assignments";
+import { useToast } from "@/hooks/use-toast";
+import { Patient, CareLevel, PatientStatus } from "@/lib/types/patients";
+import { formatDate } from "@/lib/utils";
+import {
+  Heart,
   Users,
   Search,
-  AlertTriangle,
-  Activity,
-  Phone,
-  MapPin,
-  Clock,
-  TrendingUp,
-  TrendingDown,
   User,
-  Pill,
+  Settings,
+  LogOut,
+  Eye,
   FileText,
+  Phone,
+  Mail,
+  MapPin,
+  Calendar,
   Stethoscope,
+  ClipboardList,
+  Home,
+  Filter,
+  MoreVertical,
+  Bell,
+  ClipboardCheck,
+  List,
+  Grid3X3,
 } from "lucide-react";
 
-interface Patient {
-  id: string;
-  name: string;
-  age: number;
-  gender: string;
-  conditions: string[];
-  careLevel: "low" | "medium" | "high" | "critical";
-  status: "stable" | "improving" | "declining" | "critical";
-  assignedDate: string;
-  lastVisit: string;
-  nextVisit: string;
-  address: string;
-  phone: string;
-  emergencyContact: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
-  vitals: {
-    bloodPressure: string;
-    heartRate: string;
-    temperature: string;
-    oxygenSaturation: string;
-    recordedDate: string;
-  };
-  prescriptions: number;
-  pendingReviews: number;
-  notes: string;
-  riskFactors: string[];
-  allergies: string[];
-}
-
-// Mock data for patients requiring medical review
-const mockPatients: Patient[] = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    age: 67,
-    gender: "Female",
-    conditions: ["Hypertension", "Type 2 Diabetes", "Arthritis"],
-    careLevel: "high",
-    status: "stable",
-    assignedDate: "2024-01-15",
-    lastVisit: "2024-01-20",
-    nextVisit: "2024-02-03",
-    address: "123 Oak Street, Accra",
-    phone: "+233 24 123 4567",
-    emergencyContact: {
-      name: "Michael Johnson",
-      relationship: "Son",
-      phone: "+233 24 765 4321",
-    },
-    vitals: {
-      bloodPressure: "140/90",
-      heartRate: "78",
-      temperature: "98.6°F",
-      oxygenSaturation: "97%",
-      recordedDate: "2024-01-20T10:30:00Z",
-    },
-    prescriptions: 5,
-    pendingReviews: 2,
-    notes: "Patient responding well to current treatment plan",
-    riskFactors: ["Family history of heart disease", "Sedentary lifestyle"],
-    allergies: ["Penicillin", "Shellfish"],
-  },
-  {
-    id: "2",
-    name: "James Wilson",
-    age: 45,
-    gender: "Male",
-    conditions: ["Asthma", "Anxiety"],
-    careLevel: "medium",
-    status: "improving",
-    assignedDate: "2024-01-10",
-    lastVisit: "2024-01-18",
-    nextVisit: "2024-02-01",
-    address: "456 Pine Avenue, Kumasi",
-    phone: "+233 24 234 5678",
-    emergencyContact: {
-      name: "Lisa Wilson",
-      relationship: "Wife",
-      phone: "+233 24 876 5432",
-    },
-    vitals: {
-      bloodPressure: "125/80",
-      heartRate: "72",
-      temperature: "98.4°F",
-      oxygenSaturation: "98%",
-      recordedDate: "2024-01-18T14:15:00Z",
-    },
-    prescriptions: 3,
-    pendingReviews: 1,
-    notes: "Asthma symptoms improving with new inhaler",
-    riskFactors: ["Smoking history"],
-    allergies: ["Latex"],
-  },
-  {
-    id: "3",
-    name: "Mary Asante",
-    age: 72,
-    gender: "Female",
-    conditions: ["Heart Disease", "Osteoporosis", "Depression"],
-    careLevel: "critical",
-    status: "declining",
-    assignedDate: "2024-01-05",
-    lastVisit: "2024-01-22",
-    nextVisit: "2024-01-25",
-    address: "789 Cedar Road, Tamale",
-    phone: "+233 24 345 6789",
-    emergencyContact: {
-      name: "Grace Asante",
-      relationship: "Daughter",
-      phone: "+233 24 987 6543",
-    },
-    vitals: {
-      bloodPressure: "160/95",
-      heartRate: "88",
-      temperature: "99.1°F",
-      oxygenSaturation: "94%",
-      recordedDate: "2024-01-22T09:45:00Z",
-    },
-    prescriptions: 8,
-    pendingReviews: 4,
-    notes: "Requires close monitoring due to recent cardiac episode",
-    riskFactors: ["Advanced age", "Multiple comorbidities", "Fall risk"],
-    allergies: ["Aspirin", "Codeine"],
-  },
-];
-
 export default function ReviewerPatientsPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [selectedCareLevel, setSelectedCareLevel] = useState<string>("all");
+  const { toast } = useToast();
+  const [assignedPatients, setAssignedPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterLevel, setFilterLevel] = useState<CareLevel | "all">("all");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+
+  // Check permissions
+  useEffect(() => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    if (user.role !== "reviewer") {
+      router.push("/");
+      return;
+    }
+  }, [user, router]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/login");
-    }
-    if (user && user.role !== "reviewer") {
-      router.push("/dashboard");
-    }
-    if (user && user.role === "reviewer") {
-      loadPatients();
-    }
-  }, [user, authLoading, router]);
+    const fetchAssignedPatients = async () => {
+      if (!user) return;
 
-  const loadPatients = async () => {
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setPatients(mockPatients);
-    setIsLoading(false);
-  };
+      setIsLoading(true);
+      try {
+        const patients = await getPatientsByReviewer(user.id);
+        setAssignedPatients(patients);
+      } catch (error) {
+        console.error("Failed to fetch assigned patients:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const filteredPatients = patients.filter((patient) => {
-    const matchesSearch =
-      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.conditions.some((condition) =>
-        condition.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    const matchesStatus =
-      selectedStatus === "all" || patient.status === selectedStatus;
-    const matchesCareLevel =
-      selectedCareLevel === "all" || patient.careLevel === selectedCareLevel;
+    fetchAssignedPatients();
+  }, [user]);
 
-    return matchesSearch && matchesStatus && matchesCareLevel;
-  });
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "improving":
-        return <TrendingUp className="h-4 w-4 text-green-500" />;
-      case "declining":
-        return <TrendingDown className="h-4 w-4 text-red-500" />;
-      case "critical":
-        return <AlertTriangle className="h-4 w-4 text-red-600" />;
+  const getCareLevelColor = (careLevel?: CareLevel) => {
+    switch (careLevel) {
+      case "low":
+        return "text-green-700 font-medium";
+      case "medium":
+        return "text-amber-700 font-medium";
+      case "high":
+        return "text-red-700 font-medium";
       default:
-        return <Activity className="h-4 w-4 text-blue-500" />;
+        return "text-gray-600 font-medium";
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status?: PatientStatus) => {
     switch (status) {
       case "stable":
-        return "bg-blue-100 text-blue-800";
+        return "text-green-700 font-medium";
       case "improving":
-        return "bg-green-100 text-green-800";
+        return "text-teal-700 font-medium";
       case "declining":
-        return "bg-orange-100 text-orange-800";
+        return "text-amber-700 font-medium";
       case "critical":
-        return "bg-red-100 text-red-800";
+        return "text-red-700 font-medium";
       default:
-        return "bg-slate-100 text-slate-800";
+        return "text-gray-600 font-medium";
     }
   };
 
-  const getCareLevel = (level: string) => {
-    switch (level) {
-      case "low":
-        return { label: "Low Care", color: "bg-green-100 text-green-800" };
-      case "medium":
-        return { label: "Medium Care", color: "bg-yellow-100 text-yellow-800" };
-      case "high":
-        return { label: "High Care", color: "bg-orange-100 text-orange-800" };
-      case "critical":
-        return { label: "Critical Care", color: "bg-red-100 text-red-800" };
-      default:
-        return { label: "Unknown", color: "bg-slate-100 text-slate-800" };
-    }
+  const filteredPatients = assignedPatients.filter((patient) => {
+    const matchesSearch =
+      searchTerm === "" ||
+      patient.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (patient.medicalRecordNumber &&
+        patient.medicalRecordNumber
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()));
+
+    const matchesFilter =
+      filterLevel === "all" || patient.careLevel === filterLevel;
+
+    return matchesSearch && matchesFilter;
+  });
+
+  const formatAssignedDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return formatDate(date);
   };
-
-  if (authLoading || isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <AuthHeader />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8">
-            <Skeleton className="h-8 w-64 mb-2" />
-            <Skeleton className="h-4 w-96" />
-          </div>
-
-          {/* Stats Skeleton */}
-          <div className="grid md:grid-cols-4 gap-6 mb-8">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-6">
-                  <Skeleton className="h-4 w-24 mb-2" />
-                  <Skeleton className="h-8 w-16 mb-2" />
-                  <Skeleton className="h-3 w-32" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Filters Skeleton */}
-          <Card className="mb-8">
-            <CardHeader>
-              <Skeleton className="h-6 w-48" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:space-x-4">
-                <Skeleton className="flex-1 h-10" />
-                <Skeleton className="h-10 w-32" />
-                <Skeleton className="h-10 w-32" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Patient Cards Skeleton */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <Skeleton className="h-12 w-12 rounded-full" />
-                      <div>
-                        <Skeleton className="h-5 w-32 mb-1" />
-                        <Skeleton className="h-4 w-24" />
-                      </div>
-                    </div>
-                    <Skeleton className="h-6 w-16" />
-                  </div>
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-3/4 mb-4" />
-                  <div className="space-y-2 mb-4">
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-full" />
-                  </div>
-                  <Skeleton className="h-10 w-full" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (!user || user.role !== "reviewer") {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Alert className="max-w-md">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            You don't have permission to access this page.
-          </AlertDescription>
-        </Alert>
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <div className="text-muted-foreground">
+            Access denied. Reviewer role required.
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AuthHeader />
+    <div className="min-h-screen bg-background w-full">
+      {/* Header Navigation */}
+      <RoleHeader role="reviewer" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Patient Review</h1>
-          <p className="text-slate-600 mt-2">
-            Select a patient to review prescriptions and medical records
-          </p>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6 w-full max-w-7xl">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">My Patients</h1>
+            <p className="text-muted-foreground">
+              Manage and view your assigned patients
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline" className="text-lg px-3 py-1">
+              {assignedPatients.length}/5 Patients
+            </Badge>
+          </div>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">
-                    Total Patients
-                  </p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {patients.length}
-                  </p>
+        {/* Filters and Search */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search patients by name, email, or medical record..."
+                    className="pl-9"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
-                <Users className="h-8 w-8 text-blue-500" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">
-                    Pending Reviews
-                  </p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {patients.reduce((sum, p) => sum + p.pendingReviews, 0)}
-                  </p>
+              <div className="flex gap-2">
+                {/* View Toggle */}
+                <div className="flex bg-muted rounded-lg p-1">
+                  <Button
+                    variant={viewMode === "table" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("table")}
+                    className="h-8"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                    className="h-8"
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
                 </div>
-                <FileText className="h-8 w-8 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">
-                    Critical Cases
-                  </p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {patients.filter((p) => p.careLevel === "critical").length}
-                  </p>
-                </div>
-                <AlertTriangle className="h-8 w-8 text-red-500" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Care Level: {filterLevel === "all" ? "All" : filterLevel}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setFilterLevel("all")}>
+                      All Levels
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setFilterLevel("low")}>
+                      Low Care
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setFilterLevel("medium")}>
+                      Medium Care
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setFilterLevel("high")}>
+                      High Care
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">
-                    Active Prescriptions
-                  </p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {patients.reduce((sum, p) => sum + p.prescriptions, 0)}
-                  </p>
-                </div>
-                <Pill className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Stethoscope className="h-5 w-5" />
-              <span>Patient Management</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:space-x-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Search patients or conditions..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              >
-                <option value="all">All Status</option>
-                <option value="stable">Stable</option>
-                <option value="improving">Improving</option>
-                <option value="declining">Declining</option>
-                <option value="critical">Critical</option>
-              </select>
-              <select
-                value={selectedCareLevel}
-                onChange={(e) => setSelectedCareLevel(e.target.value)}
-                className="px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              >
-                <option value="all">All Care Levels</option>
-                <option value="low">Low Care</option>
-                <option value="medium">Medium Care</option>
-                <option value="high">High Care</option>
-                <option value="critical">Critical Care</option>
-              </select>
             </div>
           </CardContent>
         </Card>
 
-        {/* Patient Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPatients.map((patient) => {
-            const careLevel = getCareLevel(patient.careLevel);
-            return (
+        {/* Patients Table */}
+        {isLoading ? (
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3"></div>
+                <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : filteredPatients.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                {assignedPatients.length === 0
+                  ? "No Patients Assigned"
+                  : "No Patients Found"}
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                {assignedPatients.length === 0
+                  ? "You don't have any patients assigned for review yet. Your supervisor will assign patients to you."
+                  : "No patients match your current search criteria."}
+              </p>
+              {searchTerm && (
+                <Button variant="outline" onClick={() => setSearchTerm("")}>
+                  Clear Search
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : viewMode === "table" ? (
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="px-6 py-4 text-left font-medium">
+                        Patient
+                      </th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Contact
+                      </th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Care Level
+                      </th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Status
+                      </th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Service
+                      </th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Assigned
+                      </th>
+                      <th className="px-6 py-4 text-center font-medium">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPatients.map((patient, index) => (
+                      <tr
+                        key={patient.id}
+                        className={`border-b hover:bg-muted/25 transition-colors cursor-pointer ${
+                          index % 2 === 0 ? "bg-background" : "bg-muted/10"
+                        }`}
+                        onClick={() =>
+                          router.push(`/reviewer/patients/${patient.id}`)
+                        }
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="bg-purple-100 p-2 rounded-full">
+                              <User className="h-4 w-4 text-purple-600" />
+                            </div>
+                            <div>
+                              <div className="font-medium whitespace-nowrap">
+                                {patient.firstName} {patient.lastName}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center text-sm whitespace-nowrap">
+                              <Mail className="h-3 w-3 mr-2 text-muted-foreground" />
+                              {patient.email}
+                            </div>
+                            <div className="flex items-center text-sm whitespace-nowrap">
+                              <Phone className="h-3 w-3 mr-2 text-muted-foreground" />
+                              {patient.phone || "N/A"}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`${getCareLevelColor(
+                              patient.careLevel
+                            )} whitespace-nowrap`}
+                          >
+                            {patient.careLevel
+                              ? patient.careLevel.charAt(0).toUpperCase() +
+                                patient.careLevel.slice(1)
+                              : "Standard"}{" "}
+                            Care
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`${getStatusColor(
+                              patient.status
+                            )} whitespace-nowrap`}
+                          >
+                            {patient.status
+                              ? patient.status.charAt(0).toUpperCase() +
+                                patient.status.slice(1)
+                              : "Unknown"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm whitespace-nowrap">
+                            {patient.serviceName || "N/A"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-muted-foreground whitespace-nowrap">
+                            {formatAssignedDate(
+                              patient.assignedReviewer?.assignedAt
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center whitespace-nowrap">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/reviewer/patients/${patient.id}`);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPatients.map((patient) => (
               <Card
                 key={patient.id}
-                className={`${
-                  patient.careLevel === "critical"
-                    ? "border-red-200 bg-red-50"
-                    : ""
-                }`}
+                className="hover:shadow-lg transition-shadow"
               >
-                <CardContent className="p-6">
-                  {/* Patient Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="bg-slate-200 p-3 rounded-full">
-                        <User className="h-6 w-6 text-slate-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900">
-                          {patient.name}
-                        </h3>
-                        <p className="text-sm text-slate-600">
-                          {patient.age} years • {patient.gender}
-                        </p>
-                      </div>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">
+                        {patient.firstName} {patient.lastName}
+                      </CardTitle>
+                      <CardDescription className="flex items-center mt-1">
+                        <Mail className="h-3 w-3 mr-1" />
+                        {patient.email}
+                      </CardDescription>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      {getStatusIcon(patient.status)}
-                      <Badge className={getStatusColor(patient.status)}>
-                        {patient.status}
-                      </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() =>
+                            router.push(`/reviewer/patients/${patient.id}`)
+                          }
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            toast({
+                              title: "Create Medical Review",
+                              description: `Opening medical review form for ${patient.firstName} ${patient.lastName}. This feature allows reviewers to create formal medical assessments, document findings, and make treatment recommendations.`,
+                            });
+                          }}
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          Create Review
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Stethoscope className="mr-2 h-4 w-4" />
+                          Medical Assessment
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* Patient Info */}
+                  <div className="space-y-2">
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Phone className="h-3 w-3 mr-2" />
+                      {patient.phone || "N/A"}
+                    </div>
+                    {patient.address && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="h-3 w-3 mr-2" />
+                        {patient.address}
+                      </div>
+                    )}
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Calendar className="h-3 w-3 mr-2" />
+                      Assigned:{" "}
+                      {formatAssignedDate(patient.assignedReviewer?.assignedAt)}
                     </div>
                   </div>
 
-                  {/* Care Level and Conditions */}
-                  <div className="mb-4">
-                    <Badge className={`${careLevel.color} mb-2`}>
-                      {careLevel.label}
-                    </Badge>
-                    <div className="text-sm text-slate-600">
-                      <strong>Conditions:</strong>{" "}
-                      {patient.conditions.slice(0, 2).join(", ")}
-                      {patient.conditions.length > 2 && "..."}
+                  {/* Medical Record Number */}
+                  {patient.medicalRecordNumber && (
+                    <div className="p-2 bg-gray-50 rounded text-center">
+                      <p className="text-xs text-muted-foreground">
+                        Medical Record
+                      </p>
+                      <p className="font-mono text-sm">
+                        {patient.medicalRecordNumber}
+                      </p>
                     </div>
+                  )}
+
+                  {/* Status Info */}
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <span className={getCareLevelColor(patient.careLevel)}>
+                      {patient.careLevel
+                        ? patient.careLevel.charAt(0).toUpperCase() +
+                          patient.careLevel.slice(1)
+                        : "Standard"}{" "}
+                      Care
+                    </span>
+                    <span className={getStatusColor(patient.status)}>
+                      {patient.status
+                        ? patient.status.charAt(0).toUpperCase() +
+                          patient.status.slice(1)
+                        : "Unknown"}
+                    </span>
                   </div>
 
-                  {/* Review Stats */}
-                  <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                    <div className="text-center p-2 bg-slate-50 rounded">
-                      <div className="font-semibold text-slate-900">
-                        {patient.prescriptions}
-                      </div>
-                      <div className="text-slate-600">Prescriptions</div>
+                  {/* Service */}
+                  {patient.serviceName && (
+                    <div className="p-2 bg-purple-50 rounded">
+                      <p className="text-xs text-purple-600 font-medium">
+                        Service
+                      </p>
+                      <p className="text-sm text-purple-800">
+                        {patient.serviceName}
+                      </p>
                     </div>
-                    <div className="text-center p-2 bg-orange-50 rounded">
-                      <div className="font-semibold text-orange-900">
-                        {patient.pendingReviews}
-                      </div>
-                      <div className="text-orange-600">Pending Reviews</div>
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Contact Information */}
-                  <div className="mb-4 text-sm text-slate-600">
-                    <div className="flex items-center space-x-1 mb-1">
-                      <Phone className="h-3 w-3" />
-                      <span>{patient.phone}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="h-3 w-3" />
-                      <span className="truncate">{patient.address}</span>
-                    </div>
-                  </div>
-
-                  {/* Action Button */}
-                  <div className="flex">
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-2">
                     <Button
                       size="sm"
+                      className="flex-1"
                       onClick={() =>
                         router.push(`/reviewer/patients/${patient.id}`)
                       }
-                      className="w-full bg-teal-600 hover:bg-teal-700 text-white"
                     >
-                      <Stethoscope className="h-4 w-4 mr-1" />
-                      Review Patient
+                      <Eye className="h-4 w-4 mr-1" />
+                      Review
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        toast({
+                          title: "Create Medical Review",
+                          description: `Opening medical review form for ${patient.firstName} ${patient.lastName}. This feature allows reviewers to create formal medical assessments, document findings, and make treatment recommendations.`,
+                        });
+                      }}
+                    >
+                      <ClipboardList className="h-4 w-4 mr-1" />
+                      Assess
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
-
-        {filteredPatients.length === 0 && (
-          <div className="text-center py-12">
-            <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-slate-900 mb-2">
-              No patients found
-            </h3>
-            <p className="text-slate-600">
-              Try adjusting your search criteria or filters.
-            </p>
+            ))}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

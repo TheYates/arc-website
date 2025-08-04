@@ -85,18 +85,7 @@ export default function AdminPatientDetailPage({
   const [isAssigning, setIsAssigning] = useState(false);
   const { toast } = useToast();
 
-  // Check permissions
-  useEffect(() => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    if (!hasPermission(user.role, "patient_management")) {
-      router.push("/");
-      return;
-    }
-  }, [user, router]);
+  // Authentication is handled by admin layout - no need for individual checks
 
   useEffect(() => {
     const fetchData = async () => {

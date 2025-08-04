@@ -1,60 +1,241 @@
+"use client";
+
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Users, Shield, Phone, Car, Heart, Presentation, Clock, Building } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Check, Users, Shield, Phone, Car, Heart, Presentation, Clock, Building, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
+import { useState, useEffect } from "react";
+
+// Utility function to format price
+const formatPrice = (price: number): string => {
+  return `GHS ${price.toFixed(2)}`;
+};
+
+// Service structure types
+interface ServiceItem {
+  id: string;
+  name: string;
+  description?: string;
+  level: number;
+  children?: ServiceItem[];
+  basePrice?: number;
+  isOptional?: boolean;
+  isRecurring?: boolean;
+}
+
+interface ConferenceOptionService {
+  id: string;
+  name: string;
+  description: string;
+  basePrice?: number;
+  items: ServiceItem[];
+}
 
 export default function ConferenceOptionPage() {
-  const serviceCategories = [
-    {
-      category: "Stay In",
-      items: [
-        "Basic nursing",
-        "Vital signs monitoring",
-        "Wound care management (Optional)",
-        "Medication management (Optional)"
-      ]
-    },
-    {
-      category: "Emergency Response and Management",
-      items: [
-        "1st respondent First Aid, Stop the Bleed & BLS",
-        "Secondary response (variable)",
-        "Emergency ground transport (Pick & Run)",
-        "ARC Ambulance (when available)",
-        "National ambulance service (Stand by)"
-      ]
+  const [conferenceService, setConferenceService] = useState<ConferenceOptionService | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  // Fetch Conference Option service data from admin
+  useEffect(() => {
+    const fetchServiceData = async () => {
+      try {
+        const response = await fetch('/api/services/conference-option');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setConferenceService(result.data);
+          console.log('Using dynamic data from admin');
+        } else {
+          setError('No service data found');
+          console.log('No dynamic data found');
+        }
+      } catch (err) {
+        console.error('Error fetching service data:', err);
+        setError('Failed to load service data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServiceData();
+  }, []);
+
+  // Auto-expand items with children for better UX when service data is loaded
+  useEffect(() => {
+    if (conferenceService) {
+      const itemsToExpand = conferenceService.items
+        .filter((item) => item.children && item.children.length > 0)
+        .slice(0, 2) // Expand first 2 items with children
+        .map((item) => item.id);
+      setExpandedItems(new Set(itemsToExpand));
     }
-  ];
+  }, [conferenceService]);
+
+  const toggleItemExpansion = (itemId: string) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(itemId)) {
+      newExpanded.delete(itemId);
+    } else {
+      newExpanded.add(itemId);
+    }
+    setExpandedItems(newExpanded);
+  };
+
+  const renderServiceItem = (item: ServiceItem): React.ReactNode => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedItems.has(item.id);
+
+    // Only render top-level items as cards for the main style
+    if (item.level === 1) {
+      return (
+        <Card key={item.id} className="overflow-hidden">
+          {hasChildren ? (
+            <Collapsible
+              open={isExpanded}
+              onOpenChange={() => toggleItemExpansion(item.id)}
+            >
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-slate-50 transition-colors py-3 px-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base text-blue-600 flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          {item.name}
+                        </CardTitle>
+                        {item.isOptional && (
+                          <span className="text-orange-600 text-xs">
+                            Optional
+                            {item.basePrice && item.basePrice > 0 && (
+                              <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      {item.description && (
+                        <CardDescription className="text-xs text-slate-600 mt-1">
+                          {item.description}
+                        </CardDescription>
+                      )}
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200 data-[state=open]:rotate-180" />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 px-4 pb-4">
+                  <div className="space-y-2">
+                    {item.children?.map((child) => renderServiceItem(child))}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
+          ) : (
+            <CardHeader className="py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base text-blue-600 flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      {item.name}
+                    </CardTitle>
+                    {item.isOptional && (
+                      <span className="text-orange-600 text-xs">
+                        Optional
+                        {item.basePrice && item.basePrice > 0 && (
+                          <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  {item.description && (
+                    <CardDescription className="text-xs text-slate-600 mt-1">
+                      {item.description}
+                    </CardDescription>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+          )}
+        </Card>
+      );
+    }
+
+    // Render nested items (level > 1) as simple list items
+    return (
+      <div key={item.id} className="flex items-start gap-2 py-1">
+        <Check className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-700">{item.name}</span>
+            {item.isOptional && item.basePrice && item.basePrice > 0 && (
+              <span className="text-orange-600 text-xs ml-2">
+                Optional +{formatPrice(item.basePrice)}
+              </span>
+            )}
+          </div>
+          {item.description && (
+            <p className="text-xs text-slate-500 mt-0.5">{item.description}</p>
+          )}
+          {item.children && item.children.length > 0 && (
+            <div className="ml-4 mt-1 space-y-1">
+              {item.children.map((child) => renderServiceItem(child))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-50 to-purple-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-20 overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            className="absolute inset-0 w-full h-full object-cover"
+            src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=1200&h=800&fit=crop&crop=center"
+            alt="Professional conference and business event medical services"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/80 to-purple-900/70"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="flex items-center justify-center lg:justify-start space-x-3 mb-6">
-                <Presentation className="h-12 w-12 text-blue-600" />
-                <h1 className="text-4xl md:text-5xl font-bold text-slate-900">
-                  Conference Option
+                <Presentation className="h-12 w-12 text-blue-300" />
+                <h1 className="text-4xl md:text-5xl font-bold text-white">
+                  {conferenceService?.name || "Conference Option"}
                 </h1>
               </div>
-              <Badge className="bg-blue-100 text-blue-800 mb-4">Stay In</Badge>
-              <p className="text-2xl text-slate-700 mb-4">Professional Conference Medical Services</p>
-              <p className="text-xl text-slate-600 leading-relaxed mb-8">
-                Dedicated medical support for conferences and business events with on-site medical 
-                professionals providing continuous care and emergency response throughout your event.
+              <Badge className="bg-white/20 text-white border border-white/30 mb-4">Stay In</Badge>
+              <p className="text-2xl text-blue-100 mb-4">Professional Conference Medical Services</p>
+              <p className="text-xl font-medium text-white/90 leading-relaxed mb-8">
+                {conferenceService?.description}
               </p>
+              {conferenceService?.basePrice && (
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
+                    <span className="text-white font-semibold">Starting from {formatPrice(conferenceService.basePrice || 0)}</span>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link href="/get-started">
                   <Button
                     size="lg"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-8"
                   >
                     Get Started
                   </Button>
@@ -63,28 +244,15 @@ export default function ConferenceOptionPage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-blue-600 text-blue-600 px-8 bg-transparent"
+                    className="border-white text-white hover:bg-white hover:text-blue-900 px-8 bg-transparent"
                   >
                     Contact Us
                   </Button>
                 </Link>
               </div>
             </div>
-            
-            {/* Hero Image */}
-            <div className="relative">
-              <div className="bg-blue-100 rounded-2xl p-8 text-center">
-                <div className="bg-white rounded-xl p-6 shadow-lg">
-                  <div className="text-blue-600 text-sm font-medium mb-2">IMAGE PLACEHOLDER</div>
-                  <div className="text-slate-700 text-xs leading-relaxed">
-                    "Medical professional at conference venue with first aid station setup"
-                    <br />
-                    <br />
-                    Search terms: conference medical services, business event healthcare, medical station, professional conference, event safety
-                  </div>
-                </div>
-              </div>
-            </div>
+
+
           </div>
         </div>
       </section>
@@ -199,26 +367,30 @@ export default function ConferenceOptionPage() {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
-            {serviceCategories.map((category, index) => (
-              <Card key={index} className="h-full">
-                <CardHeader>
-                  <CardTitle className="text-xl text-blue-600">
-                    {category.category}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {category.items.map((item, itemIndex) => (
-                      <li key={itemIndex} className="flex items-start space-x-3">
-                        <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-slate-700">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="space-y-6">
+            {loading ? (
+              <div className="text-center py-6">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="text-slate-600 mt-2">Loading service details...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-6">
+                <p className="text-red-600 mb-4">{error}</p>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  className="border-blue-600 text-blue-600"
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : conferenceService ? (
+              conferenceService.items.map((item) => renderServiceItem(item))
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-slate-600 text-sm">No service details available.</p>
+              </div>
+            )}
           </div>
         </div>
       </section>

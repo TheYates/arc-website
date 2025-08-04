@@ -1,88 +1,283 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Check,
-  Clock,
   Shield,
-  Phone,
-  Car,
+  Clock,
   Heart,
+  Phone,
+  ChevronDown,
+  ChevronRight,
+  Calendar,
   Home,
   Users,
-  Calendar,
 } from "lucide-react";
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
-import Image from "next/image";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+
+// Service structure types
+interface ServiceItem {
+  id: string;
+  name: string;
+  description?: string;
+  level: number;
+  children?: ServiceItem[];
+  basePrice?: number;
+  isOptional?: boolean;
+  isRecurring?: boolean;
+}
+
+interface AdamfoPaService {
+  id: string;
+  name: string;
+  description: string;
+  basePrice?: number;
+  items: ServiceItem[];
+}
+
+// Utility function to format price
+const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('en-GH', {
+    style: 'currency',
+    currency: 'GHS',
+    minimumFractionDigits: 2,
+  }).format(price);
+};
 
 export default function AdamfoPaPage() {
-  const serviceCategories = [
-    {
-      category: "Home Visitation (Daily)",
-      items: [
-        "Basic nursing",
-        "Vital signs monitoring",
-        "Wound care management",
-        "Medication management (Optional)",
-        "Lab call (Optional)",
-        "Review",
-        "Remote review (ARC staff)",
-        "Facility reviews planning (Optional)",
-        "Booking for facility engagement",
-        "Transportation and support to reviewing facility (Optional)",
-        "Information sharing with review facility",
-        "ARC to review facility",
-        "Review facility to ARC",
-      ],
-    },
-    {
-      category: "Emergency Response and Management",
-      items: [
-        "1st respondent First Aid, Stop the Bleed & BLS",
-        "Secondary response (variable)",
-        "Emergency ground transport (Pick & Run)",
-        "ARC Ambulance (when available)",
-        "National ambulance service",
-      ],
-    },
-  ];
+  const [adamfoPaService, setAdamfoPaService] = useState<AdamfoPaService | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  // Fetch ADAMFO-PA service data from admin
+  useEffect(() => {
+    const fetchServiceData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/services/adamfo-pa');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setAdamfoPaService(result.data);
+          console.log('Using dynamic data from admin');
+        } else {
+          setError('No service data found');
+          console.log('No dynamic data found');
+        }
+      } catch (err) {
+        console.error('Error fetching service data:', err);
+        setError('Failed to load service data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServiceData();
+  }, []);
+
+  // Auto-expand items with children for better UX when service data is loaded
+  useEffect(() => {
+    if (adamfoPaService) {
+      const itemsToExpand = adamfoPaService.items
+        .filter((item) => item.children && item.children.length > 0)
+        .slice(0, 2) // Expand first 2 items with children
+        .map((item) => item.id);
+      setExpandedItems(new Set(itemsToExpand));
+    }
+  }, [adamfoPaService]);
+
+  const toggleItemExpansion = (itemId: string) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(itemId)) {
+      newExpanded.delete(itemId);
+    } else {
+      newExpanded.add(itemId);
+    }
+    setExpandedItems(newExpanded);
+  };
+
+  const renderServiceItem = (item: ServiceItem): React.ReactNode => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedItems.has(item.id);
+
+    // Only render top-level items as cards for the main style
+    if (item.level === 1) {
+      return (
+        <Card key={item.id} className="overflow-hidden">
+          {hasChildren ? (
+            <Collapsible
+              open={isExpanded}
+              onOpenChange={() => toggleItemExpansion(item.id)}
+            >
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-slate-50 transition-colors py-3 px-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base text-teal-600 flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          {item.name}
+                        </CardTitle>
+                        {item.isOptional && (
+                          <span className="text-orange-600 text-xs">
+                            Optional
+                            {item.basePrice && item.basePrice > 0 && (
+                              <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      {item.description && (
+                        <CardDescription className="text-xs text-slate-600 mt-1">
+                          {item.description}
+                        </CardDescription>
+                      )}
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200 data-[state=open]:rotate-180" />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 px-4 pb-4">
+                  <div className="space-y-2">
+                    {item.children?.map((child) => renderServiceItem(child))}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
+          ) : (
+            <CardHeader className="py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base text-teal-600 flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      {item.name}
+                    </CardTitle>
+                    {item.isOptional && (
+                      <span className="text-orange-600 text-xs">
+                        Optional
+                        {item.basePrice && item.basePrice > 0 && (
+                          <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  {item.description && (
+                    <CardDescription className="text-xs text-slate-600 mt-1">
+                      {item.description}
+                    </CardDescription>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+          )}
+        </Card>
+      );
+    }
+
+    // Render nested items (level > 1) as simple list items
+    return (
+      <div key={item.id} className="flex items-start gap-2 py-1">
+        <Check className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-700">{item.name}</span>
+            {item.isOptional && item.basePrice && item.basePrice > 0 && (
+              <span className="text-orange-600 text-xs ml-2">
+                Optional +{formatPrice(item.basePrice)}
+              </span>
+            )}
+          </div>
+          {item.description && (
+            <p className="text-xs text-slate-500 mt-0.5">{item.description}</p>
+          )}
+          {item.children && item.children.length > 0 && (
+            <div className="ml-4 mt-1 space-y-1">
+              {item.children.map((child) => renderServiceItem(child))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading ADAMFO-PA service details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !adamfoPaService) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error || 'Service not found'}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-50 to-indigo-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-20 overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            className="absolute inset-0 w-full h-full object-cover"
+            src="https://images.pexels.com/photos/5721555/pexels-photo-5721555.jpeg"
+            alt="Professional medical visit and daily care services"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 to-indigo-900/30"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="flex items-center justify-center lg:justify-start space-x-3 mb-6">
-                <Calendar className="h-12 w-12 text-blue-600" />
-                <h1 className="text-4xl md:text-5xl font-bold text-slate-900">
-                  ADAMFO PA
+                <Calendar className="h-12 w-12 text-blue-300" />
+                <h1 className="text-4xl md:text-5xl font-bold text-white">
+                  { adamfoPaService?.name.toUpperCase() }
                 </h1>
               </div>
-              <p className="text-2xl text-slate-700 mb-4">
+              <p className="text-2xl text-blue-100 mb-4">
                 Daily Home Visitation Package
               </p>
-              <p className="text-xl text-slate-600 leading-relaxed mb-8">
-                Professional daily home visits with comprehensive nursing care,
-                facility reviews, and emergency response support for your loved
-                ones.
+              <p className="text-xl font-medium text-white/90 leading-relaxed mb-8">
+                {adamfoPaService.description}
               </p>
+              <div className="flex items-center gap-4 mb-8">
+                <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
+                  <span className="text-white font-semibold">Starting from {formatPrice(adamfoPaService.basePrice || 0)}</span>
+                </div>
+              </div>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link href="/get-started">
                   <Button
                     size="lg"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-8"
                   >
                     Get Started
                   </Button>
@@ -91,7 +286,7 @@ export default function AdamfoPaPage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-blue-600 text-blue-600 px-8 bg-transparent"
+                    className="border-white text-white hover:bg-white hover:text-blue-900 px-8 bg-transparent"
                   >
                     Contact Us
                   </Button>
@@ -99,25 +294,7 @@ export default function AdamfoPaPage() {
               </div>
             </div>
 
-            {/* Hero Image */}
-            <div className="relative">
-              <div className="bg-blue-100 rounded-2xl p-8 text-center">
-                <div className="bg-white rounded-xl p-6 shadow-lg">
-                  <div className="text-blue-600 text-sm font-medium mb-2">
-                    IMAGE PLACEHOLDER
-                  </div>
-                  <div className="text-slate-700 text-xs leading-relaxed">
-                    "Nurse with medical bag walking up to front door of family
-                    home for daily visit"
-                    <br />
-                    <br />
-                    Search terms: home healthcare visit, daily nursing care,
-                    medical house call, professional caregiver arrival, home
-                    health services
-                  </div>
-                </div>
-              </div>
-            </div>
+
           </div>
         </div>
       </section>
@@ -136,23 +313,11 @@ export default function AdamfoPaPage() {
                 monitoring for your family member while maintaining their
                 independence at home.
               </p>
-              <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+              <p className="text-lg text-slate-600 mb-12 leading-relaxed">
                 Ideal for individuals who need regular medical monitoring,
                 medication management, and professional care support but don't
                 require 24/7 live-in assistance.
               </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <div className="flex items-center space-x-3 mb-2">
-                  <Heart className="h-6 w-6 text-blue-600" />
-                  <h3 className="text-xl font-semibold text-slate-900">
-                    Starting from GHS 80 per day
-                  </h3>
-                </div>
-                <p className="text-slate-600">
-                  Flexible scheduling with optional services available based on
-                  your needs.
-                </p>
-              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-6">
@@ -209,41 +374,44 @@ export default function AdamfoPaPage() {
       </section>
 
       {/* Services Included */}
-      <section className="py-20 bg-white">
+      <section className="py-12 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">
-              Complete Service Breakdown
+          <div className="text-center mb-6">
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">
+              What's Included
             </h2>
-            <p className="text-xl text-slate-600">
-              Comprehensive daily care services included in your ADAMFO PA
-              package
+            <p className="text-lg text-slate-600">
+              Comprehensive care services included in your ADAMFO-PA package
             </p>
+
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
-            {serviceCategories.map((category, index) => (
-              <Card key={index} className="h-full">
-                <CardHeader>
-                  <CardTitle className="text-xl text-blue-600">
-                    {category.category}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {category.items.map((item, itemIndex) => (
-                      <li
-                        key={itemIndex}
-                        className="flex items-start space-x-3"
-                      >
-                        <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-slate-700">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
+          {/* Hierarchical service structure display */}
+          <div className="space-y-2">
+            {loading ? (
+              <div className="text-center py-6">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-slate-600 mt-3 text-sm">Loading service details...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-6">
+                <p className="text-red-600 mb-3 text-sm">{error}</p>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-600 text-blue-600"
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : adamfoPaService ? (
+              adamfoPaService.items.map((item) => renderServiceItem(item))
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-slate-600 text-sm">No service details available.</p>
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -1,7 +1,10 @@
+"use client";
+
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Check,
   Baby,
@@ -12,80 +15,243 @@ import {
   Home,
   Users,
   Clock,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
 import Image from "next/image";
+import { useState, useEffect } from "react";
+
+// Utility function to format price
+const formatPrice = (price: number): string => {
+  return `GHS ${price.toFixed(2)}`;
+};
+
+// Service structure types
+interface ServiceItem {
+  id: string;
+  name: string;
+  description?: string;
+  level: number;
+  children?: ServiceItem[];
+  basePrice?: number;
+  isOptional?: boolean;
+  isRecurring?: boolean;
+}
+
+interface FieNeFieService {
+  id: string;
+  name: string;
+  description: string;
+  basePrice?: number;
+  items: ServiceItem[];
+}
 
 export default function FieNeFiePage() {
-  const serviceCategories = [
-    {
-      category: "Stay In",
-      items: [
-        "Basic nursing",
-        "Vital signs monitoring",
-        "Wound care management (Optional)",
-        "Medication management (Optional)",
-        "Tuition (Optional)",
-        "Laundry (Optional)",
-        "Lab call (Optional)",
-        "Review",
-      ],
-    },
-    {
-      category: "Remote Review (ARC Staff)",
-      items: [
-        "Facility reviews planning (Optional)",
-        "Booking for facility engagement (Optional dependent on age)",
-        "Transportation and support to reviewing facility (Optional)",
-        "Information sharing with review facility (Optional)",
-        "ARC to review facility",
-        "Review facility to ARC",
-      ],
-    },
-    {
-      category: "Emergency Response and Management",
-      items: [
-        "1st respondent First Aid, Stop the Bleed & BLS",
-        "Secondary response (variable)",
-        "Emergency ground transport (Pick & Run)",
-        "ARC Ambulance (when available)",
-        "National ambulance service",
-      ],
-    },
-  ];
+  const [fieNeFieService, setFieNeFieService] = useState<FieNeFieService | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  // Fetch FIE-NE-FIE service data from admin
+  useEffect(() => {
+    const fetchServiceData = async () => {
+      try {
+        const response = await fetch('/api/services/fie-ne-fie');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setFieNeFieService(result.data);
+          console.log('Using dynamic data from admin');
+        } else {
+          setError('No service data found');
+          console.log('No dynamic data found');
+        }
+      } catch (err) {
+        console.error('Error fetching service data:', err);
+        setError('Failed to load service data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServiceData();
+  }, []);
+
+  // Auto-expand items with children for better UX when service data is loaded
+  useEffect(() => {
+    if (fieNeFieService) {
+      const itemsToExpand = fieNeFieService.items
+        .filter((item) => item.children && item.children.length > 0)
+        .slice(0, 2) // Expand first 2 items with children
+        .map((item) => item.id);
+      setExpandedItems(new Set(itemsToExpand));
+    }
+  }, [fieNeFieService]);
+
+  const toggleItemExpansion = (itemId: string) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(itemId)) {
+      newExpanded.delete(itemId);
+    } else {
+      newExpanded.add(itemId);
+    }
+    setExpandedItems(newExpanded);
+  };
+
+  const renderServiceItem = (item: ServiceItem): React.ReactNode => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedItems.has(item.id);
+
+    // Only render top-level items as cards for the main style
+    if (item.level === 1) {
+      return (
+        <Card key={item.id} className="overflow-hidden">
+          {hasChildren ? (
+            <Collapsible
+              open={isExpanded}
+              onOpenChange={() => toggleItemExpansion(item.id)}
+            >
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-slate-50 transition-colors py-3 px-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base text-pink-600 flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          {item.name}
+                        </CardTitle>
+                        {item.isOptional && (
+                          <span className="text-orange-600 text-xs">
+                            Optional
+                            {item.basePrice && item.basePrice > 0 && (
+                              <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      {item.description && (
+                        <CardDescription className="text-xs text-slate-600 mt-1">
+                          {item.description}
+                        </CardDescription>
+                      )}
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200 data-[state=open]:rotate-180" />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 px-4 pb-4">
+                  <div className="space-y-2">
+                    {item.children?.map((child) => renderServiceItem(child))}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
+          ) : (
+            <CardHeader className="py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base text-pink-600 flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      {item.name}
+                    </CardTitle>
+                    {item.isOptional && (
+                      <span className="text-orange-600 text-xs">
+                        Optional
+                        {item.basePrice && item.basePrice > 0 && (
+                          <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  {item.description && (
+                    <CardDescription className="text-xs text-slate-600 mt-1">
+                      {item.description}
+                    </CardDescription>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+          )}
+        </Card>
+      );
+    }
+
+    // Render nested items (level > 1) as simple list items
+    return (
+      <div key={item.id} className="flex items-start gap-2 py-1">
+        <Check className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-700">{item.name}</span>
+            {item.isOptional && item.basePrice && item.basePrice > 0 && (
+              <span className="text-orange-600 text-xs ml-2">
+                Optional +{formatPrice(item.basePrice)}
+              </span>
+            )}
+          </div>
+          {item.description && (
+            <p className="text-xs text-slate-500 mt-0.5">{item.description}</p>
+          )}
+          {item.children && item.children.length > 0 && (
+            <div className="ml-4 mt-1 space-y-1">
+              {item.children.map((child) => renderServiceItem(child))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-pink-50 to-purple-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-20 overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            className="absolute inset-0 w-full h-full object-cover"
+            src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9"
+            alt="Professional childcare and nanny services"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-pink-900/30 to-purple-900/30"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="flex items-center justify-center lg:justify-start space-x-3 mb-6">
-                <Baby className="h-12 w-12 text-pink-600" />
-                <h1 className="text-4xl md:text-5xl font-bold text-slate-900">
-                  Fie Ne Fie
+                <Baby className="h-12 w-12 text-pink-300" />
+                <h1 className="text-4xl md:text-5xl font-bold text-white">
+                  {fieNeFieService?.name || "FIE NE FIE"}
                 </h1>
               </div>
-              <Badge className="bg-purple-100 text-purple-800 mb-4">
+              <Badge className="bg-white/20 text-white border border-white/30 mb-4">
                 Nanny Service
               </Badge>
-              <p className="text-2xl text-slate-700 mb-4">
+              <p className="text-2xl text-pink-100 mb-4">
                 Stay-in Nanny Service
               </p>
-              <p className="text-xl text-slate-600 leading-relaxed mb-8">
-                Comprehensive live-in childcare with professional nanny support,
-                basic nursing care, and emergency response capabilities for your
-                precious little ones.
+              <p className="text-xl font-medium text-white/90 leading-relaxed mb-8">
+                {fieNeFieService?.description}
               </p>
+              {fieNeFieService?.basePrice && (
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
+                    <span className="text-white font-semibold">Starting from {formatPrice(fieNeFieService.basePrice || 0)}</span>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link href="/get-started">
                   <Button
                     size="lg"
-                    className="bg-pink-600 hover:bg-pink-700 text-white px-8"
+                    className="bg-pink-500 hover:bg-pink-600 text-white px-8"
                   >
                     Get Started
                   </Button>
@@ -94,7 +260,7 @@ export default function FieNeFiePage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-pink-600 text-pink-600 px-8 bg-transparent"
+                    className="border-white text-white hover:bg-white hover:text-pink-900 px-8 bg-transparent"
                   >
                     Contact Us
                   </Button>
@@ -102,24 +268,7 @@ export default function FieNeFiePage() {
               </div>
             </div>
 
-            {/* Hero Image */}
-            <div className="relative">
-              <div className="bg-pink-100 rounded-2xl p-8 text-center">
-                <div className="bg-white rounded-xl p-6 shadow-lg">
-                  <div className="text-pink-600 text-sm font-medium mb-2">
-                    IMAGE PLACEHOLDER
-                  </div>
-                  <div className="text-slate-700 text-xs leading-relaxed">
-                    "Professional African nanny reading with happy children in
-                    comfortable home setting"
-                    <br />
-                    <br />
-                    Search terms: African nanny, childcare, reading to children,
-                    home environment, professional caregiver, happy family
-                  </div>
-                </div>
-              </div>
-            </div>
+            
           </div>
         </div>
       </section>
@@ -143,38 +292,25 @@ export default function FieNeFiePage() {
                 childcare with the added security of basic medical support and
                 emergency response capabilities.
               </p>
-              <div className="bg-pink-50 border border-pink-200 rounded-lg p-6">
-                <div className="flex items-center space-x-3 mb-2">
-                  <Heart className="h-6 w-6 text-pink-600" />
-                  <h3 className="text-xl font-semibold text-slate-900">
-                    Starting from GHS 120 per day
-                  </h3>
+              {fieNeFieService?.basePrice && (
+                <div className="bg-pink-50 border border-pink-200 rounded-lg p-6">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Heart className="h-6 w-6 text-pink-600" />
+                    <h3 className="text-xl font-semibold text-slate-900">
+                      Starting from {formatPrice(fieNeFieService.basePrice)}
+                    </h3>
+                  </div>
+                  <p className="text-slate-600">
+                    Comprehensive childcare with optional educational and care
+                    services.
+                  </p>
                 </div>
-                <p className="text-slate-600">
-                  Comprehensive childcare with optional educational and care
-                  services.
-                </p>
-              </div>
+              )}
             </div>
 
             <div className="space-y-6">
               {/* Service Overview Image */}
-              <div className="bg-purple-100 rounded-2xl p-6 text-center">
-                <div className="bg-white rounded-xl p-4 shadow-lg">
-                  <div className="text-purple-600 text-sm font-medium mb-2">
-                    IMAGE PLACEHOLDER
-                  </div>
-                  <div className="text-slate-700 text-xs leading-relaxed">
-                    "Nanny helping child with homework at kitchen table, warm
-                    home atmosphere"
-                    <br />
-                    <br />
-                    Search terms: nanny tutoring, homework help, educational
-                    support, home learning, childcare assistance
-                  </div>
-                </div>
-              </div>
-
+              
               <div className="grid grid-cols-2 gap-6">
                 <Card className="text-center">
                   <CardContent className="p-6">
@@ -242,29 +378,30 @@ export default function FieNeFiePage() {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {serviceCategories.map((category, index) => (
-              <Card key={index} className="h-full">
-                <CardHeader>
-                  <CardTitle className="text-xl text-pink-600">
-                    {category.category}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {category.items.map((item, itemIndex) => (
-                      <li
-                        key={itemIndex}
-                        className="flex items-start space-x-3"
-                      >
-                        <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-slate-700">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="space-y-6">
+            {loading ? (
+              <div className="text-center py-6">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
+                <p className="text-slate-600 mt-2">Loading service details...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-6">
+                <p className="text-red-600 mb-4">{error}</p>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  className="border-pink-600 text-pink-600"
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : fieNeFieService ? (
+              fieNeFieService.items.map((item) => renderServiceItem(item))
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-slate-600 text-sm">No service details available.</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -325,7 +462,7 @@ export default function FieNeFiePage() {
       <section className="py-20 bg-pink-600">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to Start Fie Ne Fie Care?
+            Ready to Start {fieNeFieService?.name || "Fie Ne Fie"} Care?
           </h2>
           <p className="text-xl text-pink-100 mb-8">
             Contact us today to learn more about our comprehensive stay-in nanny

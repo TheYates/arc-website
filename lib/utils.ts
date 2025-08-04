@@ -6,6 +6,25 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Format price in GHS currency
+ * @param amount - The price amount
+ * @returns Formatted price string (e.g., "GHS 50.00")
+ */
+export function formatPrice(amount: number): string {
+  return `GHS ${amount.toFixed(2)}`;
+}
+
+/**
+ * Format optional item price for display
+ * @param amount - The price amount
+ * @returns Formatted price string with plus sign (e.g., "+GHS 50.00")
+ */
+export function formatOptionalPrice(amount: number): string {
+  if (amount <= 0) return "";
+  return `+${formatPrice(amount)}`;
+}
+
+/**
  * Formats a date to the standard app format: "28th July, 2025"
  * @param date - The date to format
  * @returns Formatted date string

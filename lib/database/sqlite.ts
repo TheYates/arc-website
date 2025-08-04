@@ -1,18 +1,18 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import Database from "better-sqlite3";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
 
 // Database connection
 let db: Database.Database | null = null;
 
 export function getDatabase(): Database.Database {
   if (!db) {
-    const dbPath = path.join(process.cwd(), 'data', 'arc.db');
+    const dbPath = path.join(process.cwd(), "data", "arc.db");
     db = new Database(dbPath);
-    
+
     // Enable foreign keys
-    db.pragma('foreign_keys = ON');
-    
+    db.pragma("foreign_keys = ON");
+
     // Initialize database schema
     initializeDatabase();
   }
@@ -176,6 +176,67 @@ function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- Services management tables
+    CREATE TABLE IF NOT EXISTS services (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      display_name TEXT NOT NULL,
+      description TEXT,
+      short_description TEXT,
+      category TEXT NOT NULL CHECK (category IN ('home_care', 'nanny', 'emergency', 'custom')),
+      base_price_daily REAL,
+      base_price_monthly REAL,
+      base_price_hourly REAL,
+      price_display TEXT,
+      is_active BOOLEAN DEFAULT TRUE,
+      is_popular BOOLEAN DEFAULT FALSE,
+      sort_order INTEGER DEFAULT 0,
+      color_theme TEXT DEFAULT 'teal',
+      icon TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Service categories (like "Home Visitation (Daily)", "Emergency Response")
+    CREATE TABLE IF NOT EXISTS service_categories (
+      id TEXT PRIMARY KEY,
+      service_id TEXT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Service items (individual checklist items within categories)
+    CREATE TABLE IF NOT EXISTS service_items (
+      id TEXT PRIMARY KEY,
+      category_id TEXT NOT NULL REFERENCES service_categories(id) ON DELETE CASCADE,
+      parent_item_id TEXT REFERENCES service_items(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      description TEXT,
+      is_optional BOOLEAN DEFAULT FALSE,
+      item_level INTEGER DEFAULT 1 CHECK (item_level BETWEEN 1 AND 4),
+      sort_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Service pricing tiers
+    CREATE TABLE IF NOT EXISTS service_pricing (
+      id TEXT PRIMARY KEY,
+      service_id TEXT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+      tier_name TEXT NOT NULL,
+      price REAL NOT NULL,
+      billing_period TEXT NOT NULL CHECK (billing_period IN ('hourly', 'daily', 'weekly', 'monthly', 'yearly')),
+      description TEXT,
+      is_default BOOLEAN DEFAULT FALSE,
+      sort_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Insert default data if tables are empty
@@ -186,8 +247,10 @@ function insertDefaultData() {
   if (!db) return;
 
   // Check if we already have users
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
-  
+  const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as {
+    count: number;
+  };
+
   if (userCount.count === 0) {
     // Insert default users
     const insertUser = db.prepare(`
@@ -198,12 +261,12 @@ function insertDefaultData() {
     // Default admin user
     insertUser.run(
       uuidv4(),
-      'admin@arc.com',
-      'admin',
-      'hashed_password_here', // In real app, this would be properly hashed
-      'Admin',
-      'User',
-      'admin',
+      "admin@arc.com",
+      "admin",
+      "hashed_password_here", // In real app, this would be properly hashed
+      "Admin",
+      "User",
+      "admin",
       true,
       true
     );
@@ -212,12 +275,12 @@ function insertDefaultData() {
     const reviewerId = uuidv4();
     insertUser.run(
       reviewerId,
-      'reviewer@arc.com',
-      'reviewer',
-      'hashed_password_here',
-      'Dr. Sarah',
-      'Johnson',
-      'reviewer',
+      "reviewer@arc.com",
+      "reviewer",
+      "hashed_password_here",
+      "Dr. Sarah",
+      "Johnson",
+      "reviewer",
       true,
       true
     );
@@ -226,12 +289,12 @@ function insertDefaultData() {
     const caregiverId = uuidv4();
     insertUser.run(
       caregiverId,
-      'caregiver@arc.com',
-      'caregiver',
-      'hashed_password_here',
-      'John',
-      'Smith',
-      'care_giver',
+      "caregiver@arc.com",
+      "caregiver",
+      "hashed_password_here",
+      "John",
+      "Smith",
+      "care_giver",
       true,
       true
     );
@@ -240,12 +303,12 @@ function insertDefaultData() {
     const patientUserId = uuidv4();
     insertUser.run(
       patientUserId,
-      'patient@arc.com',
-      'patient',
-      'hashed_password_here',
-      'Michael',
-      'Smith',
-      'patient',
+      "patient@arc.com",
+      "patient",
+      "hashed_password_here",
+      "Michael",
+      "Smith",
+      "patient",
       true,
       true
     );
@@ -256,15 +319,15 @@ function insertDefaultData() {
       INSERT INTO patients (id, user_id, date_of_birth, gender, blood_type, care_level, status)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     insertPatient.run(
       patientId,
       patientUserId,
-      '1985-06-15',
-      'male',
-      'O+',
-      'medium',
-      'improving'
+      "1985-06-15",
+      "male",
+      "O+",
+      "medium",
+      "improving"
     );
 
     // Assign caregiver to patient
@@ -272,13 +335,8 @@ function insertDefaultData() {
       INSERT INTO caregiver_assignments (id, patient_id, caregiver_id, assigned_by)
       VALUES (?, ?, ?, ?)
     `);
-    
-    insertAssignment.run(
-      uuidv4(),
-      patientId,
-      caregiverId,
-      reviewerId
-    );
+
+    insertAssignment.run(uuidv4(), patientId, caregiverId, reviewerId);
 
     // Insert sample medication
     const medicationId = uuidv4();
@@ -286,20 +344,20 @@ function insertDefaultData() {
       INSERT INTO medications (id, patient_id, medication_name, dosage, route, frequency, start_date, instructions, prescribed_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     insertMedication.run(
       medicationId,
       patientId,
-      'Lisinopril',
-      '10mg',
-      'oral',
-      'once_daily',
-      '2024-01-01',
-      'Take with food in the morning',
+      "Lisinopril",
+      "10mg",
+      "oral",
+      "once_daily",
+      "2024-01-01",
+      "Take with food in the morning",
       reviewerId
     );
 
-    console.log('Default data inserted into SQLite database');
+    console.log("Default data inserted into SQLite database");
   }
 }
 

@@ -78,6 +78,8 @@ export default function PatientsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
 
+
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);

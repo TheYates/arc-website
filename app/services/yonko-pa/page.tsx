@@ -1,7 +1,10 @@
+"use client";
+
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Check,
   Baby,
@@ -12,80 +15,243 @@ import {
   Calendar,
   Users,
   Clock,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
 import Image from "next/image";
+import { useState, useEffect } from "react";
+
+// Utility function to format price
+const formatPrice = (price: number): string => {
+  return `GHS ${price.toFixed(2)}`;
+};
+
+// Service structure types
+interface ServiceItem {
+  id: string;
+  name: string;
+  description?: string;
+  level: number;
+  children?: ServiceItem[];
+  basePrice?: number;
+  isOptional?: boolean;
+  isRecurring?: boolean;
+}
+
+interface YonkoPaService {
+  id: string;
+  name: string;
+  description: string;
+  basePrice?: number;
+  items: ServiceItem[];
+}
 
 export default function YonkoPaPage() {
-  const serviceCategories = [
-    {
-      category: "Visit on Request",
-      items: [
-        "Basic nursing",
-        "Vital signs monitoring",
-        "Wound care management (Optional)",
-        "Medication management (Optional)",
-        "Tuition (Optional)",
-        "Laundry (Optional)",
-        "Lab call (Optional)",
-        "Review",
-      ],
-    },
-    {
-      category: "Remote Review (ARC Staff)",
-      items: [
-        "Facility reviews planning (Optional)",
-        "Booking for facility engagement (Optional dependent on age)",
-        "Transportation and support to reviewing facility (Optional)",
-        "Information sharing with review facility (Optional)",
-        "ARC to review facility",
-        "Review facility to ARC",
-      ],
-    },
-    {
-      category: "Emergency Response and Management",
-      items: [
-        "1st respondent First Aid, Stop the Bleed & BLS",
-        "Secondary response (variable)",
-        "Emergency ground transport (Pick & Run)",
-        "ARC Ambulance (when available)",
-        "National ambulance service",
-      ],
-    },
-  ];
+  const [yonkoPaService, setYonkoPaService] = useState<YonkoPaService | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  // Fetch YONKO-PA service data from admin
+  useEffect(() => {
+    const fetchServiceData = async () => {
+      try {
+        const response = await fetch('/api/services/yonko-pa');
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setYonkoPaService(result.data);
+          console.log('Using dynamic data from admin');
+        } else {
+          setError('No service data found');
+          console.log('No dynamic data found');
+        }
+      } catch (err) {
+        console.error('Error fetching service data:', err);
+        setError('Failed to load service data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServiceData();
+  }, []);
+
+  // Auto-expand items with children for better UX when service data is loaded
+  useEffect(() => {
+    if (yonkoPaService) {
+      const itemsToExpand = yonkoPaService.items
+        .filter((item) => item.children && item.children.length > 0)
+        .slice(0, 2) // Expand first 2 items with children
+        .map((item) => item.id);
+      setExpandedItems(new Set(itemsToExpand));
+    }
+  }, [yonkoPaService]);
+
+  const toggleItemExpansion = (itemId: string) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(itemId)) {
+      newExpanded.delete(itemId);
+    } else {
+      newExpanded.add(itemId);
+    }
+    setExpandedItems(newExpanded);
+  };
+
+  const renderServiceItem = (item: ServiceItem): React.ReactNode => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedItems.has(item.id);
+
+    // Only render top-level items as cards for the main style
+    if (item.level === 1) {
+      return (
+        <Card key={item.id} className="overflow-hidden">
+          {hasChildren ? (
+            <Collapsible
+              open={isExpanded}
+              onOpenChange={() => toggleItemExpansion(item.id)}
+            >
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-slate-50 transition-colors py-3 px-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base text-blue-600 flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          {item.name}
+                        </CardTitle>
+                        {item.isOptional && (
+                          <span className="text-orange-600 text-xs">
+                            Optional
+                            {item.basePrice && item.basePrice > 0 && (
+                              <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      {item.description && (
+                        <CardDescription className="text-xs text-slate-600 mt-1">
+                          {item.description}
+                        </CardDescription>
+                      )}
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200 data-[state=open]:rotate-180" />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 px-4 pb-4">
+                  <div className="space-y-2">
+                    {item.children?.map((child) => renderServiceItem(child))}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
+          ) : (
+            <CardHeader className="py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base text-blue-600 flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      {item.name}
+                    </CardTitle>
+                    {item.isOptional && (
+                      <span className="text-orange-600 text-xs">
+                        Optional
+                        {item.basePrice && item.basePrice > 0 && (
+                          <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  {item.description && (
+                    <CardDescription className="text-xs text-slate-600 mt-1">
+                      {item.description}
+                    </CardDescription>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+          )}
+        </Card>
+      );
+    }
+
+    // Render nested items (level > 1) as simple list items
+    return (
+      <div key={item.id} className="flex items-start gap-2 py-1">
+        <Check className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-700">{item.name}</span>
+            {item.isOptional && item.basePrice && item.basePrice > 0 && (
+              <span className="text-orange-600 text-xs ml-2">
+                Optional +{formatPrice(item.basePrice)}
+              </span>
+            )}
+          </div>
+          {item.description && (
+            <p className="text-xs text-slate-500 mt-0.5">{item.description}</p>
+          )}
+          {item.children && item.children.length > 0 && (
+            <div className="ml-4 mt-1 space-y-1">
+              {item.children.map((child) => renderServiceItem(child))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-indigo-50 to-cyan-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-20 overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            className="absolute inset-0 w-full h-full object-cover"
+            src="https://images.pexels.com/photos/69096/pexels-photo-69096.jpeg"
+            alt="Flexible childcare and visit-on-request services"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/30 to-cyan-900/30"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="flex items-center justify-center lg:justify-start space-x-3 mb-6">
-                <Calendar className="h-12 w-12 text-indigo-600" />
-                <h1 className="text-4xl md:text-5xl font-bold text-slate-900">
-                  YONKO PA
+                <Calendar className="h-12 w-12 text-indigo-300" />
+                <h1 className="text-4xl md:text-5xl font-bold text-white">
+                  {yonkoPaService?.name || "YONKO PA"}
                 </h1>
               </div>
-              <Badge className="bg-indigo-100 text-indigo-800 mb-4">
+              <Badge className="bg-white/20 text-white border border-white/30 mb-4">
                 Nanny Service
               </Badge>
-              <p className="text-2xl text-slate-700 mb-4">
+              <p className="text-2xl text-indigo-100 mb-4">
                 Visit-on-Request Nanny Service
               </p>
-              <p className="text-xl text-slate-600 leading-relaxed mb-8">
-                Flexible childcare support with professional nanny visits
-                scheduled when you need them most. Perfect for busy families who
-                need reliable, on-demand childcare assistance.
+              <p className="text-xl font-medium text-white/90 leading-relaxed mb-8">
+                {yonkoPaService?.description}
               </p>
+              {yonkoPaService?.basePrice && (
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
+                    <span className="text-white font-semibold">Starting from {formatPrice(yonkoPaService.basePrice || 0)}</span>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link href="/get-started">
                   <Button
                     size="lg"
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-8"
+                    className="bg-indigo-500 hover:bg-indigo-600 text-white px-8"
                   >
                     Get Started
                   </Button>
@@ -94,33 +260,14 @@ export default function YonkoPaPage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-indigo-600 text-indigo-600 px-8 bg-transparent"
+                    className="border-white text-white hover:bg-white hover:text-indigo-900 px-8 bg-transparent"
                   >
                     Contact Us
                   </Button>
                 </Link>
               </div>
             </div>
-
-            {/* Hero Image */}
-            <div className="relative">
-              <div className="bg-indigo-100 rounded-2xl p-8 text-center">
-                <div className="bg-white rounded-xl p-6 shadow-lg">
-                  <div className="text-indigo-600 text-sm font-medium mb-2">
-                    IMAGE PLACEHOLDER
-                  </div>
-                  <div className="text-slate-700 text-xs leading-relaxed">
-                    "Professional nanny arriving at family home with bag,
-                    parents greeting at door"
-                    <br />
-                    <br />
-                    Search terms: nanny arrival, on-demand childcare, flexible
-                    babysitting, professional caregiver visit, family doorway
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                      </div>
         </div>
       </section>
 
@@ -143,37 +290,25 @@ export default function YonkoPaPage() {
                 emergency situations, or those who need occasional professional
                 childcare support with basic nursing capabilities.
               </p>
-              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
-                <div className="flex items-center space-x-3 mb-2">
-                  <Heart className="h-6 w-6 text-indigo-600" />
-                  <h3 className="text-xl font-semibold text-slate-900">
-                    Starting from GHS 60 per visit
-                  </h3>
+              {yonkoPaService?.basePrice && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Heart className="h-6 w-6 text-indigo-600" />
+                    <h3 className="text-xl font-semibold text-slate-900">
+                      Starting from {formatPrice(yonkoPaService.basePrice)} per visit
+                    </h3>
+                  </div>
+                  <p className="text-slate-600">
+                    Flexible pricing based on duration and specific services
+                    requested.
+                  </p>
                 </div>
-                <p className="text-slate-600">
-                  Flexible pricing based on duration and specific services
-                  requested.
-                </p>
-              </div>
+              )}
             </div>
 
             <div className="space-y-6">
               {/* Service Overview Image */}
-              <div className="bg-cyan-100 rounded-2xl p-6 text-center">
-                <div className="bg-white rounded-xl p-4 shadow-lg">
-                  <div className="text-cyan-600 text-sm font-medium mb-2">
-                    IMAGE PLACEHOLDER
-                  </div>
-                  <div className="text-slate-700 text-xs leading-relaxed">
-                    "Parent using smartphone to schedule nanny visit, calendar
-                    app visible"
-                    <br />
-                    <br />
-                    Search terms: mobile scheduling, childcare booking app,
-                    on-demand service, flexible babysitting, parent planning
-                  </div>
-                </div>
-              </div>
+              
 
               <div className="grid grid-cols-2 gap-6">
                 <Card className="text-center">
@@ -242,29 +377,30 @@ export default function YonkoPaPage() {
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {serviceCategories.map((category, index) => (
-              <Card key={index} className="h-full">
-                <CardHeader>
-                  <CardTitle className="text-xl text-indigo-600">
-                    {category.category}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {category.items.map((item, itemIndex) => (
-                      <li
-                        key={itemIndex}
-                        className="flex items-start space-x-3"
-                      >
-                        <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-slate-700">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="space-y-6">
+            {loading ? (
+              <div className="text-center py-6">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <p className="text-slate-600 mt-2">Loading service details...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-6">
+                <p className="text-red-600 mb-4">{error}</p>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  className="border-indigo-600 text-indigo-600"
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : yonkoPaService ? (
+              yonkoPaService.items.map((item) => renderServiceItem(item))
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-slate-600 text-sm">No service details available.</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -367,7 +503,7 @@ export default function YonkoPaPage() {
       <section className="py-20 bg-indigo-600">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to Book Your First YONKO PA Visit?
+            Ready to Book Your First {yonkoPaService?.name || "YONKO PA"} Visit?
           </h2>
           <p className="text-xl text-indigo-100 mb-8">
             Contact us today to learn more about our flexible visit-on-request

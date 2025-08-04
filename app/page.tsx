@@ -1,15 +1,12 @@
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
 import {
   Shield,
   Clock,
   Baby,
   Calendar,
-  ArrowRight,
   AlertTriangle,
-  Users,
-  Flag,
   Phone,
   Home,
   UserCheck,
@@ -17,6 +14,54 @@ import {
 import Link from "next/link";
 
 export default function HomePage() {
+  const services = [
+    {
+      Icon: Shield,
+      name: "Event Medical Coverage",
+      description: "24/7 live-in home care with dedicated nursing support, emergency response, and comprehensive medical assistance.",
+      href: "/services/ahenefie",
+      cta: "Learn more",
+      background: <img className="absolute inset-0 w-full h-full object-cover opacity-65" src="https://images.pexels.com/photos/11187364/pexels-photo-11187364.jpeg" alt="Home care" />,
+      className: "lg:row-start-1 lg:row-end-4 lg:col-start-2 lg:col-end-3",
+    },
+    {
+      Icon: Clock,
+      name: "Ahenefie",
+      description: "24/7 live-in home care with dedicated nursing support, emergency response, and comprehensive medical assistance.",
+      href: "/services/ahenefie",
+      cta: "Learn more",
+      background: <img className="absolute inset-0 w-full h-full object-cover opacity-65" src="https://images.pexels.com/photos/339620/pexels-photo-339620.jpeg" alt="Medical visit" />,
+      className: "lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3",
+    },
+    {
+      Icon: Baby,
+      name: "Adamfo Pa",
+      description: "Professional daily home visits with comprehensive nursing care, facility reviews, and emergency response support for your loved ones.",
+      href: "/services/fie-ne-fie",
+      cta: "Learn more",
+      background: <img className="absolute inset-0 w-full h-full object-cover opacity-65" src="https://images.pexels.com/photos/5721555/pexels-photo-5721555.jpeg" alt="Childcare" />,
+      className: "lg:col-start-1 lg:col-end-2 lg:row-start-3 lg:row-end-4",
+    },
+    {
+      Icon: Calendar,
+      name: "Fie Ne Fie",
+      description: "Comprehensive live-in childcare with professional nanny support, basic nursing care, and emergency response capabilities for your precious little ones.",
+      href: "/services/fie-ne-fie",
+      cta: "Learn more",
+      background: <img className="absolute inset-0 w-full h-full object-cover opacity-65" src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=400&h=300&fit=crop&crop=center" alt="Flexible childcare" />,
+      className: "lg:col-start-3 lg:col-end-3 lg:row-start-1 lg:row-end-2",
+    },
+    {
+      Icon: AlertTriangle,
+      name: "Yonko Pa",
+      description: "Flexible childcare support with professional nanny visits scheduled when you need them most. Perfect for busy families who need reliable, on-demand childcare assistance.",
+      href: "/services/yonko-pa",
+      cta: "Learn more",
+      background: <img className="absolute inset-0 w-full h-full object-cover opacity-65" src="https://images.pexels.com/photos/69096/pexels-photo-69096.jpeg" alt="Event medical" />,
+      className: "lg:col-start-3 lg:col-end-3 lg:row-start-2 lg:row-end-4",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-white dark:bg-black">
       <Header />
@@ -90,247 +135,11 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Home Care Service */}
-          <div className="bg-white dark:bg-black mb-16">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl md:text-3xl font-bold  mb-2">
-                Home Care Service
-              </h3>
-              <p className="text-lg">
-                Professional medical care and support in the comfort of your
-                home
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-8">
-              {/* Ahenefie */}
-              <Card className="bg-white dark:bg-black hover:shadow-lg transition-shadow border-l-4 border-l-teal-500">
-                <CardContent className="p-6">
-                  <div className="bg-teal-100 p-3 rounded-lg w-fit mb-4">
-                    <Shield className="h-6 w-6 text-teal-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold  mb-2">AHENEFIE</h3>
-                  <p className=" mb-4">
-                    24/7 live-in home care with dedicated nursing support,
-                    emergency response, and comprehensive medical assistance.
-                  </p>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm text-teal-600 font-medium">
-                      Starting from GHS 150/day
-                    </p>
-                    <Link href="/services/ahenefie">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-teal-600 text-teal-600"
-                      >
-                        Learn More <ArrowRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Adamfo Pa */}
-              <Card className="bg-white dark:bg-black hover:shadow-lg transition-shadow border-l-4 border-l-blue-500">
-                <CardContent className="p-6">
-                  <div className="bg-blue-100 p-3 rounded-lg w-fit mb-4">
-                    <Clock className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold  mb-2">ADAMFO PA</h3>
-                  <p className="mb-4">
-                    Professional daily home visits with flexible scheduling for
-                    regular medical support and health monitoring.
-                  </p>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm text-blue-600 font-medium">
-                      Starting from GHS 80/visit
-                    </p>
-                    <Link href="/services/adamfo-pa">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-blue-600 text-blue-600"
-                      >
-                        Learn More <ArrowRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Nanny Service */}
-          <div className="mb-16">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl md:text-3xl font-bold  mb-2">
-                Nanny Service
-              </h3>
-              <p className="text-lg ">
-                Professional childcare and nanny services for your family
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-8">
-              {/* Fie Ne Fie */}
-              <Card className="bg-white dark:bg-black hover:shadow-lg transition-shadow border-l-4 border-l-pink-500">
-                <CardContent className="p-6">
-                  <div className="bg-pink-100 p-3 rounded-lg w-fit mb-4">
-                    <Baby className="h-6 w-6 text-pink-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold  mb-2">FIE NE FIE</h3>
-                  <p className=" mb-4">
-                    Live-in nanny service with professional childcare,
-                    educational support, and emergency response capabilities.
-                  </p>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm text-pink-600 font-medium">
-                      Starting from GHS 120/day
-                    </p>
-                    <Link href="/services/fie-ne-fie">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-pink-600 text-pink-600"
-                      >
-                        Learn More <ArrowRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Yonko Pa */}
-              <Card className="bg-white dark:bg-black hover:shadow-lg transition-shadow border-l-4 border-l-indigo-500">
-                <CardContent className="p-6">
-                  <div className="bg-indigo-100 p-3 rounded-lg w-fit mb-4">
-                    <Calendar className="h-6 w-6 text-indigo-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold  mb-2">YONKO PA</h3>
-                  <p className=" mb-4">
-                    Flexible on-demand nanny service with professional childcare
-                    and educational support when you need it.
-                  </p>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm text-indigo-600 font-medium">
-                      Starting from GHS 60/visit
-                    </p>
-                    <Link href="/services/yonko-pa">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-indigo-600 text-indigo-600"
-                      >
-                        Learn More <ArrowRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Event Medical Services */}
-          <div className="mb-16">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl md:text-3xl font-bold  mb-2">
-                Event Medical Services
-              </h3>
-              <p className="text-lg ">
-                Professional medical coverage for events, conferences, and
-                gatherings
-              </p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-8">
-              {/* Event Medical Coverage */}
-              <Card className="bg-white dark:bg-black hover:shadow-lg transition-shadow border-l-4 border-l-red-500">
-                <CardContent className="p-6">
-                  <div className="bg-red-100 p-3 rounded-lg w-fit mb-4">
-                    <AlertTriangle className="h-6 w-6 text-red-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold  mb-2">
-                    Event Medical Coverage
-                  </h3>
-                  <p className=" mb-4">
-                    Comprehensive medical coverage for sporting events,
-                    concerts, festivals, and corporate gatherings with emergency
-                    response capabilities.
-                  </p>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm text-red-600 font-medium">
-                      Starting from GHS 500/event
-                    </p>
-                    <Link href="/services/event-medical-coverage">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-600 text-red-600"
-                      >
-                        Learn More <ArrowRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Conference Option */}
-              <Card className="bg-white dark:bg-black hover:shadow-lg transition-shadow border-l-4 border-l-blue-500">
-                <CardContent className="p-6">
-                  <div className="bg-blue-100 p-3 rounded-lg w-fit mb-4">
-                    <Users className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold  mb-2">
-                    Conference Option
-                  </h3>
-                  <p className=" mb-4">
-                    Dedicated stay-in medical support for conferences and
-                    business events with continuous on-site medical presence.
-                  </p>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm text-blue-600 font-medium">
-                      Starting from GHS 800/day
-                    </p>
-                    <Link href="/services/conference-option">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-blue-600 text-blue-600"
-                      >
-                        Learn More <ArrowRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Rally Pack */}
-              <Card className="hover:shadow-lg transition-shadow border-l-4 border-l-green-500">
-                <CardContent className="p-6">
-                  <div className="bg-green-100 p-3 rounded-lg w-fit mb-4">
-                    <Flag className="h-6 w-6 text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold  mb-2">Rally Pack</h3>
-                  <p className=" mb-4">
-                    Specialized medical coverage for rallies, demonstrations,
-                    and high-energy events with rapid response capabilities.
-                  </p>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm text-green-600 font-medium">
-                      Starting from GHS 600/event
-                    </p>
-                    <Link href="/services/rally-pack">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-green-600 text-green-600"
-                      >
-                        Learn More <ArrowRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <BentoGrid className="lg:grid-rows-3">
+            {services.map((service) => (
+              <BentoCard key={service.name} {...service} />
+            ))}
+          </BentoGrid>
         </div>
       </section>
 

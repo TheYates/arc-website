@@ -60,18 +60,7 @@ export default function UsersPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  // Check permissions
-  useEffect(() => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    if (!hasPermission(user.role, "user_management")) {
-      router.push("/");
-      return;
-    }
-  }, [user, router]);
+  // Authentication is handled by admin layout - no need for individual checks
 
   useEffect(() => {
     const fetchUsers = async () => {

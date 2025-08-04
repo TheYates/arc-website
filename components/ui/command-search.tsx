@@ -76,7 +76,7 @@ export function CommandSearch({
           shortcut: "⌘P",
           href: "/admin/patients",
         },
-        { icon: Package, label: "Packages", href: "/admin/packages" },
+        { icon: Package, label: "Packages", href: "/admin/services" },
         { icon: Calendar, label: "Scheduling", href: "/admin/scheduling" },
         { icon: PieChart, label: "Reports", href: "/admin/reports" },
       ],

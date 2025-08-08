@@ -2,10 +2,31 @@
 
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Check, Users, Shield, Phone, Car, Heart, Presentation, Clock, Building, ChevronDown } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Check,
+  Users,
+  Shield,
+  Phone,
+  Car,
+  Heart,
+  Presentation,
+  Clock,
+  Building,
+  ChevronDown,
+} from "lucide-react";
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
 import { useState, useEffect } from "react";
@@ -36,7 +57,8 @@ interface ConferenceOptionService {
 }
 
 export default function ConferenceOptionPage() {
-  const [conferenceService, setConferenceService] = useState<ConferenceOptionService | null>(null);
+  const [conferenceService, setConferenceService] =
+    useState<ConferenceOptionService | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -45,19 +67,19 @@ export default function ConferenceOptionPage() {
   useEffect(() => {
     const fetchServiceData = async () => {
       try {
-        const response = await fetch('/api/services/conference-option');
+        const response = await fetch("/api/services/conference-option");
         const result = await response.json();
 
         if (result.success && result.data) {
           setConferenceService(result.data);
-          console.log('Using dynamic data from admin');
+          console.log("Using dynamic data from admin");
         } else {
-          setError('No service data found');
-          console.log('No dynamic data found');
+          setError("No service data found");
+          console.log("No dynamic data found");
         }
       } catch (err) {
-        console.error('Error fetching service data:', err);
-        setError('Failed to load service data');
+        console.error("Error fetching service data:", err);
+        setError("Failed to load service data");
       } finally {
         setLoading(false);
       }
@@ -113,7 +135,9 @@ export default function ConferenceOptionPage() {
                           <span className="text-orange-600 text-xs">
                             Optional
                             {item.basePrice && item.basePrice > 0 && (
-                              <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                              <span className="ml-1 text-green-600">
+                                + {formatPrice(item.basePrice)}
+                              </span>
                             )}
                           </span>
                         )}
@@ -149,7 +173,9 @@ export default function ConferenceOptionPage() {
                       <span className="text-orange-600 text-xs">
                         Optional
                         {item.basePrice && item.basePrice > 0 && (
-                          <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                          <span className="ml-1 text-green-600">
+                            + {formatPrice(item.basePrice)}
+                          </span>
                         )}
                       </span>
                     )}
@@ -219,20 +245,27 @@ export default function ConferenceOptionPage() {
                   {conferenceService?.name || "Conference Option"}
                 </h1>
               </div>
-              <Badge className="bg-white/20 text-white border border-white/30 mb-4">Stay In</Badge>
-              <p className="text-2xl text-blue-100 mb-4">Professional Conference Medical Services</p>
+              <Badge className="bg-white/20 text-white border border-white/30 mb-4">
+                Stay In
+              </Badge>
+              <p className="text-2xl text-blue-100 mb-4">
+                Professional Conference Medical Services
+              </p>
               <p className="text-xl font-medium text-white/90 leading-relaxed mb-8">
                 {conferenceService?.description}
               </p>
               {conferenceService?.basePrice && (
                 <div className="flex items-center gap-4 mb-8">
                   <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
-                    <span className="text-white font-semibold">Starting from {formatPrice(conferenceService.basePrice || 0)}</span>
+                    <span className="text-white font-semibold">
+                      Starting from{" "}
+                      {formatPrice(conferenceService.basePrice || 0)}
+                    </span>
                   </div>
                 </div>
               )}
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/get-started">
+                <Link href="/get-started?service=conference-option">
                   <Button
                     size="lg"
                     className="bg-blue-500 hover:bg-blue-600 text-white px-8"
@@ -251,8 +284,6 @@ export default function ConferenceOptionPage() {
                 </Link>
               </div>
             </div>
-
-
           </div>
         </div>
       </section>
@@ -266,13 +297,15 @@ export default function ConferenceOptionPage() {
                 Comprehensive Conference Medical Support
               </h2>
               <p className="text-lg text-slate-600 mb-6 leading-relaxed">
-                Our Conference Option provides dedicated medical professionals who stay on-site 
-                throughout your conference or business event. With continuous medical presence 
-                and emergency response capabilities, we ensure participant safety and peace of mind.
+                Our Conference Option provides dedicated medical professionals
+                who stay on-site throughout your conference or business event.
+                With continuous medical presence and emergency response
+                capabilities, we ensure participant safety and peace of mind.
               </p>
               <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                Perfect for multi-day conferences, corporate retreats, business summits, and 
-                professional gatherings where continuous medical support is essential.
+                Perfect for multi-day conferences, corporate retreats, business
+                summits, and professional gatherings where continuous medical
+                support is essential.
               </p>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <div className="flex items-center space-x-3 mb-2">
@@ -282,7 +315,8 @@ export default function ConferenceOptionPage() {
                   </h3>
                 </div>
                 <p className="text-slate-600">
-                  Pricing varies based on conference duration, attendee count, and specific requirements.
+                  Pricing varies based on conference duration, attendee count,
+                  and specific requirements.
                 </p>
               </div>
             </div>
@@ -291,12 +325,17 @@ export default function ConferenceOptionPage() {
               {/* Service Overview Image */}
               <div className="bg-purple-100 rounded-2xl p-6 text-center">
                 <div className="bg-white rounded-xl p-4 shadow-lg">
-                  <div className="text-purple-600 text-sm font-medium mb-2">IMAGE PLACEHOLDER</div>
+                  <div className="text-purple-600 text-sm font-medium mb-2">
+                    IMAGE PLACEHOLDER
+                  </div>
                   <div className="text-slate-700 text-xs leading-relaxed">
-                    "Professional conference hall with medical team monitoring attendees"
+                    "Professional conference hall with medical team monitoring
+                    attendees"
                     <br />
                     <br />
-                    Search terms: conference medical monitoring, business event safety, professional healthcare, conference attendees, medical supervision
+                    Search terms: conference medical monitoring, business event
+                    safety, professional healthcare, conference attendees,
+                    medical supervision
                   </div>
                 </div>
               </div>
@@ -363,7 +402,8 @@ export default function ConferenceOptionPage() {
               Complete Service Breakdown
             </h2>
             <p className="text-xl text-slate-600">
-              Comprehensive medical services included in your Conference Option package
+              Comprehensive medical services included in your Conference Option
+              package
             </p>
           </div>
 
@@ -371,7 +411,9 @@ export default function ConferenceOptionPage() {
             {loading ? (
               <div className="text-center py-6">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p className="text-slate-600 mt-2">Loading service details...</p>
+                <p className="text-slate-600 mt-2">
+                  Loading service details...
+                </p>
               </div>
             ) : error ? (
               <div className="text-center py-6">
@@ -388,7 +430,9 @@ export default function ConferenceOptionPage() {
               conferenceService.items.map((item) => renderServiceItem(item))
             ) : (
               <div className="text-center py-6">
-                <p className="text-slate-600 text-sm">No service details available.</p>
+                <p className="text-slate-600 text-sm">
+                  No service details available.
+                </p>
               </div>
             )}
           </div>
@@ -478,7 +522,8 @@ export default function ConferenceOptionPage() {
                 Professional Service
               </h3>
               <p className="text-slate-600">
-                Discreet, professional medical support that doesn't disrupt your event
+                Discreet, professional medical support that doesn't disrupt your
+                event
               </p>
             </div>
           </div>
@@ -495,16 +540,24 @@ export default function ConferenceOptionPage() {
             Secure Medical Coverage for Your Conference
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Contact us today to discuss your conference medical coverage needs and ensure attendee safety.
+            Contact us today to discuss your conference medical coverage needs
+            and ensure attendee safety.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/get-started">
-              <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50">
+            <Link href="/get-started?service=conference-option">
+              <Button
+                size="lg"
+                className="bg-white text-blue-600 hover:bg-blue-50"
+              >
                 Book Conference Coverage
               </Button>
             </Link>
             <Link href="/contact">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white text-white hover:bg-white/10"
+              >
                 <Phone className="h-5 w-5 mr-2" />
                 Call Us Today
               </Button>
@@ -517,7 +570,8 @@ export default function ConferenceOptionPage() {
       <footer className="bg-slate-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-slate-400">
-            © 2024 Alpha Rescue Consult. Professional conference medical services you can trust.
+            © 2024 Alpha Rescue Consult. Professional conference medical
+            services you can trust.
           </p>
         </div>
       </footer>

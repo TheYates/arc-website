@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFileSync, existsSync } from "fs";
-import { join } from "path";
+import { getServiceBySlugWithDetails } from "@/lib/api/services-prisma";
 import type { PricingItem } from "@/lib/types/packages";
 
 // Types for customer-friendly service display
@@ -58,22 +57,7 @@ export interface CustomerAddon {
   sortOrder: number;
 }
 
-// Load pricing data from admin
-const loadPricingData = (): PricingItem[] => {
-  const pricingFile = join(process.cwd(), "data", "pricing.json");
-
-  if (!existsSync(pricingFile)) {
-    return [];
-  }
-
-  try {
-    const data = readFileSync(pricingFile, "utf8");
-    return JSON.parse(data);
-  } catch (error) {
-    console.error("Error loading pricing data:", error);
-    return [];
-  }
-};
+// Note: Pricing data now comes from PostgreSQL database
 
 // Convert slug to searchable format
 const slugToName = (slug: string): string => {
@@ -197,22 +181,62 @@ export async function GET(
 ) {
   try {
     const { serviceSlug } = await params;
-    const pricingData = loadPricingData();
 
-    if (!pricingData.length) {
-      return NextResponse.json(
-        { error: "No pricing data available" },
-        { status: 404 }
-      );
-    }
+    // Get service from database by slug
+    const service = await getServiceBySlugWithDetails(serviceSlug);
 
-    const adminService = findServiceBySlug(pricingData, serviceSlug);
-
-    if (!adminService) {
+    if (!service) {
       return NextResponse.json({ error: "Service not found" }, { status: 404 });
     }
 
-    const customerService = transformToCustomerService(adminService);
+    // Transform database service to customer format
+    const customerService: CustomerService = {
+      id: service.id,
+      name: service.name,
+      slug: service.slug,
+      description: service.description || undefined,
+      basePrice: Number(
+        service.basePriceDaily ||
+          service.basePriceMonthly ||
+          service.basePriceHourly ||
+          0
+      ),
+      plans: [
+        {
+          id: `${service.id}-plan`,
+          name: `${service.name} Plan`,
+          description:
+            service.description || `Complete ${service.name} package`,
+          basePrice: Number(
+            service.basePriceDaily ||
+              service.basePriceMonthly ||
+              service.basePriceHourly ||
+              0
+          ),
+          features:
+            service.serviceItems?.map((item) => ({
+              id: item.id,
+              name: item.name,
+              description: item.description || "",
+              isIncluded: item.isRequired,
+              addons: [],
+            })) || [],
+        },
+      ],
+      category: service.category.toLowerCase(),
+      isPopular: service.isPopular,
+      metadata: {
+        totalPlans: 1,
+        totalFeatures: service.serviceItems?.length || 0,
+        totalAddons: 0,
+        startingPrice: Number(
+          service.basePriceDaily ||
+            service.basePriceMonthly ||
+            service.basePriceHourly ||
+            0
+        ),
+      },
+    };
 
     return NextResponse.json({
       success: true,

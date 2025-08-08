@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMedicationAdministrations } from "@/lib/api/medications-sqlite";
+import { getMedicationAdministrationsByPatient } from "@/lib/api/medications-prisma";
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,9 @@ export async function GET(
 ) {
   try {
     const { patientId } = await params;
-    const administrations = getMedicationAdministrations(patientId);
+    const administrations = await getMedicationAdministrationsByPatient(
+      patientId
+    );
     return NextResponse.json({ administrations });
   } catch (error) {
     console.error("Get administrations API error:", error);

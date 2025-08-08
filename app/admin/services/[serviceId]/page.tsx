@@ -14,6 +14,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { ServiceHierarchyManager } from "@/components/admin/service-hierarchy-manager";
+import { AdminServiceDetailMobile } from "@/components/mobile/admin-service-detail";
 
 interface Service {
   id: string;
@@ -148,8 +149,13 @@ export default function ServiceManagementPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <AdminServiceDetailMobile serviceId={serviceId} />
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="hidden md:flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -179,7 +185,7 @@ export default function ServiceManagementPage() {
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
-        className="space-y-6"
+        className="hidden md:block space-y-6"
       >
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview" className="flex items-center gap-2">
@@ -314,7 +320,7 @@ export default function ServiceManagementPage() {
           {service.categories && service.categories.length > 0 && (
             <ServiceHierarchyManager
               serviceId={serviceId}
-              categories={service.categories}
+              categories={service.categories as unknown as any}
               onSave={loadService}
             />
           )}
@@ -402,7 +408,7 @@ export default function ServiceManagementPage() {
       </Tabs>
 
       {/* Footer */}
-      <Card>
+      <Card className="hidden md:block">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div>Created: {formatDate(service.createdAt)}</div>

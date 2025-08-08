@@ -47,15 +47,15 @@ import {
   Loader2,
   Search,
   Calendar,
-  Plus,
   UserPlus,
   Users,
   Eye,
-  X,
   CheckCircle,
   AlertCircle,
   Stethoscope,
+  X,
 } from "lucide-react";
+import { AdminPatientsMobile } from "@/components/mobile/admin-patients";
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -77,8 +77,6 @@ export default function PatientsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
-
-
 
   useEffect(() => {
     const fetchData = async () => {
@@ -225,6 +223,51 @@ export default function PatientsPage() {
     }
   };
 
+  const handleRemoveAssignment = async (patient: Patient) => {
+    if (!user) return;
+
+    setIsAssigning(true);
+    try {
+      let success = true;
+
+      // Remove caregiver assignment
+      if (patient.assignedCaregiverId) {
+        success = await removeAssignment(patient.id, "caregiver");
+        if (!success) throw new Error("Failed to remove caregiver assignment");
+      }
+
+      // Remove reviewer assignment
+      if (patient.assignedReviewerId) {
+        success = await removeAssignment(patient.id, "reviewer");
+        if (!success) throw new Error("Failed to remove reviewer assignment");
+      }
+
+      // Refresh data
+      const [patientsData, staffData, statsData] = await Promise.all([
+        getPatients(),
+        getAvailableStaff(),
+        getWorkloadStats(),
+      ]);
+      setPatients(patientsData);
+      setAvailableStaff(staffData);
+      setWorkloadStats(statsData);
+
+      toast({
+        title: "Assignment Removed",
+        description: `Patient assignments have been removed successfully.`,
+      });
+    } catch (error) {
+      console.error("Remove assignment error:", error);
+      toast({
+        title: "Remove Assignment Failed",
+        description: "Failed to remove patient assignments. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
   const formatAssignedDate = (dateString?: string) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
@@ -233,347 +276,378 @@ export default function PatientsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Patients</h1>
-          <p className="text-muted-foreground">
-            View and manage all registered patients
-          </p>
-        </div>
-        <Button onClick={() => router.push("/admin/applications")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add From Applications
-        </Button>
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <AdminPatientsMobile />
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-            <CardTitle>All Patients</CardTitle>
-            <div className="relative w-full md:w-[300px]">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search patients..."
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+      {/* Desktop View */}
+      <div className="hidden md:block space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Patients</h1>
+            <p className="text-muted-foreground">
+              View and manage all registered patients
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          {/* Removed Add From Applications per new flow: approved apps auto-create patients */}
+        </div>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+              <CardTitle>All Patients</CardTitle>
+              <div className="relative w-full md:w-[300px]">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search patients..."
+                  className="pl-9"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
-          ) : filteredPatients.length === 0 ? (
-            <div className="text-center py-10">
-              <div className="text-muted-foreground">No patients found</div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : filteredPatients.length === 0 ? (
+              <div className="text-center py-10">
+                <div className="text-muted-foreground">No patients found</div>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => router.push("/admin/applications")}
+                >
+                  Review Applications
+                </Button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Medical Record #</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Care Level</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Assigned Date</TableHead>
+                      <TableHead>Assignments</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPatients.map((patient) => (
+                      <TableRow
+                        key={patient.id}
+                        role="link"
+                        tabIndex={0}
+                        className="cursor-pointer hover:bg-accent/50"
+                        onClick={() =>
+                          router.push(`/admin/patients/${patient.id}`)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            router.push(`/admin/patients/${patient.id}`);
+                          }
+                        }}
+                      >
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">
+                              {patient.firstName} {patient.lastName}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {patient.email}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-mono text-sm">
+                            {patient.medicalRecordNumber || "N/A"}
+                          </div>
+                        </TableCell>
+                        <TableCell>{patient.serviceName || "N/A"}</TableCell>
+                        <TableCell>
+                          {getCareLevelBadge(patient.careLevel)}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(patient.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <span>
+                              {formatAssignedDate(patient.assignedDate)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center space-x-2">
+                            {patient.assignedCaregiver && (
+                              <div className="flex items-center space-x-1 text-green-600">
+                                <Eye className="h-4 w-4" />
+                                <span className="text-sm font-medium">
+                                  {patient.assignedCaregiver.name}
+                                </span>
+                              </div>
+                            )}
+                            {patient.assignedReviewer && (
+                              <div className="flex items-center space-x-1 text-purple-600">
+                                <Stethoscope className="h-4 w-4" />
+                                <span className="text-sm font-medium">
+                                  {patient.assignedReviewer.name}
+                                </span>
+                              </div>
+                            )}
+                            {!patient.assignedCaregiver &&
+                              !patient.assignedReviewer && (
+                                <Badge variant="outline" className="text-xs">
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  Unassigned
+                                </Badge>
+                              )}
+                          </div>
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          {patient.status === "stable" ||
+                          patient.status === "improving" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRemoveAssignment(patient)}
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Unassign
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                handleOpenAssignmentDialog(patient)
+                              }
+                            >
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Assign
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Assignment Dialog */}
+        <Dialog
+          open={showAssignmentDialog}
+          onOpenChange={setShowAssignmentDialog}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <UserPlus className="h-5 w-5 mr-2" />
+                Assign Patient
+              </DialogTitle>
+              <DialogDescription>
+                Assign {selectedPatient?.firstName} {selectedPatient?.lastName}{" "}
+                to available staff members
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {/* Current Assignment Status */}
+              {selectedPatient &&
+                (selectedPatient.assignedCaregiver ||
+                  selectedPatient.assignedReviewer) && (
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-sm font-medium text-blue-900 mb-2">
+                      Current Assignments:
+                    </div>
+                    <div className="space-y-1 text-xs text-blue-700">
+                      {selectedPatient.assignedCaregiver && (
+                        <div className="flex items-center">
+                          <Users className="h-3 w-3 mr-1" />
+                          <span>
+                            Caregiver: {selectedPatient.assignedCaregiver.name}
+                          </span>
+                        </div>
+                      )}
+                      {selectedPatient.assignedReviewer && (
+                        <div className="flex items-center">
+                          <Eye className="h-3 w-3 mr-1" />
+                          <span>
+                            Reviewer: {selectedPatient.assignedReviewer.name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {/* Caregiver Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="caregiver">Caregiver</Label>
+                <Select
+                  value={selectedCaregiver}
+                  onValueChange={setSelectedCaregiver}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a caregiver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Assignment</SelectItem>
+                    {availableStaff.caregivers.map((caregiver) => {
+                      const workload =
+                        workloadStats.caregivers.find(
+                          (w) => w.user.id === caregiver.id
+                        )?.patientCount || 0;
+                      return (
+                        <SelectItem key={caregiver.id} value={caregiver.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>
+                              {caregiver.firstName} {caregiver.lastName}
+                            </span>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {workload}/5 patients
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                    {/* Show current caregiver even if at capacity */}
+                    {selectedPatient?.assignedCaregiver &&
+                      !availableStaff.caregivers.find(
+                        (c) => c.id === selectedPatient.assignedCaregiverId
+                      ) && (
+                        <SelectItem
+                          value={selectedPatient.assignedCaregiverId!}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>
+                              {selectedPatient.assignedCaregiver.name}
+                            </span>
+                            <Badge
+                              variant="destructive"
+                              className="ml-2 text-xs"
+                            >
+                              At Capacity
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Reviewer Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="reviewer">Reviewer</Label>
+                <Select
+                  value={selectedReviewer}
+                  onValueChange={setSelectedReviewer}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a reviewer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Assignment</SelectItem>
+                    {availableStaff.reviewers.map((reviewer) => {
+                      const workload =
+                        workloadStats.reviewers.find(
+                          (w) => w.user.id === reviewer.id
+                        )?.patientCount || 0;
+                      return (
+                        <SelectItem key={reviewer.id} value={reviewer.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>
+                              {reviewer.firstName} {reviewer.lastName}
+                            </span>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {workload}/5 patients
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                    {/* Show current reviewer even if at capacity */}
+                    {selectedPatient?.assignedReviewer &&
+                      !availableStaff.reviewers.find(
+                        (r) => r.id === selectedPatient.assignedReviewerId
+                      ) && (
+                        <SelectItem value={selectedPatient.assignedReviewerId!}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{selectedPatient.assignedReviewer.name}</span>
+                            <Badge
+                              variant="destructive"
+                              className="ml-2 text-xs"
+                            >
+                              At Capacity
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Workload Warning */}
+              {(selectedCaregiver &&
+                availableStaff.caregivers.find(
+                  (c) =>
+                    c.id === selectedCaregiver &&
+                    (workloadStats.caregivers.find((w) => w.user.id === c.id)
+                      ?.patientCount || 0) >= 4
+                )) ||
+              (selectedReviewer &&
+                availableStaff.reviewers.find(
+                  (r) =>
+                    r.id === selectedReviewer &&
+                    (workloadStats.reviewers.find((w) => w.user.id === r.id)
+                      ?.patientCount || 0) >= 4
+                )) ? (
+                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <div className="flex items-center">
+                    <AlertCircle className="h-4 w-4 text-amber-600 mr-2" />
+                    <span className="text-sm text-amber-700">
+                      Selected staff member is approaching maximum capacity (5
+                      patients).
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <DialogFooter>
               <Button
                 variant="outline"
-                className="mt-4"
-                onClick={() => router.push("/admin/applications")}
+                onClick={() => setShowAssignmentDialog(false)}
+                disabled={isAssigning}
               >
-                Review Applications
+                Cancel
               </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Medical Record #</TableHead>
-                    <TableHead>Service</TableHead>
-                    <TableHead>Care Level</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assigned Date</TableHead>
-                    <TableHead>Assignments</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPatients.map((patient) => (
-                    <TableRow key={patient.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {patient.firstName} {patient.lastName}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {patient.email}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-mono text-sm">
-                          {patient.medicalRecordNumber || "N/A"}
-                        </div>
-                      </TableCell>
-                      <TableCell>{patient.serviceName || "N/A"}</TableCell>
-                      <TableCell>
-                        {getCareLevelBadge(patient.careLevel)}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(patient.status)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {formatAssignedDate(patient.assignedDate)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          {patient.assignedCaregiver && (
-                            <div className="flex items-center space-x-1 text-green-600">
-                              <Eye className="h-4 w-4" />
-                              <span className="text-sm font-medium">
-                                {patient.assignedCaregiver.name}
-                              </span>
-                            </div>
-                          )}
-                          {patient.assignedReviewer && (
-                            <div className="flex items-center space-x-1 text-purple-600">
-                              <Stethoscope className="h-4 w-4" />
-                              <span className="text-sm font-medium">
-                                {patient.assignedReviewer.name}
-                              </span>
-                            </div>
-                          )}
-                          {!patient.assignedCaregiver &&
-                            !patient.assignedReviewer && (
-                              <Badge variant="outline" className="text-xs">
-                                <AlertCircle className="h-3 w-3 mr-1" />
-                                Unassigned
-                              </Badge>
-                            )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenAssignmentDialog(patient)}
-                          >
-                            <UserPlus className="h-4 w-4 mr-1" />
-                            Assign
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              router.push(`/admin/patients/${patient.id}`)
-                            }
-                          >
-                            View Details
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Assignment Dialog */}
-      <Dialog
-        open={showAssignmentDialog}
-        onOpenChange={setShowAssignmentDialog}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <UserPlus className="h-5 w-5 mr-2" />
-              Assign Patient
-            </DialogTitle>
-            <DialogDescription>
-              Assign {selectedPatient?.firstName} {selectedPatient?.lastName} to
-              available staff members
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Current Assignment Status */}
-            {selectedPatient &&
-              (selectedPatient.assignedCaregiver ||
-                selectedPatient.assignedReviewer) && (
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="text-sm font-medium text-blue-900 mb-2">
-                    Current Assignments:
-                  </div>
-                  <div className="space-y-1 text-xs text-blue-700">
-                    {selectedPatient.assignedCaregiver && (
-                      <div className="flex items-center">
-                        <Users className="h-3 w-3 mr-1" />
-                        <span>
-                          Caregiver: {selectedPatient.assignedCaregiver.name}
-                        </span>
-                      </div>
-                    )}
-                    {selectedPatient.assignedReviewer && (
-                      <div className="flex items-center">
-                        <Eye className="h-3 w-3 mr-1" />
-                        <span>
-                          Reviewer: {selectedPatient.assignedReviewer.name}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-            {/* Caregiver Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="caregiver">Caregiver</Label>
-              <Select
-                value={selectedCaregiver}
-                onValueChange={setSelectedCaregiver}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a caregiver" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Assignment</SelectItem>
-                  {availableStaff.caregivers.map((caregiver) => {
-                    const workload =
-                      workloadStats.caregivers.find(
-                        (w) => w.user.id === caregiver.id
-                      )?.patientCount || 0;
-                    return (
-                      <SelectItem key={caregiver.id} value={caregiver.id}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>
-                            {caregiver.firstName} {caregiver.lastName}
-                          </span>
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            {workload}/5 patients
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                  {/* Show current caregiver even if at capacity */}
-                  {selectedPatient?.assignedCaregiver &&
-                    !availableStaff.caregivers.find(
-                      (c) => c.id === selectedPatient.assignedCaregiverId
-                    ) && (
-                      <SelectItem value={selectedPatient.assignedCaregiverId!}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{selectedPatient.assignedCaregiver.name}</span>
-                          <Badge variant="destructive" className="ml-2 text-xs">
-                            At Capacity
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Reviewer Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="reviewer">Reviewer</Label>
-              <Select
-                value={selectedReviewer}
-                onValueChange={setSelectedReviewer}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a reviewer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Assignment</SelectItem>
-                  {availableStaff.reviewers.map((reviewer) => {
-                    const workload =
-                      workloadStats.reviewers.find(
-                        (w) => w.user.id === reviewer.id
-                      )?.patientCount || 0;
-                    return (
-                      <SelectItem key={reviewer.id} value={reviewer.id}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>
-                            {reviewer.firstName} {reviewer.lastName}
-                          </span>
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            {workload}/5 patients
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                  {/* Show current reviewer even if at capacity */}
-                  {selectedPatient?.assignedReviewer &&
-                    !availableStaff.reviewers.find(
-                      (r) => r.id === selectedPatient.assignedReviewerId
-                    ) && (
-                      <SelectItem value={selectedPatient.assignedReviewerId!}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{selectedPatient.assignedReviewer.name}</span>
-                          <Badge variant="destructive" className="ml-2 text-xs">
-                            At Capacity
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Workload Warning */}
-            {(selectedCaregiver &&
-              availableStaff.caregivers.find(
-                (c) =>
-                  c.id === selectedCaregiver &&
-                  (workloadStats.caregivers.find((w) => w.user.id === c.id)
-                    ?.patientCount || 0) >= 4
-              )) ||
-            (selectedReviewer &&
-              availableStaff.reviewers.find(
-                (r) =>
-                  r.id === selectedReviewer &&
-                  (workloadStats.reviewers.find((w) => w.user.id === r.id)
-                    ?.patientCount || 0) >= 4
-              )) ? (
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <div className="flex items-center">
-                  <AlertCircle className="h-4 w-4 text-amber-600 mr-2" />
-                  <span className="text-sm text-amber-700">
-                    Selected staff member is approaching maximum capacity (5
-                    patients).
-                  </span>
-                </div>
-              </div>
-            ) : null}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowAssignmentDialog(false)}
-              disabled={isAssigning}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleAssignment} disabled={isAssigning}>
-              {isAssigning ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Assigning...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Update Assignments
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <Button onClick={handleAssignment} disabled={isAssigning}>
+                {isAssigning ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Assigning...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Update Assignments
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

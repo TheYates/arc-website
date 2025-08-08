@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPatientById } from "@/lib/api/patients-sqlite";
+import { getPatientById } from "@/lib/api/patients-prisma";
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const patient = getPatientById(id);
+    const patient = await getPatientById(id);
 
     if (!patient) {
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });

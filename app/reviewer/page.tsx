@@ -22,6 +22,8 @@ import {
 import { CommandSearch } from "@/components/ui/command-search";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
+import { ReviewerMobileDashboard } from "@/components/mobile/reviewer-dashboard";
+import { RoleBottomNav } from "@/components/mobile/role-bottom-nav";
 import { useAuth } from "@/lib/auth";
 import { getPatientsByReviewer } from "@/lib/api/assignments";
 import { Patient } from "@/lib/types/patients";
@@ -126,8 +128,13 @@ export default function ReviewerPage() {
       {/* Header Navigation */}
       <RoleHeader role="reviewer" />
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 w-full max-w-7xl">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <ReviewerMobileDashboard />
+      </div>
+
+      {/* Desktop */}
+      <main className="hidden md:block container mx-auto px-4 py-6 w-full max-w-7xl">
         {/* Welcome Header */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">

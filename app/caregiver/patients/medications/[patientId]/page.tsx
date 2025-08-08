@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Pill, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
+import { CaregiverMedicationsMobile } from "@/components/mobile/caregiver-medications";
 
 interface PageProps {
   params: Promise<{ patientId: string }>;
@@ -36,14 +37,14 @@ export default function CaregiverMedicationsPage({ params }: PageProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const patientData = getPatientById(resolvedParams.patientId);
+        const patientData = await getPatientById(resolvedParams.patientId);
         if (patientData) {
           setPatient(patientData);
-          const medicationsData = getMedications(
-            resolvedParams.patientId
+          const medicationsData = (
+            await getMedications(resolvedParams.patientId)
           ).filter((m) => m.isActive);
           setMedications(medicationsData);
-          const administrationsData = getMedicationAdministrations(
+          const administrationsData = await getMedicationAdministrations(
             resolvedParams.patientId
           );
           setAdministrations(administrationsData);
@@ -86,8 +87,13 @@ export default function CaregiverMedicationsPage({ params }: PageProps) {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center space-x-4">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <CaregiverMedicationsMobile patientId={resolvedParams.patientId} />
+      </div>
+
+      {/* Header (Desktop) */}
+      <div className="hidden md:flex items-center space-x-4">
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -99,7 +105,7 @@ export default function CaregiverMedicationsPage({ params }: PageProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="administer" className="space-y-6">
+      <Tabs defaultValue="administer" className="hidden md:block space-y-6">
         <TabsList>
           <TabsTrigger value="administer">Record Administration</TabsTrigger>
           <TabsTrigger value="history">Administration History</TabsTrigger>

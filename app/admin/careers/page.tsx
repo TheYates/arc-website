@@ -38,7 +38,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,6 +91,7 @@ import {
   Tag,
   Settings,
 } from "lucide-react";
+import { AdminCareersMobile } from "@/components/mobile/admin-careers";
 
 export default function JobManagementPage() {
   // State for jobs
@@ -124,6 +133,28 @@ export default function JobManagementPage() {
   const [newCategory, setNewCategory] = useState("");
 
   const router = useRouter();
+
+  // Viewport detection to prevent desktop Dialog from rendering on mobile
+  const [isMdUp, setIsMdUp] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(min-width: 768px)");
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      // Support both event and initial list
+      // @ts-ignore
+      setIsMdUp(e.matches !== undefined ? e.matches : mql.matches);
+    };
+    handler(mql as unknown as MediaQueryList);
+    mql.addEventListener?.(
+      "change",
+      handler as (e: MediaQueryListEvent) => void
+    );
+    return () =>
+      mql.removeEventListener?.(
+        "change",
+        handler as (e: MediaQueryListEvent) => void
+      );
+  }, []);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -404,33 +435,53 @@ export default function JobManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Job Management</h1>
-          <p className="text-muted-foreground">
-            Manage job positions and review applications
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Draft
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Create New Job Position</DialogTitle>
-                <DialogDescription>
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <AdminCareersMobile
+          title="Job Management"
+          subtitle="Manage job positions and review applications"
+          onOpenCreate={() => setShowCreateDialog(true)}
+          onOpenCategories={() => setShowCategoryDialog(true)}
+          onEdit={(job) => {
+            setEditingJob(job);
+            setFormData({
+              title: job.title,
+              type: job.type,
+              location: job.location,
+              description: job.description,
+              requirements: Array.isArray(job.requirements)
+                ? job.requirements.join("\n")
+                : job.requirements,
+              salary: job.salary,
+              category: job.category,
+              status: job.status,
+              publicationDate: job.publicationDate || "",
+              expirationDate: job.expirationDate || "",
+              applicationDeadline: job.applicationDeadline || "",
+              numberOfPositions: job.numberOfPositions || 1,
+              remoteWorkOptions: job.remoteWorkOptions || "",
+              benefits: Array.isArray(job.benefits)
+                ? job.benefits.join("\n")
+                : job.benefits || "",
+            });
+            setShowEditDialog(true);
+          }}
+        />
+        {/* Mobile Create Job Sheet */}
+        {!isMdUp && (
+          <Sheet open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <SheetContent side="bottom" className="p-4">
+              <SheetHeader>
+                <SheetTitle>Create New Job Position</SheetTitle>
+                <SheetDescription>
                   Job will be created as draft - you can publish it later
-                </DialogDescription>
-              </DialogHeader>
+                </SheetDescription>
+              </SheetHeader>
               <div className="grid gap-3 py-4">
                 <div>
-                  <Label htmlFor="title">Job Title *</Label>
+                  <Label htmlFor="m-title">Job Title *</Label>
                   <Input
-                    id="title"
+                    id="m-title"
                     value={formData.title}
                     onChange={(e) =>
                       setFormData({ ...formData, title: e.target.value })
@@ -438,68 +489,65 @@ export default function JobManagementPage() {
                     placeholder="e.g., Senior Nurse Practitioner"
                   />
                 </div>
-
-                <div>
-                  <Label htmlFor="category">Category *</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, category: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="m-category">Category *</Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, category: value })
+                      }
+                    >
+                      <SelectTrigger id="m-category">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="m-type">Employment Type</Label>
+                    <Input
+                      id="m-type"
+                      value={formData.type}
+                      onChange={(e) =>
+                        setFormData({ ...formData, type: e.target.value })
+                      }
+                      placeholder="e.g., Full-time"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="m-location">Location</Label>
+                    <Input
+                      id="m-location"
+                      value={formData.location}
+                      onChange={(e) =>
+                        setFormData({ ...formData, location: e.target.value })
+                      }
+                      placeholder="e.g., Accra or Remote"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="m-salary">Salary Range</Label>
+                    <Input
+                      id="m-salary"
+                      value={formData.salary}
+                      onChange={(e) =>
+                        setFormData({ ...formData, salary: e.target.value })
+                      }
+                      placeholder="e.g., $80,000 - $120,000"
+                    />
+                  </div>
                 </div>
-
                 <div>
-                  <Label htmlFor="type">Employment Type</Label>
-                  <Input
-                    id="type"
-                    value={formData.type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, type: e.target.value })
-                    }
-                    placeholder="e.g., Full-time, Part-time, Contract"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) =>
-                      setFormData({ ...formData, location: e.target.value })
-                    }
-                    placeholder="e.g., New York, NY or Remote"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="salary">Salary Range</Label>
-                  <Input
-                    id="salary"
-                    value={formData.salary}
-                    onChange={(e) =>
-                      setFormData({ ...formData, salary: e.target.value })
-                    }
-                    placeholder="e.g., $80,000 - $120,000"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="description">Job Description</Label>
+                  <Label htmlFor="m-description">Job Description</Label>
                   <Textarea
-                    id="description"
+                    id="m-description"
                     value={formData.description}
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
@@ -508,50 +556,40 @@ export default function JobManagementPage() {
                     placeholder="Brief description of the role..."
                   />
                 </div>
-
                 <div>
-                  <Label htmlFor="requirements">
-                    Requirements (one per line)
-                  </Label>
+                  <Label htmlFor="m-reqs">Requirements (one per line)</Label>
                   <Textarea
-                    id="requirements"
+                    id="m-reqs"
                     value={
                       Array.isArray(formData.requirements)
                         ? formData.requirements.join("\n")
                         : formData.requirements
                     }
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        requirements: e.target.value,
-                      })
+                      setFormData({ ...formData, requirements: e.target.value })
                     }
-                    rows={2}
-                    placeholder="e.g., Bachelor's degree&#10;2+ years experience"
+                    rows={3}
+                    placeholder={"e.g., Bachelor's degree\n2+ years experience"}
                   />
                 </div>
-
                 <div>
-                  <Label htmlFor="benefits">Benefits (one per line)</Label>
+                  <Label htmlFor="m-benefits">Benefits (one per line)</Label>
                   <Textarea
-                    id="benefits"
+                    id="m-benefits"
                     value={
                       Array.isArray(formData.benefits)
                         ? formData.benefits.join("\n")
                         : formData.benefits
                     }
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        benefits: e.target.value,
-                      })
+                      setFormData({ ...formData, benefits: e.target.value })
                     }
-                    rows={2}
-                    placeholder="e.g., Health insurance&#10;Paid vacation"
+                    rows={3}
+                    placeholder={"e.g., Health insurance\nPaid vacation"}
                   />
                 </div>
               </div>
-              <DialogFooter>
+              <div className="grid grid-cols-2 gap-2 pb-[env(safe-area-inset-bottom)]">
                 <Button
                   variant="outline"
                   onClick={() => setShowCreateDialog(false)}
@@ -559,12 +597,380 @@ export default function JobManagementPage() {
                   Cancel
                 </Button>
                 <Button onClick={handleCreateJob}>Create Draft</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
 
+        {/* Mobile Edit Job Sheet */}
+        {!isMdUp && (
+          <Sheet open={showEditDialog} onOpenChange={setShowEditDialog}>
+            <SheetContent side="bottom" className="p-4">
+              <SheetHeader>
+                <SheetTitle>Edit Job Position</SheetTitle>
+                <SheetDescription>Update job position details</SheetDescription>
+              </SheetHeader>
+              <div className="grid gap-3 py-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="me-title">Job Title *</Label>
+                    <Input
+                      id="me-title"
+                      value={formData.title}
+                      onChange={(e) =>
+                        setFormData({ ...formData, title: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="me-status">Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, status: value })
+                      }
+                    >
+                      <SelectTrigger id="me-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="me-category">Category *</Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, category: value })
+                      }
+                    >
+                      <SelectTrigger id="me-category">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="me-type">Employment Type</Label>
+                    <Input
+                      id="me-type"
+                      value={formData.type}
+                      onChange={(e) =>
+                        setFormData({ ...formData, type: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="me-location">Location</Label>
+                    <Input
+                      id="me-location"
+                      value={formData.location}
+                      onChange={(e) =>
+                        setFormData({ ...formData, location: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="me-salary">Salary Range</Label>
+                    <Input
+                      id="me-salary"
+                      value={formData.salary}
+                      onChange={(e) =>
+                        setFormData({ ...formData, salary: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="me-description">Job Description</Label>
+                  <Textarea
+                    id="me-description"
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="me-reqs">Requirements (one per line)</Label>
+                  <Textarea
+                    id="me-reqs"
+                    value={
+                      Array.isArray(formData.requirements)
+                        ? formData.requirements.join("\n")
+                        : formData.requirements
+                    }
+                    onChange={(e) =>
+                      setFormData({ ...formData, requirements: e.target.value })
+                    }
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="me-benefits">Benefits (one per line)</Label>
+                  <Textarea
+                    id="me-benefits"
+                    value={
+                      Array.isArray(formData.benefits)
+                        ? formData.benefits.join("\n")
+                        : formData.benefits
+                    }
+                    onChange={(e) =>
+                      setFormData({ ...formData, benefits: e.target.value })
+                    }
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pb-[env(safe-area-inset-bottom)]">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEditDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateJob}>Update Job</Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
+      </div>
+
+      <div className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Job Management</h1>
+          <p className="text-muted-foreground">
+            Manage job positions and review applications
+          </p>
+        </div>
+        <div className="flex gap-3">
+          {/* Desktop dialog only when md+ to avoid portal bleed on mobile */}
+          <div className="hidden md:block">
+            {isMdUp && (
+              <Dialog
+                open={showCreateDialog}
+                onOpenChange={setShowCreateDialog}
+              >
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Draft
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Create New Job Position</DialogTitle>
+                    <DialogDescription>
+                      Job will be created as draft - you can publish it later
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    {/* Job Title - Full width */}
+                    <div>
+                      <Label htmlFor="title">Job Title *</Label>
+                      <Input
+                        id="title"
+                        value={formData.title}
+                        onChange={(e) =>
+                          setFormData({ ...formData, title: e.target.value })
+                        }
+                        placeholder="e.g., Senior Nurse Practitioner"
+                      />
+                    </div>
+
+                    {/* Category and Employment Type - 2 columns */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="category">Category *</Label>
+                        <Select
+                          value={formData.category}
+                          onValueChange={(value) =>
+                            setFormData({ ...formData, category: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="type">Employment Type</Label>
+                        <Input
+                          id="type"
+                          value={formData.type}
+                          onChange={(e) =>
+                            setFormData({ ...formData, type: e.target.value })
+                          }
+                          placeholder="e.g., Full-time, Part-time, Contract"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Location and Salary - 2 columns */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="location">Location</Label>
+                        <Input
+                          id="location"
+                          value={formData.location}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              location: e.target.value,
+                            })
+                          }
+                          placeholder="e.g., New York, NY or Remote"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="salary">Salary Range</Label>
+                        <Input
+                          id="salary"
+                          value={formData.salary}
+                          onChange={(e) =>
+                            setFormData({ ...formData, salary: e.target.value })
+                          }
+                          placeholder="e.g., $80,000 - $120,000"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Job Description - Full width */}
+                    <div>
+                      <Label htmlFor="description">Job Description</Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            description: e.target.value,
+                          })
+                        }
+                        rows={3}
+                        placeholder="Brief description of the role..."
+                      />
+                    </div>
+
+                    {/* Requirements and Benefits - 2 columns */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="requirements">
+                          Requirements (one per line)
+                        </Label>
+                        <Textarea
+                          id="requirements"
+                          value={
+                            Array.isArray(formData.requirements)
+                              ? formData.requirements.join("\n")
+                              : formData.requirements
+                          }
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              requirements: e.target.value,
+                            })
+                          }
+                          rows={3}
+                          placeholder="e.g., Bachelor's degree&#10;2+ years experience"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="benefits">
+                          Benefits (one per line)
+                        </Label>
+                        <Textarea
+                          id="benefits"
+                          value={
+                            Array.isArray(formData.benefits)
+                              ? formData.benefits.join("\n")
+                              : formData.benefits
+                          }
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              benefits: e.target.value,
+                            })
+                          }
+                          rows={3}
+                          placeholder="e.g., Health insurance&#10;Paid vacation"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Additional Options - 2 columns */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="positions">Number of Positions</Label>
+                        <Input
+                          id="positions"
+                          type="number"
+                          min="1"
+                          value={formData.numberOfPositions}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              numberOfPositions: parseInt(e.target.value) || 1,
+                            })
+                          }
+                          placeholder="1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="remote">Remote Work Options</Label>
+                        <Input
+                          id="remote"
+                          value={formData.remoteWorkOptions}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              remoteWorkOptions: e.target.value,
+                            })
+                          }
+                          placeholder="e.g., Hybrid, Fully Remote, On-site only"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowCreateDialog(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateJob}>Create Draft</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+
+          {/* Desktop Categories Dialog; on mobile we use a sheet below */}
           <Dialog
-            open={showCategoryDialog}
+            open={showCategoryDialog && isMdUp}
             onOpenChange={setShowCategoryDialog}
           >
             <DialogTrigger asChild>
@@ -573,7 +979,7 @@ export default function JobManagementPage() {
                 Manage Categories
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Manage Job Categories</DialogTitle>
                 <DialogDescription>
@@ -626,10 +1032,118 @@ export default function JobManagementPage() {
               </div>
             </DialogContent>
           </Dialog>
+          {/* Mobile Categories Sheet */}
+          <Sheet
+            open={showCategoryDialog && !isMdUp}
+            onOpenChange={setShowCategoryDialog}
+          >
+            <SheetContent side="bottom" className="p-4">
+              <SheetHeader>
+                <SheetTitle>Manage Job Categories</SheetTitle>
+                <SheetDescription>
+                  Add or remove job categories
+                </SheetDescription>
+              </SheetHeader>
+              <div className="space-y-3 py-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="New category name"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                  />
+                  <Button onClick={handleCreateCategory}>Add</Button>
+                </div>
+                <div className="space-y-2">
+                  {categories.map((category) => (
+                    <div
+                      key={category}
+                      className="flex items-center justify-between p-2 border rounded"
+                    >
+                      <span>{category}</span>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{category}"? This
+                              action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteCategory(category)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="pb-[env(safe-area-inset-bottom)]" />
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
+      {/* KPI Stats (Desktop) */}
+      <div className="hidden md:grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Open Jobs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {jobs.filter((j) => j.status === "published").length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Positions accepting applications
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Applications</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{applications.length}</div>
+            <p className="text-xs text-muted-foreground">
+              All-time applications
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Pending Review</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {applications.filter((a) => a.status === "pending").length}
+            </div>
+            <p className="text-xs text-muted-foreground">Awaiting decision</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Hired</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {applications.filter((a) => a.status === "hired").length}
+            </div>
+            <p className="text-xs text-muted-foreground">Marked as hired</p>
+          </CardContent>
+        </Card>
+      </div>
 
-      <Tabs defaultValue="jobs" className="space-y-4">
+      <Tabs defaultValue="jobs" className="hidden md:block space-y-4">
         <TabsList className="grid grid-cols-2 w-full">
           <TabsTrigger className="w-full" value="jobs">
             Job Positions
@@ -638,112 +1152,8 @@ export default function JobManagementPage() {
             Applications
           </TabsTrigger>
         </TabsList>
-
-        {/* Dynamic Statistics - Show Job Stats for Jobs Tab */}
-        <TabsContent value="jobs" className="m-0">
-          <Card>
-            <CardContent className="pt-4">
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  {
-                    status: "all",
-                    label: "Total",
-                    icon: <Briefcase className="h-3 w-3" />,
-                  },
-                  {
-                    status: "published",
-                    label: "Published",
-                    icon: <Eye className="h-3 w-3" />,
-                  },
-                  {
-                    status: "draft",
-                    label: "Draft",
-                    icon: <FileText className="h-3 w-3" />,
-                  },
-                  {
-                    status: "archived",
-                    label: "Archived",
-                    icon: <Clock className="h-3 w-3" />,
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.status}
-                    className="flex flex-col items-center p-2 border rounded-lg bg-background"
-                  >
-                    <div className="p-1 rounded-full bg-primary/10 mb-1">
-                      {item.icon}
-                    </div>
-                    <div className="text-sm font-bold">
-                      {item.status === "all"
-                        ? jobs.length
-                        : jobs.filter((job) => job.status === item.status)
-                            .length}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {item.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Dynamic Statistics - Show Application Stats for Applications Tab */}
-        <TabsContent value="applications" className="m-0">
-          <Card>
-            <CardContent className="pt-4">
-              <div className="grid grid-cols-5 gap-2">
-                {[
-                  {
-                    status: "all",
-                    label: "Total",
-                    icon: <FileText className="h-3 w-3" />,
-                  },
-                  {
-                    status: "pending",
-                    label: "Pending",
-                    icon: <Clock className="h-3 w-3" />,
-                  },
-                  {
-                    status: "reviewing",
-                    label: "Reviewing",
-                    icon: <FileText className="h-3 w-3" />,
-                  },
-                  {
-                    status: "interview",
-                    label: "Interview",
-                    icon: <Calendar className="h-3 w-3" />,
-                  },
-                  {
-                    status: "hired",
-                    label: "Hired",
-                    icon: <Award className="h-3 w-3" />,
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.status}
-                    className="flex flex-col items-center p-2 border rounded-lg bg-background"
-                  >
-                    <div className="p-1 rounded-full bg-primary/10 mb-1">
-                      {item.icon}
-                    </div>
-                    <div className="text-sm font-bold">
-                      {item.status === "all"
-                        ? applications.length
-                        : applications.filter(
-                            (app) => app.status === item.status
-                          ).length}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {item.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <TabsContent value="jobs" className="m-0" />
+        <TabsContent value="applications" className="m-0" />
 
         {/* Job Positions Tab */}
         <TabsContent value="jobs" className="mt-4">
@@ -973,7 +1383,21 @@ export default function JobManagementPage() {
                       </TableHeader>
                       <TableBody>
                         {sortedApplications.map((application) => (
-                          <TableRow key={application.id}>
+                          <TableRow
+                            key={application.id}
+                            role="link"
+                            tabIndex={0}
+                            className="cursor-pointer hover:bg-accent/50"
+                            onClick={() =>
+                              router.push(`/admin/careers/${application.id}`)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                router.push(`/admin/careers/${application.id}`);
+                              }
+                            }}
+                          >
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -1018,7 +1442,10 @@ export default function JobManagementPage() {
                             <TableCell>
                               {getApplicationStatusBadge(application.status)}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell
+                              className="text-right"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1041,288 +1468,235 @@ export default function JobManagementPage() {
             </Card>
           </Tabs>
 
-          {/* Application Statistics */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Application Statistics</CardTitle>
-              <CardDescription>
-                Overview of applications by status
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {[
-                {
-                  status: "all",
-                  label: "Total",
-                  icon: <FileText className="h-4 w-4" />,
-                },
-                {
-                  status: "pending",
-                  label: "Pending",
-                  icon: <Clock className="h-4 w-4" />,
-                },
-                {
-                  status: "reviewing",
-                  label: "Reviewing",
-                  icon: <FileText className="h-4 w-4" />,
-                },
-                {
-                  status: "interview",
-                  label: "Interview",
-                  icon: <Calendar className="h-4 w-4" />,
-                },
-                {
-                  status: "hired",
-                  label: "Hired",
-                  icon: <Award className="h-4 w-4" />,
-                },
-              ].map((item) => (
-                <div
-                  key={item.status}
-                  className="flex flex-col items-center p-3 border rounded-lg bg-background"
-                >
-                  <div className="p-1.5 rounded-full bg-primary/10 mb-2">
-                    {item.icon}
-                  </div>
-                  <div className="text-lg font-bold">
-                    {item.status === "all"
-                      ? applications.length
-                      : applications.filter((app) => app.status === item.status)
-                          .length}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {item.label}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          {/* Removed Application Statistics section for a cleaner view */}
         </TabsContent>
       </Tabs>
 
       {/* Edit Job Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Job Position</DialogTitle>
-            <DialogDescription>Update job position details</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-title">Job Title *</Label>
-                <Input
-                  id="edit-title"
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                />
+      {isMdUp && (
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Job Position</DialogTitle>
+              <DialogDescription>Update job position details</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-title">Job Title *</Label>
+                  <Input
+                    id="edit-title"
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, status: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="edit-status">Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, status: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-category">Category *</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, category: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-category">Category *</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, category: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-type">Employment Type</Label>
+                  <Input
+                    id="edit-type"
+                    value={formData.type}
+                    onChange={(e) =>
+                      setFormData({ ...formData, type: e.target.value })
+                    }
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="edit-type">Employment Type</Label>
-                <Input
-                  id="edit-type"
-                  value={formData.type}
-                  onChange={(e) =>
-                    setFormData({ ...formData, type: e.target.value })
-                  }
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-location">Location</Label>
-                <Input
-                  id="edit-location"
-                  value={formData.location}
-                  onChange={(e) =>
-                    setFormData({ ...formData, location: e.target.value })
-                  }
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-location">Location</Label>
+                  <Input
+                    id="edit-location"
+                    value={formData.location}
+                    onChange={(e) =>
+                      setFormData({ ...formData, location: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-salary">Salary Range</Label>
+                  <Input
+                    id="edit-salary"
+                    value={formData.salary}
+                    onChange={(e) =>
+                      setFormData({ ...formData, salary: e.target.value })
+                    }
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="edit-salary">Salary Range</Label>
-                <Input
-                  id="edit-salary"
-                  value={formData.salary}
-                  onChange={(e) =>
-                    setFormData({ ...formData, salary: e.target.value })
-                  }
-                />
-              </div>
-            </div>
 
-            <div>
-              <Label htmlFor="edit-description">Job Description</Label>
-              <Textarea
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                rows={4}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-requirements">
-                  Requirements (one per line)
-                </Label>
+                <Label htmlFor="edit-description">Job Description</Label>
                 <Textarea
-                  id="edit-requirements"
-                  value={
-                    Array.isArray(formData.requirements)
-                      ? formData.requirements.join("\n")
-                      : formData.requirements
-                  }
+                  id="edit-description"
+                  value={formData.description}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      requirements: e.target.value,
-                    })
+                    setFormData({ ...formData, description: e.target.value })
                   }
                   rows={4}
                 />
               </div>
-              <div>
-                <Label htmlFor="edit-benefits">Benefits (one per line)</Label>
-                <Textarea
-                  id="edit-benefits"
-                  value={
-                    Array.isArray(formData.benefits)
-                      ? formData.benefits.join("\n")
-                      : formData.benefits
-                  }
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      benefits: e.target.value,
-                    })
-                  }
-                  rows={4}
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="edit-positions">Number of Positions</Label>
-                <Input
-                  id="edit-positions"
-                  type="number"
-                  min="1"
-                  value={formData.numberOfPositions}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      numberOfPositions: parseInt(e.target.value) || 1,
-                    })
-                  }
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-requirements">
+                    Requirements (one per line)
+                  </Label>
+                  <Textarea
+                    id="edit-requirements"
+                    value={
+                      Array.isArray(formData.requirements)
+                        ? formData.requirements.join("\n")
+                        : formData.requirements
+                    }
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        requirements: e.target.value,
+                      })
+                    }
+                    rows={4}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-benefits">Benefits (one per line)</Label>
+                  <Textarea
+                    id="edit-benefits"
+                    value={
+                      Array.isArray(formData.benefits)
+                        ? formData.benefits.join("\n")
+                        : formData.benefits
+                    }
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        benefits: e.target.value,
+                      })
+                    }
+                    rows={4}
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="edit-publication">Publication Date</Label>
-                <Input
-                  id="edit-publication"
-                  type="date"
-                  value={formData.publicationDate}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      publicationDate: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-deadline">Application Deadline</Label>
-                <Input
-                  id="edit-deadline"
-                  type="date"
-                  value={formData.applicationDeadline}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      applicationDeadline: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
 
-            <div>
-              <Label htmlFor="edit-remote">Remote Work Options</Label>
-              <Input
-                id="edit-remote"
-                value={formData.remoteWorkOptions}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    remoteWorkOptions: e.target.value,
-                  })
-                }
-                placeholder="e.g., Hybrid, Fully Remote, On-site only"
-              />
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="edit-positions">Number of Positions</Label>
+                  <Input
+                    id="edit-positions"
+                    type="number"
+                    min="1"
+                    value={formData.numberOfPositions}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        numberOfPositions: parseInt(e.target.value) || 1,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-publication">Publication Date</Label>
+                  <Input
+                    id="edit-publication"
+                    type="date"
+                    value={formData.publicationDate}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        publicationDate: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-deadline">Application Deadline</Label>
+                  <Input
+                    id="edit-deadline"
+                    type="date"
+                    value={formData.applicationDeadline}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        applicationDeadline: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-remote">Remote Work Options</Label>
+                <Input
+                  id="edit-remote"
+                  value={formData.remoteWorkOptions}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      remoteWorkOptions: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., Hybrid, Fully Remote, On-site only"
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowEditDialog(false);
-                setEditingJob(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateJob}>Update Job</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEditDialog(false);
+                  setEditingJob(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateJob}>Update Job</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

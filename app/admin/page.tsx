@@ -27,13 +27,10 @@ import {
   Bell,
   Calendar,
   FileCheck,
-  FileText,
-  Home,
   Plus,
-  Settings,
-  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { AdminMobileDashboard } from "@/components/mobile/admin-dashboard";
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
@@ -224,33 +221,6 @@ export default function AdminDashboardPage() {
     },
   ];
 
-  const quickLinks = [
-    {
-      title: "New Application",
-      icon: <FileText className="h-5 w-5" />,
-      href: "/admin/applications",
-      color: "bg-primary",
-    },
-    {
-      title: "Add Patient",
-      icon: <UserPlus className="h-5 w-5" />,
-      href: "/admin/patients",
-      color: "bg-primary",
-    },
-    {
-      title: "Schedule",
-      icon: <Calendar className="h-5 w-5" />,
-      href: "/admin/scheduling",
-      color: "bg-primary",
-    },
-    {
-      title: "Settings",
-      icon: <Settings className="h-5 w-5" />,
-      href: "/admin/settings",
-      color: "bg-primary",
-    },
-  ];
-
   function getStatusBadge(status: string) {
     switch (status) {
       case "pending":
@@ -281,6 +251,11 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <AdminMobileDashboard />
+      </div>
+
       {/* Header & Welcome */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -301,24 +276,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Quick Links */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {quickLinks.map((link, index) => (
-          <Link href={link.href} key={index} className="block">
-            <Card className="cursor-pointer transition-all hover:shadow-md hover:border-primary">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className={`${link.color} p-2 rounded-lg text-white`}>
-                  {link.icon}
-                </div>
-                <div className="font-medium">{link.title}</div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
       {/* Dashboard Overview Content */}
-      <div className="space-y-6">
+      <div className="hidden md:block space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat, index) => (

@@ -71,6 +71,7 @@ import {
   UserPlus,
   Copy,
 } from "lucide-react";
+import { AdminCareerApplicationDetailMobile } from "@/components/mobile/admin-career-application-detail";
 
 export default function ApplicationDetailPage({
   params,
@@ -287,7 +288,12 @@ export default function ApplicationDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <AdminCareerApplicationDetailMobile id={id} />
+      </div>
+
+      <div className="hidden md:flex justify-between items-center">
         <Button
           variant="ghost"
           className="flex items-center"
@@ -302,7 +308,7 @@ export default function ApplicationDetailPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Info */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
@@ -527,7 +533,7 @@ export default function ApplicationDetailPage({
         </div>
 
         {/* Admin Actions */}
-        <div className="space-y-6">
+        <div className="hidden md:block space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Update Application</CardTitle>

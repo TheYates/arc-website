@@ -1,202 +1,323 @@
-import { NextResponse } from 'next/server'
-import type { PricingItem } from '@/lib/types/packages'
-import fs from 'fs'
-import path from 'path'
+import { NextResponse } from "next/server";
+import type { PricingItem } from "@/lib/types/packages";
+import { getAllServices, getServiceItems } from "@/lib/api/services-prisma";
 
-// File path for storing pricing data
-const PRICING_DATA_FILE = path.join(process.cwd(), 'data', 'pricing.json')
+// Transform service to PricingItem format for admin interface
+const transformServiceToPricingItem = async (
+  service: any
+): Promise<PricingItem> => {
+  const serviceItems = await getServiceItems(service.id);
 
-// Ensure data directory exists
-const ensureDataDirectory = () => {
-  const dataDir = path.dirname(PRICING_DATA_FILE)
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true })
-  }
-}
+  // Helper function to build hierarchical structure
+  const buildHierarchy = (
+    items: any[],
+    parentId: string | null = null
+  ): any[] => {
+    return items
+      .filter((item) => item.parentId === parentId)
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description || "",
+        type: item.level === 1 ? "feature" : ("addon" as "feature" | "addon"),
+        basePrice: Number(
+          item.priceDaily || item.priceMonthly || item.priceHourly || 0
+        ),
+        isRequired: item.isRequired,
+        isRecurring: true,
+        parentId: item.parentId || service.id,
+        sortOrder: item.sortOrder,
+        children: buildHierarchy(items, item.id), // Recursively build children
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+      }));
+  };
 
-// Load pricing data from file or return default
-const loadPricingData = (): PricingItem[] => {
-  try {
-    ensureDataDirectory()
-    if (fs.existsSync(PRICING_DATA_FILE)) {
-      const data = fs.readFileSync(PRICING_DATA_FILE, 'utf8')
-      return JSON.parse(data)
-    }
-  } catch (error) {
-    console.error('Error loading pricing data:', error)
-  }
+  // Build hierarchical structure starting with top-level items (parentId = null)
+  const children = buildHierarchy(serviceItems, null);
 
-  // Return default data if file doesn't exist or error occurred
-  return sampleAdminPricingData
-}
-
-// Save pricing data to file
-const savePricingData = (data: PricingItem[]): void => {
-  try {
-    ensureDataDirectory()
-    fs.writeFileSync(PRICING_DATA_FILE, JSON.stringify(data, null, 2))
-  } catch (error) {
-    console.error('Error saving pricing data:', error)
-    throw error
-  }
-}
-
-// Default admin pricing data
-const sampleAdminPricingData: PricingItem[] = [
-  {
-    id: "service_1",
-    name: "Home Care Service",
-    description: "Comprehensive home care services",
+  return {
+    id: service.id,
+    name: service.name,
+    description: service.description || "",
     type: "service",
-    basePrice: 150.00, // Services now require base price
+    basePrice: Number(
+      service.basePriceDaily ||
+        service.basePriceMonthly ||
+        service.basePriceHourly ||
+        0
+    ),
     isRequired: true,
     isRecurring: true,
     parentId: null,
-    sortOrder: 1,
-    children: [
-      {
-        id: "feature_1",
-        name: "Daily Check-ins",
-        description: "Daily wellness checks",
-        type: "feature",
-        basePrice: 0,
-        isRequired: true,
-        isRecurring: true,
-        parentId: "service_1",
-        sortOrder: 1,
-        children: [
-          {
-            id: "addon_1",
-            name: "Vital signs monitoring",
-            description: "Blood pressure, temperature, pulse monitoring",
-            type: "addon",
-            basePrice: 15.00,
-            isRequired: false,
-            isRecurring: true,
-            parentId: "feature_1",
-            sortOrder: 1,
-            children: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: "addon_2",
-            name: "Medication reminders",
-            description: "Automated medication reminder system",
-            type: "addon",
-            basePrice: 10.00,
-            isRequired: false,
-            isRecurring: true,
-            parentId: "feature_1",
-            sortOrder: 2,
-            children: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        ],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "feature_2",
-        name: "Emergency Response",
-        description: "24/7 emergency support services",
-        type: "feature",
-        basePrice: 50.00,
-        isRequired: false,
-        isRecurring: true,
-        parentId: "service_1",
-        sortOrder: 2,
-        children: [
-          {
-            id: "addon_3",
-            name: "Medical alert device",
-            description: "Wearable emergency alert device",
-            type: "addon",
-            basePrice: 20.00,
-            isRequired: false,
-            isRecurring: true,
-            parentId: "feature_2",
-            sortOrder: 1,
-            children: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        ],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "feature_3",
-        name: "Premium Care Package",
-        description: "Full-service care package with enhanced features",
-        type: "feature",
-        basePrice: 200.00,
-        isRequired: false,
-        isRecurring: true,
-        parentId: "service_1",
-        sortOrder: 3,
-        children: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-]
+    sortOrder: service.sortOrder,
+    colorTheme: service.colorTheme,
+    children,
+    createdAt: service.createdAt.toISOString(),
+    updatedAt: service.updatedAt.toISOString(),
+  };
+};
+
+// Note: Sample data removed - now using PostgreSQL database
 
 export async function GET() {
   try {
-    const data = loadPricingData()
+    // Get all services from database
+    const services = await getAllServices(true); // Include inactive for admin
+
+    // Transform services to PricingItem format
+    const data = await Promise.all(
+      services.map((service) => transformServiceToPricingItem(service))
+    );
+
     return NextResponse.json({
       success: true,
-      data: data
-    })
+      data: data,
+    });
   } catch (error) {
-    console.error('Error fetching admin pricing data:', error)
+    console.error("Error fetching admin pricing data:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch pricing data' },
+      { success: false, error: "Failed to fetch pricing data" },
       { status: 500 }
-    )
+    );
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { data } = body
+    const body = await request.json();
+    const { data } = body;
 
     if (!data || !Array.isArray(data)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid data format' },
+        { success: false, error: "Invalid data format" },
         { status: 400 }
-      )
+      );
     }
 
-    // Add timestamps to new items
-    const processItems = (items: PricingItem[]): PricingItem[] => {
-      return items.map(item => ({
-        ...item,
-        updatedAt: new Date().toISOString(),
-        createdAt: item.createdAt || new Date().toISOString(),
-        children: item.children ? processItems(item.children) : []
-      }))
+    console.log("💾 Saving pricing data to database:", {
+      itemCount: data.length,
+    });
+
+    // Import the necessary functions
+    const {
+      updateService,
+      createServiceItem,
+      updateServiceItem,
+      deleteServiceItem,
+    } = await import("@/lib/api/services-prisma");
+
+    let updatedCount = 0;
+    let createdCount = 0;
+    let errors: string[] = [];
+
+    // Helper function to clean up duplicates for a service
+    const cleanupDuplicates = async (serviceId: string) => {
+      const { getServiceItems } = await import("@/lib/api/services-prisma");
+      const allItems = await getServiceItems(serviceId);
+
+      // Group items by name, parentId, and level
+      const itemGroups = new Map<string, any[]>();
+
+      allItems.forEach((item) => {
+        const key = `${item.name}-${item.parentId || "null"}-${item.level}`;
+        if (!itemGroups.has(key)) {
+          itemGroups.set(key, []);
+        }
+        itemGroups.get(key)!.push(item);
+      });
+
+      // Remove duplicates (keep the oldest one)
+      for (const [, items] of itemGroups) {
+        if (items.length > 1) {
+          // Sort by creation date, keep the first (oldest)
+          items.sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          const toKeep = items[0];
+          const toDelete = items.slice(1);
+
+          console.log(
+            `🧹 Cleaning up ${toDelete.length} duplicates of "${toKeep.name}"`
+          );
+
+          for (const duplicate of toDelete) {
+            await deleteServiceItem(duplicate.id);
+          }
+        }
+      }
+    };
+
+    // Helper function to recursively process service items (features and addons)
+    const processServiceItems = async (
+      items: any[],
+      serviceId: string,
+      parentId: string | null = null,
+      level: number = 1
+    ) => {
+      for (let index = 0; index < items.length; index++) {
+        const item = items[index];
+        try {
+          console.log(
+            `📝 Processing ${item.type}: ${item.name} (level ${level}, order ${index})`
+          );
+
+          const itemData = {
+            serviceId: serviceId,
+            name: item.name,
+            description: item.description,
+            isRequired: item.isRequired,
+            sortOrder: index, // Use array index to preserve order
+            level: level,
+            parentId: parentId || undefined, // Convert null to undefined
+            priceDaily: item.basePrice,
+          };
+
+          let savedItem = null;
+
+          // Check if this is a real database ID (UUIDs) or a temporary frontend ID
+          const isRealId =
+            item.id &&
+            item.id.length > 20 &&
+            !item.id.includes("temp_") &&
+            !item.id.includes("new_");
+
+          if (isRealId) {
+            // Try to update existing item with real ID
+            savedItem = await updateServiceItem(item.id, itemData);
+            if (savedItem) {
+              updatedCount++;
+              console.log(
+                `✅ Service item updated: ${item.name} (order: ${index})`
+              );
+            }
+          }
+
+          if (!savedItem) {
+            // Either no real ID or update failed, check if item exists by name and parent
+            const existingItems = await getServiceItems(serviceId);
+            const existingItem = existingItems.find(
+              (existing) =>
+                existing.name === item.name &&
+                existing.parentId === parentId &&
+                existing.level === level
+            );
+
+            if (existingItem) {
+              // Update existing item found by name/parent
+              savedItem = await updateServiceItem(existingItem.id, itemData);
+              if (savedItem) {
+                updatedCount++;
+                console.log(
+                  `✅ Service item updated by name match: ${item.name} (order: ${index})`
+                );
+              }
+            } else {
+              // Create new item
+              savedItem = await createServiceItem(itemData);
+              if (savedItem) {
+                createdCount++;
+                console.log(
+                  `✅ Service item created: ${item.name} (order: ${index})`
+                );
+              }
+            }
+
+            if (!savedItem) {
+              errors.push(`Failed to create/update service item: ${item.name}`);
+              continue;
+            }
+          }
+
+          // Recursively process nested children (addons)
+          if (item.children && item.children.length > 0) {
+            console.log(
+              `🔄 Processing ${item.children.length} nested items for ${item.name}`
+            );
+            await processServiceItems(
+              item.children,
+              serviceId,
+              savedItem.id,
+              level + 1
+            );
+          }
+        } catch (itemError) {
+          console.error(`Error processing item ${item.name}:`, itemError);
+          errors.push(`Error processing ${item.name}: ${itemError}`);
+        }
+      }
+    };
+
+    // Process each pricing item (service)
+    for (let serviceIndex = 0; serviceIndex < data.length; serviceIndex++) {
+      const item = data[serviceIndex];
+      try {
+        if (item.type === "service") {
+          console.log(
+            `📝 Updating service: ${item.name} (${item.id}) - order: ${serviceIndex}`
+          );
+
+          // Clean up any existing duplicates first
+          await cleanupDuplicates(item.id);
+
+          // Update the service with preserved order
+          const serviceData = {
+            name: item.name,
+            displayName: item.name,
+            description: item.description,
+            basePriceDaily: item.basePrice,
+            sortOrder: serviceIndex, // Use array index to preserve service order
+            colorTheme: item.colorTheme || "teal",
+          };
+
+          const updatedService = await updateService(item.id, serviceData);
+          if (updatedService) {
+            updatedCount++;
+            console.log(
+              `✅ Service updated: ${item.name} (order: ${serviceIndex})`
+            );
+          } else {
+            errors.push(`Failed to update service: ${item.name}`);
+            continue;
+          }
+
+          // Process all children recursively (features and nested addons)
+          if (item.children && item.children.length > 0) {
+            console.log(
+              `🔄 Processing ${item.children.length} items for service ${item.name}`
+            );
+            await processServiceItems(item.children, item.id, null, 1);
+          }
+        }
+      } catch (itemError) {
+        console.error(`Error processing service ${item.name}:`, itemError);
+        errors.push(`Error processing service ${item.name}: ${itemError}`);
+      }
     }
 
-    const processedData = processItems(data)
-    savePricingData(processedData)
+    const result = {
+      success: errors.length === 0,
+      message: `Database update complete. Updated: ${updatedCount}, Created: ${createdCount}`,
+      details: {
+        updated: updatedCount,
+        created: createdCount,
+        errors: errors.length,
+        servicesProcessed: data.filter((item) => item.type === "service")
+          .length,
+      },
+      errors: errors.length > 0 ? errors : undefined,
+    };
 
-    return NextResponse.json({
-      success: true,
-      message: 'Pricing data saved successfully',
-      data: processedData
-    })
+    console.log("💾 Save result:", result);
+
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('Error saving admin pricing data:', error)
+    console.error("Error processing admin pricing data:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to save pricing data' },
+      { success: false, error: "Failed to process pricing data" },
       { status: 500 }
-    )
+    );
   }
 }

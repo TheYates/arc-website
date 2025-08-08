@@ -57,6 +57,7 @@ import {
   Search,
 } from "lucide-react";
 import { RoleHeader } from "@/components/role-header";
+import { ReviewerPatientMobile } from "@/components/mobile/reviewer-patient-detail";
 import { useToast } from "@/hooks/use-toast";
 
 import { PrescriptionDialog } from "@/components/medical/prescription-dialog";
@@ -367,9 +368,13 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
     <div className="min-h-screen bg-background w-full">
       {/* Header Navigation */}
       <RoleHeader role="reviewer" />
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <ReviewerPatientMobile patientId={resolvedParams.id} />
+      </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      {/* Desktop */}
+      <div className="hidden md:block container mx-auto px-4 py-8 max-w-7xl">
         {/* Back Button */}
         <div className="mb-6">
           <Button
@@ -417,7 +422,7 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
             </div>
             <div>
               <p className="text-2xl font-bold text-blue-600">
-                {medications.filter((m) => m.isActive).length}
+                {(medications || []).filter((m) => m.isActive).length}
               </p>
               <p className="text-sm text-muted-foreground">
                 Active Medications
@@ -750,7 +755,7 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                                     {medication}
                                   </div>
                                 ))}
-                              {commonMedications.filter((med) =>
+                              {(commonMedications || []).filter((med) =>
                                 med
                                   .toLowerCase()
                                   .includes(selectedMedication.toLowerCase())
@@ -1066,7 +1071,8 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                         </tbody>
                       </table>
                     </div>
-                    {medications.filter((m) => m.isActive).length === 0 && (
+                    {(medications || []).filter((m) => m.isActive).length ===
+                      0 && (
                       <div className="text-center py-8 text-muted-foreground">
                         No active medications found
                       </div>
@@ -1214,7 +1220,6 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
           </TabsContent>
         </Tabs>
       </div>
-
       {/* Prescription Dialog */}
       {patient && (
         <PrescriptionDialog

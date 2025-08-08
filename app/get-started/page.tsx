@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -8,16 +8,49 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Phone } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { Calendar, Users, Phone, Check, Plus, Minus } from "lucide-react";
 import { createApplication } from "@/lib/api/applications";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useSearchParams } from "next/navigation";
+
+// Types for dynamic service data
+interface ServiceItem {
+  id: string;
+  name: string;
+  description?: string;
+  level: number;
+  isOptional?: boolean;
+  basePrice?: number;
+  children?: ServiceItem[];
+}
+
+interface DynamicService {
+  id: string;
+  name: string;
+  description?: string;
+  basePrice?: number;
+  items: ServiceItem[];
+}
+
+interface SelectedAddon {
+  id: string;
+  name: string;
+  price: number;
+  parentFeatureId: string;
+}
 
 export default function GetStartedPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [dynamicServices, setDynamicServices] = useState<DynamicService[]>([]);
+  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -30,38 +63,126 @@ export default function GetStartedPage() {
     duration: "",
     careNeeds: "",
     preferredContact: "",
+    selectedFeatures: [] as string[], // IDs of selected optional features
+    customizations: "", // Additional customization notes
   });
 
-  const services = [
-    {
-      id: "ahenefie",
-      name: "AHENEFIE",
-      description: "Live-in home care package",
-      price: "Starting from GHS 200/day",
-      popular: true,
-    },
-    {
-      id: "adamfo-pa",
-      name: "ADAMFO PA",
-      description: "Daily home visit package",
-      price: "Starting from GHS 80/visit",
-      popular: false,
-    },
-    {
-      id: "fie-ne-fie",
-      name: "Fie Ne Fie",
-      description: "Stay-in nanny service",
-      price: "Starting from GHS 150/day",
-      popular: false,
-    },
-    {
-      id: "yonko-pa",
-      name: "YONKO PA",
-      description: "Visit-on-request nanny service",
-      price: "Starting from GHS 50/hour",
-      popular: false,
-    },
-  ];
+  // Fetch dynamic services data
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        setIsLoadingServices(true);
+        const response = await fetch("/api/services/pricing");
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          setDynamicServices(result.data);
+
+          // Handle service pre-selection from URL parameters
+          const serviceParam = searchParams.get("service");
+          if (serviceParam && result.data.length > 0) {
+            // Try to find service by slug, name, or ID
+            const preSelectedService = result.data.find(
+              (service: DynamicService) =>
+                service.name.toLowerCase().replace(/\s+/g, "-") ===
+                  serviceParam.toLowerCase() ||
+                service.name.toLowerCase() === serviceParam.toLowerCase() ||
+                service.id === serviceParam
+            );
+
+            if (preSelectedService) {
+              setFormData((prev) => ({
+                ...prev,
+                serviceId: preSelectedService.id,
+              }));
+
+              // Show a toast to indicate pre-selection
+              toast({
+                title: "Service Pre-selected",
+                description: `${preSelectedService.name} has been selected for you.`,
+              });
+            }
+          }
+        } else {
+          console.error("Failed to fetch services:", result.error);
+          toast({
+            title: "Error Loading Services",
+            description:
+              "Failed to load service options. Please refresh the page.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching services:", error);
+        toast({
+          title: "Error Loading Services",
+          description:
+            "Failed to load service options. Please refresh the page.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingServices(false);
+      }
+    };
+
+    fetchServices();
+  }, [toast, searchParams]);
+
+  // Helper functions for pricing and selections
+  const formatPrice = (price: number): string => {
+    return new Intl.NumberFormat("en-GH", {
+      style: "currency",
+      currency: "GHS",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
+  const getSelectedService = (): DynamicService | null => {
+    return (
+      dynamicServices.find((service) => service.id === formData.serviceId) ||
+      null
+    );
+  };
+
+  const calculateTotalPrice = (): number => {
+    const selectedService = getSelectedService();
+    if (!selectedService) return 0;
+
+    let total = selectedService.basePrice || 0;
+
+    // Add prices for selected addons
+    selectedAddons.forEach((addon) => {
+      total += addon.price;
+    });
+
+    return total;
+  };
+
+  const handleAddonToggle = (addon: ServiceItem, parentFeatureId: string) => {
+    const addonId = addon.id;
+    const existingIndex = selectedAddons.findIndex((a) => a.id === addonId);
+
+    if (existingIndex >= 0) {
+      // Remove addon
+      setSelectedAddons((prev) => prev.filter((a) => a.id !== addonId));
+    } else {
+      // Add addon
+      setSelectedAddons((prev) => [
+        ...prev,
+        {
+          id: addonId,
+          name: addon.name,
+          price: addon.basePrice || 0,
+          parentFeatureId,
+        },
+      ]);
+    }
+  };
+
+  const isAddonSelected = (addonId: string): boolean => {
+    return selectedAddons.some((addon) => addon.id === addonId);
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -74,6 +195,8 @@ export default function GetStartedPage() {
 
   const handleServiceChange = (serviceId: string) => {
     setFormData((prev) => ({ ...prev, serviceId }));
+    // Clear addon selections when service changes
+    setSelectedAddons([]);
   };
 
   const handleContactMethodChange = (
@@ -105,16 +228,27 @@ export default function GetStartedPage() {
     setIsSubmitting(true);
 
     try {
-      // Get selected service name
-      const selectedService = services.find(
-        (service) => service.id === formData.serviceId
-      );
+      // Get selected service
+      const selectedService = getSelectedService();
 
-      // Submit application to API
-      await createApplication({
+      // Prepare application data with selections
+      const applicationData = {
         ...formData,
         serviceName: selectedService?.name || "",
-      });
+        basePrice: selectedService?.basePrice || 0,
+        selectedAddons: selectedAddons,
+        totalPrice: calculateTotalPrice(),
+        packageDetails: {
+          serviceId: formData.serviceId,
+          serviceName: selectedService?.name || "",
+          basePrice: selectedService?.basePrice || 0,
+          addons: selectedAddons,
+          totalPrice: calculateTotalPrice(),
+        },
+      };
+
+      // Submit application to API
+      await createApplication(applicationData);
 
       // Show success state
       setIsSubmitted(true);
@@ -314,36 +448,202 @@ export default function GetStartedPage() {
                     <h3 className="text-lg font-semibold mb-4">
                       Select Your Service
                     </h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {services.map((service) => (
-                        <label key={service.id} className="cursor-pointer">
-                          <input
-                            type="radio"
-                            name="service"
-                            value={service.id}
-                            checked={formData.serviceId === service.id}
-                            onChange={() => handleServiceChange(service.id)}
-                            className="sr-only peer"
-                          />
-                          <Card className="peer-checked:ring-2 peer-checked:ring-primary peer-checked:border-primary hover:shadow-md transition-all">
-                            <CardContent className="p-4">
-                              <div className="flex justify-between items-start mb-2">
-                                <h4 className="font-semibold">
-                                  {service.name}
+                    {isLoadingServices ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                        <span>Loading services...</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {dynamicServices.map((service) => (
+                          <div key={service.id}>
+                            <label className="cursor-pointer block">
+                              <input
+                                type="radio"
+                                name="service"
+                                value={service.id}
+                                checked={formData.serviceId === service.id}
+                                onChange={() => handleServiceChange(service.id)}
+                                className="sr-only peer"
+                              />
+                              <Card
+                                className={`peer-checked:ring-2 peer-checked:ring-primary peer-checked:border-primary hover:shadow-md transition-all ${
+                                  formData.serviceId &&
+                                  formData.serviceId !== service.id
+                                    ? "opacity-50"
+                                    : ""
+                                }`}
+                              >
+                                <CardContent className="p-4">
+                                  <div className="flex justify-between items-start mb-2">
+                                    <h4 className="font-semibold">
+                                      {service.name}
+                                    </h4>
+                                    {service.name === "AHENEFIE" && (
+                                      <Badge>Most Popular</Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-muted-foreground text-sm mb-2">
+                                    {service.description ||
+                                      "Professional care service"}
+                                  </p>
+                                  <p className="text-green-600 font-medium text-sm">
+                                    Starting from{" "}
+                                    {formatPrice(service.basePrice || 0)}
+                                  </p>
+                                </CardContent>
+                              </Card>
+                            </label>
+
+                            {/* Service Customization - appears right under selected service */}
+                            {formData.serviceId === service.id && (
+                              <div className="mt-4 ml-4 border-l-2 border-primary/20 pl-4">
+                                <h4 className="text-base font-medium mb-3 text-primary">
+                                  Customize Your {service.name} Service
                                 </h4>
-                                {service.popular && <Badge>Most Popular</Badge>}
+                                <div className="space-y-2">
+                                  {service.items.map((feature) => (
+                                    <div key={feature.id} className="space-y-1">
+                                      <div className="flex items-start gap-2">
+                                        <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1">
+                                          <span className="text-sm font-medium">
+                                            {feature.name}
+                                            {feature.isOptional === false && (
+                                              <Badge
+                                                variant="secondary"
+                                                className="ml-2 text-xs"
+                                              >
+                                                Included
+                                              </Badge>
+                                            )}
+                                          </span>
+                                          {feature.description && (
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                              {feature.description}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Show addons for this feature */}
+                                      {feature.children &&
+                                        feature.children.length > 0 && (
+                                          <div className="ml-6 space-y-1">
+                                            {feature.children.map((addon) => (
+                                              <div key={addon.id}>
+                                                {addon.isOptional ? (
+                                                  // Optional addon with checkbox
+                                                  <div className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50 transition-colors">
+                                                    <div className="flex items-center gap-2">
+                                                      <Checkbox
+                                                        id={addon.id}
+                                                        checked={isAddonSelected(
+                                                          addon.id
+                                                        )}
+                                                        onCheckedChange={() =>
+                                                          handleAddonToggle(
+                                                            addon,
+                                                            feature.id
+                                                          )
+                                                        }
+                                                      />
+                                                      <div>
+                                                        <label
+                                                          htmlFor={addon.id}
+                                                          className="text-xs font-medium cursor-pointer"
+                                                        >
+                                                          {addon.name}
+                                                        </label>
+                                                        {addon.description && (
+                                                          <p className="text-xs text-muted-foreground">
+                                                            {addon.description}
+                                                          </p>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                    <div className="text-xs font-medium text-green-600">
+                                                      +
+                                                      {formatPrice(
+                                                        addon.basePrice || 0
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                ) : (
+                                                  // Required addon without checkbox
+                                                  <div className="flex items-start gap-2 py-1 px-2">
+                                                    <Check className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
+                                                    <div className="flex-1">
+                                                      <span className="text-xs font-medium">
+                                                        {addon.name}
+                                                        <Badge
+                                                          variant="secondary"
+                                                          className="ml-2 text-xs"
+                                                        >
+                                                          Included
+                                                        </Badge>
+                                                      </span>
+                                                      {addon.description && (
+                                                        <p className="text-xs text-muted-foreground">
+                                                          {addon.description}
+                                                        </p>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                    </div>
+                                  ))}
+
+                                  {/* Price Summary */}
+                                  {selectedAddons.length > 0 && (
+                                    <div className="mt-3 p-3 bg-muted/30 rounded-lg">
+                                      <h5 className="text-sm font-medium mb-2">
+                                        Price Summary
+                                      </h5>
+                                      <div className="space-y-1 text-xs">
+                                        <div className="flex justify-between">
+                                          <span>Base Service</span>
+                                          <span className="text-green-600">
+                                            {formatPrice(
+                                              service.basePrice || 0
+                                            )}
+                                          </span>
+                                        </div>
+                                        {selectedAddons.map((addon) => (
+                                          <div
+                                            key={addon.id}
+                                            className="flex justify-between text-muted-foreground"
+                                          >
+                                            <span>+ {addon.name}</span>
+                                            <span className="text-green-600">
+                                              +{formatPrice(addon.price)}
+                                            </span>
+                                          </div>
+                                        ))}
+                                        <div className="border-t pt-1 mt-1">
+                                          <div className="flex justify-between font-medium text-sm">
+                                            <span>Total Price</span>
+                                            <span className="text-green-600 font-semibold">
+                                              {formatPrice(
+                                                calculateTotalPrice()
+                                              )}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <p className="text-muted-foreground text-sm mb-2">
-                                {service.description}
-                              </p>
-                              <p className="text-primary font-medium text-sm">
-                                {service.price}
-                              </p>
-                            </CardContent>
-                          </Card>
-                        </label>
-                      ))}
-                    </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Care Details */}
@@ -410,6 +710,24 @@ export default function GetStartedPage() {
                         placeholder="Please describe the specific care needs, any medical conditions, preferences, or special requirements..."
                       />
                     </div>
+
+                    {/* Additional Customizations */}
+                    <div className="mt-4">
+                      <label
+                        htmlFor="customizations"
+                        className="block text-sm font-medium mb-2"
+                      >
+                        Additional Customizations
+                      </label>
+                      <Textarea
+                        id="customizations"
+                        name="customizations"
+                        value={formData.customizations}
+                        onChange={handleInputChange}
+                        rows={3}
+                        placeholder="Any additional requests, special arrangements, or customizations for your service package..."
+                      />
+                    </div>
                   </div>
 
                   {/* Preferred Contact */}
@@ -466,6 +784,10 @@ export default function GetStartedPage() {
                           <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                           Submitting...
                         </>
+                      ) : formData.serviceId && getSelectedService() ? (
+                        `Book Free Consultation - ${formatPrice(
+                          calculateTotalPrice()
+                        )}`
                       ) : (
                         "Book Free Consultation"
                       )}

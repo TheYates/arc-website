@@ -2,10 +2,31 @@
 
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Check, Calendar, Shield, Phone, Car, Heart, Users, Clock, AlertTriangle, ChevronDown } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Check,
+  Calendar,
+  Shield,
+  Phone,
+  Car,
+  Heart,
+  Users,
+  Clock,
+  AlertTriangle,
+  ChevronDown,
+} from "lucide-react";
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
 import { useState, useEffect } from "react";
@@ -36,7 +57,8 @@ interface EventMedicalCoverageService {
 }
 
 export default function EventMedicalCoveragePage() {
-  const [eventMedicalService, setEventMedicalService] = useState<EventMedicalCoverageService | null>(null);
+  const [eventMedicalService, setEventMedicalService] =
+    useState<EventMedicalCoverageService | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -45,19 +67,19 @@ export default function EventMedicalCoveragePage() {
   useEffect(() => {
     const fetchServiceData = async () => {
       try {
-        const response = await fetch('/api/services/event-medical-coverage');
+        const response = await fetch("/api/services/event-medical-coverage");
         const result = await response.json();
 
         if (result.success && result.data) {
           setEventMedicalService(result.data);
-          console.log('Using dynamic data from admin');
+          console.log("Using dynamic data from admin");
         } else {
-          setError('No service data found');
-          console.log('No dynamic data found');
+          setError("No service data found");
+          console.log("No dynamic data found");
         }
       } catch (err) {
-        console.error('Error fetching service data:', err);
-        setError('Failed to load service data');
+        console.error("Error fetching service data:", err);
+        setError("Failed to load service data");
       } finally {
         setLoading(false);
       }
@@ -113,7 +135,9 @@ export default function EventMedicalCoveragePage() {
                           <span className="text-orange-600 text-xs">
                             Optional
                             {item.basePrice && item.basePrice > 0 && (
-                              <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                              <span className="ml-1 text-green-600">
+                                + {formatPrice(item.basePrice)}
+                              </span>
                             )}
                           </span>
                         )}
@@ -149,7 +173,9 @@ export default function EventMedicalCoveragePage() {
                       <span className="text-orange-600 text-xs">
                         Optional
                         {item.basePrice && item.basePrice > 0 && (
-                          <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                          <span className="ml-1 text-green-600">
+                            + {formatPrice(item.basePrice)}
+                          </span>
                         )}
                       </span>
                     )}
@@ -216,18 +242,26 @@ export default function EventMedicalCoveragePage() {
               <div className="flex items-center justify-center lg:justify-start space-x-3 mb-6">
                 <AlertTriangle className="h-12 w-12 text-red-300 flex-shrink-0" />
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight">
-                  {eventMedicalService?.name?.toUpperCase() || "EVENT MEDICAL COVERAGE"}
+                  {eventMedicalService?.name?.toUpperCase() ||
+                    "EVENT MEDICAL COVERAGE"}
                 </h1>
               </div>
-              <Badge className="bg-white/20 text-white border border-white/30 mb-4">Day Option</Badge>
-              <p className="text-2xl text-red-100 mb-4">Professional Event Medical Services</p>
+              <Badge className="bg-white/20 text-white border border-white/30 mb-4">
+                Day Option
+              </Badge>
+              <p className="text-2xl text-red-100 mb-4">
+                Professional Event Medical Services
+              </p>
               <p className="text-xl font-medium text-white/90 leading-relaxed mb-8">
                 {eventMedicalService?.description}
               </p>
               {eventMedicalService?.basePrice && (
                 <div className="flex items-center gap-4 mb-8">
                   <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
-                    <span className="text-white font-semibold">Starting from {formatPrice(eventMedicalService.basePrice || 0)}</span>
+                    <span className="text-white font-semibold">
+                      Starting from{" "}
+                      {formatPrice(eventMedicalService.basePrice || 0)}
+                    </span>
                   </div>
                 </div>
               )}
@@ -251,8 +285,6 @@ export default function EventMedicalCoveragePage() {
                 </Link>
               </div>
             </div>
-            
-           
           </div>
         </div>
       </section>
@@ -266,20 +298,20 @@ export default function EventMedicalCoveragePage() {
                 Professional Event Medical Support
               </h2>
               <p className="text-lg text-slate-600 mb-6 leading-relaxed">
-                Our Event Medical Coverage provides comprehensive medical support for events of all sizes. 
-                From small gatherings to large festivals, our trained medical professionals ensure participant 
-                safety with immediate response capabilities and emergency transport services.
+                Our Event Medical Coverage provides comprehensive medical
+                support for events of all sizes. From small gatherings to large
+                festivals, our trained medical professionals ensure participant
+                safety with immediate response capabilities and emergency
+                transport services.
               </p>
               <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                Perfect for sporting events, concerts, festivals, corporate gatherings, and any event where 
-                medical safety and emergency preparedness are essential.
+                Perfect for sporting events, concerts, festivals, corporate
+                gatherings, and any event where medical safety and emergency
+                preparedness are essential.
               </p>
-              
             </div>
 
             <div className="space-y-6">
-              
-
               <div className="grid grid-cols-2 gap-6">
                 <Card className="text-center">
                   <CardContent className="p-6">
@@ -342,7 +374,8 @@ export default function EventMedicalCoveragePage() {
               Complete Service Breakdown
             </h2>
             <p className="text-xl text-slate-600">
-              Comprehensive medical services included in your Event Medical Coverage
+              Comprehensive medical services included in your Event Medical
+              Coverage
             </p>
           </div>
 
@@ -350,7 +383,9 @@ export default function EventMedicalCoveragePage() {
             {loading ? (
               <div className="text-center py-6">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-                <p className="text-slate-600 mt-2">Loading service details...</p>
+                <p className="text-slate-600 mt-2">
+                  Loading service details...
+                </p>
               </div>
             ) : error ? (
               <div className="text-center py-6">
@@ -367,7 +402,9 @@ export default function EventMedicalCoveragePage() {
               eventMedicalService.items.map((item) => renderServiceItem(item))
             ) : (
               <div className="text-center py-6">
-                <p className="text-slate-600 text-sm">No service details available.</p>
+                <p className="text-slate-600 text-sm">
+                  No service details available.
+                </p>
               </div>
             )}
           </div>
@@ -425,16 +462,24 @@ export default function EventMedicalCoveragePage() {
             Secure Medical Coverage for Your Event
           </h2>
           <p className="text-xl text-red-100 mb-8">
-            Contact us today to discuss your event medical coverage needs and ensure participant safety.
+            Contact us today to discuss your event medical coverage needs and
+            ensure participant safety.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/get-started">
-              <Button size="lg" className="bg-white text-red-600 hover:bg-red-50">
+              <Button
+                size="lg"
+                className="bg-white text-red-600 hover:bg-red-50"
+              >
                 Book Event Coverage
               </Button>
             </Link>
             <Link href="/contact">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white text-white hover:bg-white/10"
+              >
                 <Phone className="h-5 w-5 mr-2" />
                 Call Us Today
               </Button>
@@ -447,7 +492,8 @@ export default function EventMedicalCoveragePage() {
       <footer className="bg-slate-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-slate-400">
-            © 2024 Alpha Rescue Consult. Professional event medical services you can trust.
+            © 2024 Alpha Rescue Consult. Professional event medical services you
+            can trust.
           </p>
         </div>
       </footer>

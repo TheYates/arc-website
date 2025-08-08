@@ -212,7 +212,7 @@ export default function PatientMedicalPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {medications.filter((m) => m.isActive).length}
+              {(medications || []).filter((m) => m.isActive).length}
             </div>
             <p className="text-xs text-muted-foreground">
               medications prescribed
@@ -259,7 +259,7 @@ export default function PatientMedicalPage() {
 
         <TabsContent value="medications">
           <div className="grid gap-4">
-            {medications.length === 0 ? (
+            {(medications || []).length === 0 ? (
               <Card>
                 <CardContent className="p-6 text-center">
                   <Pill className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -269,7 +269,7 @@ export default function PatientMedicalPage() {
                 </CardContent>
               </Card>
             ) : (
-              medications.map((medication) => (
+              (medications || []).map((medication) => (
                 <Card key={medication.id}>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="flex items-center">

@@ -184,14 +184,6 @@ export default function Header() {
               </NavigationMenuItem>
 
               <NavigationMenuItem>
-                <Link href="/pricing" legacyBehavior passHref>
-                  <NavigationMenuLink className=" hover:text-teal-600 font-medium transition-colors px-4 py-2">
-                    Pricing
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-
-              <NavigationMenuItem>
                 <Link href="/about" legacyBehavior passHref>
                   <NavigationMenuLink className=" hover:text-teal-600 font-medium transition-colors px-4 py-2">
                     About
@@ -279,13 +271,7 @@ export default function Header() {
                   </div>
                 ))}
               </div>
-              <Link
-                href="/pricing"
-                className="block py-2  font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Pricing
-              </Link>
+
               <Link
                 href="/about"
                 className="block py-2  font-medium"

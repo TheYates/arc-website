@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -690,17 +691,25 @@ export default function ServiceDetailPage() {
 
                     {/* CTA Buttons */}
                     <div className="space-y-3">
-                      <Button
-                        size="lg"
-                        className="w-full bg-teal-600 hover:bg-teal-700"
+                      <Link
+                        href={`/get-started?service=${enhancedService.name
+                          .toLowerCase()
+                          .replace(/\s+/g, "-")}`}
                       >
-                        <Heart className="h-4 w-4 mr-2" />
-                        Book This Service
-                      </Button>
-                      <Button variant="outline" size="lg" className="w-full">
-                        <Users className="h-4 w-4 mr-2" />
-                        Speak to Consultant
-                      </Button>
+                        <Button
+                          size="lg"
+                          className="w-full bg-teal-600 hover:bg-teal-700"
+                        >
+                          <Heart className="h-4 w-4 mr-2" />
+                          Book This Service
+                        </Button>
+                      </Link>
+                      <Link href="/contact">
+                        <Button variant="outline" size="lg" className="w-full">
+                          <Users className="h-4 w-4 mr-2" />
+                          Speak to Consultant
+                        </Button>
+                      </Link>
                     </div>
 
                     {/* Service Features */}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceBySlugWithDetails } from "@/lib/api/services-sqlite";
+import { getServiceBySlugWithDetails } from "@/lib/api/services-prisma";
 
 export async function GET(
   request: NextRequest,
@@ -7,13 +7,10 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const service = getServiceBySlugWithDetails(slug);
+    const service = await getServiceBySlugWithDetails(slug);
 
     if (!service) {
-      return NextResponse.json(
-        { error: "Service not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Service not found" }, { status: 404 });
     }
 
     return NextResponse.json({ service });

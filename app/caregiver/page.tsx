@@ -22,6 +22,8 @@ import {
 import { CommandSearch } from "@/components/ui/command-search";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
+import { CaregiverMobileDashboard } from "@/components/mobile/caregiver-dashboard";
+import { RoleBottomNav } from "@/components/mobile/role-bottom-nav";
 import { useAuth, hasPermission } from "@/lib/auth";
 import { getPatientsByCaregiver } from "@/lib/api/assignments";
 import { Patient } from "@/lib/types/patients";
@@ -132,8 +134,13 @@ export default function CaregiverPage() {
       {/* Header Navigation */}
       <RoleHeader role="caregiver" />
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 w-full max-w-7xl space-y-6">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <CaregiverMobileDashboard />
+      </div>
+
+      {/* Desktop */}
+      <main className="hidden md:block container mx-auto px-4 py-6 w-full max-w-7xl space-y-6">
         {/* Welcome Header */}
         <Card className="bg-gradient-to-r from-teal-50 to-green-50 border-teal-200">
           <CardContent className="pt-6">

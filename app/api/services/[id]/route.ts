@@ -1,5 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServiceWithDetails, updateService, deleteService } from '@/lib/api/services-sqlite';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  getServiceWithDetails,
+  updateService,
+  deleteService,
+} from "@/lib/api/services-prisma";
 
 export async function GET(
   request: NextRequest,
@@ -7,20 +11,17 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const service = getServiceWithDetails(id);
+    const service = await getServiceWithDetails(id);
 
     if (!service) {
-      return NextResponse.json(
-        { error: 'Service not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Service not found" }, { status: 404 });
     }
 
     return NextResponse.json({ service });
   } catch (error) {
-    console.error('Get service API error:', error);
+    console.error("Get service API error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -34,20 +35,20 @@ export async function PUT(
     const { id } = await params;
     const updates = await request.json();
 
-    const success = updateService(id, updates);
+    const updatedService = await updateService(id, updates);
 
-    if (!success) {
+    if (!updatedService) {
       return NextResponse.json(
-        { error: 'Service not found or no changes made' },
+        { error: "Service not found or no changes made" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ service: updatedService });
   } catch (error) {
-    console.error('Update service API error:', error);
+    console.error("Update service API error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -59,20 +60,17 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const success = deleteService(id);
+    const success = await deleteService(id);
 
     if (!success) {
-      return NextResponse.json(
-        { error: 'Service not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Service not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Delete service API error:', error);
+    console.error("Delete service API error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

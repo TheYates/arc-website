@@ -41,50 +41,50 @@ import {
 import type { PricingItem } from "@/lib/types/packages";
 
 // Color theme mapping for services
-const getServiceColorClasses = (colorTheme: string = 'teal') => {
+const getServiceColorClasses = (colorTheme: string = "teal") => {
   const colorMap = {
     teal: {
-      border: 'border-teal-500',
-      bg: 'from-teal-50 to-teal-100',
-      hover: 'hover:from-teal-100 hover:to-teal-200',
-      badge: 'text-teal-600 border-teal-300 bg-teal-50',
-      text: 'text-teal-700'
+      border: "border-teal-500",
+      bg: "from-teal-50 to-teal-100",
+      hover: "hover:from-teal-100 hover:to-teal-200",
+      badge: "text-teal-600 border-teal-300 bg-teal-50",
+      text: "text-teal-700",
     },
     blue: {
-      border: 'border-blue-500',
-      bg: 'from-blue-50 to-blue-100',
-      hover: 'hover:from-blue-100 hover:to-blue-200',
-      badge: 'text-blue-600 border-blue-300 bg-blue-50',
-      text: 'text-blue-700'
+      border: "border-blue-500",
+      bg: "from-blue-50 to-blue-100",
+      hover: "hover:from-blue-100 hover:to-blue-200",
+      badge: "text-blue-600 border-blue-300 bg-blue-50",
+      text: "text-blue-700",
     },
     purple: {
-      border: 'border-purple-500',
-      bg: 'from-purple-50 to-purple-100',
-      hover: 'hover:from-purple-100 hover:to-purple-200',
-      badge: 'text-purple-600 border-purple-300 bg-purple-50',
-      text: 'text-purple-700'
+      border: "border-purple-500",
+      bg: "from-purple-50 to-purple-100",
+      hover: "hover:from-purple-100 hover:to-purple-200",
+      badge: "text-purple-600 border-purple-300 bg-purple-50",
+      text: "text-purple-700",
     },
     indigo: {
-      border: 'border-indigo-500',
-      bg: 'from-indigo-50 to-indigo-100',
-      hover: 'hover:from-indigo-100 hover:to-indigo-200',
-      badge: 'text-indigo-600 border-indigo-300 bg-indigo-50',
-      text: 'text-indigo-700'
+      border: "border-indigo-500",
+      bg: "from-indigo-50 to-indigo-100",
+      hover: "hover:from-indigo-100 hover:to-indigo-200",
+      badge: "text-indigo-600 border-indigo-300 bg-indigo-50",
+      text: "text-indigo-700",
     },
     red: {
-      border: 'border-red-500',
-      bg: 'from-red-50 to-red-100',
-      hover: 'hover:from-red-100 hover:to-red-200',
-      badge: 'text-red-600 border-red-300 bg-red-50',
-      text: 'text-red-700'
+      border: "border-red-500",
+      bg: "from-red-50 to-red-100",
+      hover: "hover:from-red-100 hover:to-red-200",
+      badge: "text-red-600 border-red-300 bg-red-50",
+      text: "text-red-700",
     },
     green: {
-      border: 'border-green-500',
-      bg: 'from-green-50 to-green-100',
-      hover: 'hover:from-green-100 hover:to-green-200',
-      badge: 'text-green-600 border-green-300 bg-green-50',
-      text: 'text-green-700'
-    }
+      border: "border-green-500",
+      bg: "from-green-50 to-green-100",
+      hover: "hover:from-green-100 hover:to-green-200",
+      badge: "text-green-600 border-green-300 bg-green-50",
+      text: "text-green-700",
+    },
   };
 
   return colorMap[colorTheme as keyof typeof colorMap] || colorMap.teal;
@@ -141,7 +141,7 @@ export function PricingCardView({
   // Reset delete dialog if the item to delete no longer exists
   React.useEffect(() => {
     if (itemToDelete && deleteConfirmOpen) {
-      const itemExists = items.some(item => {
+      const itemExists = items.some((item) => {
         const findItem = (currentItem: PricingItem): boolean => {
           if (currentItem.id === itemToDelete.id) return true;
           return currentItem.children?.some(findItem) || false;
@@ -156,8 +156,6 @@ export function PricingCardView({
       }
     }
   }, [items, itemToDelete, deleteConfirmOpen]);
-
-
 
   const toggleItemExpansion = (itemId: string) => {
     const newExpanded = new Set(expandedItems);
@@ -178,17 +176,31 @@ export function PricingCardView({
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return;
 
-    console.log("Delete confirmed for:", itemToDelete.name);
+    console.log("🗑️ Delete confirmed for:", itemToDelete.name);
+
+    // Close dialog immediately to prevent UI conflicts
     setDeleteConfirmOpen(false);
 
+    // Small delay to ensure dialog is fully closed
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
     try {
+      console.log("🗑️ Calling onDelete...");
       await onDelete(itemToDelete);
-      console.log("Delete completed successfully");
+      console.log("✅ Delete completed successfully");
     } catch (error) {
-      console.error("Error during delete:", error);
-      // Could show a toast notification here instead of alert
+      console.error("💥 Error during delete:", error);
+      // Error handling is now done in the parent component
     } finally {
+      // Clean up state
       setItemToDelete(null);
+
+      // Ensure UI is responsive
+      setTimeout(() => {
+        document.body.style.pointerEvents = "auto";
+        document.body.style.overflow = "auto";
+        console.log("🗑️ Delete cleanup completed");
+      }, 100);
     }
   };
 
@@ -197,8 +209,6 @@ export function PricingCardView({
     setDeleteConfirmOpen(false);
     setItemToDelete(null);
   };
-
-
 
   const getTypeColor = (type: PricingItem["type"]) => {
     switch (type) {
@@ -245,7 +255,7 @@ export function PricingCardView({
     const typeIcon = getTypeIcon(item.type);
 
     // Get color theme from item (assuming it's added to PricingItem type)
-    const colorTheme = (item as any).colorTheme || 'teal';
+    const colorTheme = (item as any).colorTheme || "teal";
     const colors = getServiceColorClasses(colorTheme);
 
     // Service level (top-level cards) - Now collapsible
@@ -260,7 +270,9 @@ export function PricingCardView({
             onOpenChange={() => toggleItemExpansion(item.id)}
           >
             <CollapsibleTrigger asChild>
-              <CardHeader className={`bg-gradient-to-r ${colors.bg} cursor-pointer ${colors.hover} transition-colors py-3`}>
+              <CardHeader
+                className={`bg-gradient-to-r ${colors.bg} cursor-pointer ${colors.hover} transition-colors py-3`}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
@@ -270,13 +282,17 @@ export function PricingCardView({
                         {item.name}
                         {/* Display base price as text only */}
                         {item.basePrice && item.basePrice > 0 && (
-                          <span className={`text-sm font-normal ${colors.text}/70`}>
+                          <span
+                            className={`text-sm font-normal ${colors.text}/70`}
+                          >
                             Base: {formatPrice(item.basePrice)}
                           </span>
                         )}
                       </CardTitle>
                       {item.description && (
-                        <p className="text-slate-600 mt-1 text-sm">{item.description}</p>
+                        <p className="text-slate-600 mt-1 text-sm">
+                          {item.description}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -406,10 +422,14 @@ export function PricingCardView({
                           <span className="text-orange-600 text-xs">
                             Optional
                             {item.basePrice && item.basePrice > 0 && (
-                              <span className="ml-1 text-green-600">+{formatPrice(item.basePrice)}</span>
+                              <span className="ml-1 text-green-600">
+                                +{formatPrice(item.basePrice)}
+                              </span>
                             )}
                             {(!item.basePrice || item.basePrice === 0) && (
-                              <span className="ml-1 text-gray-500">+{formatPrice(0)}</span>
+                              <span className="ml-1 text-gray-500">
+                                +{formatPrice(0)}
+                              </span>
                             )}
                           </span>
                         )}
@@ -443,20 +463,24 @@ export function PricingCardView({
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {item.type === "service" && (
-                          <DropdownMenuItem onClick={() => onAdd(item.id, "feature")}>
+                          <DropdownMenuItem
+                            onClick={() => onAdd(item.id, "feature")}
+                          >
                             <Plus className="h-4 w-4 mr-2" />
                             Add Feature
                           </DropdownMenuItem>
                         )}
                         {(item.type === "feature" || item.type === "addon") && (
-                          <DropdownMenuItem onClick={() => onAdd(item.id, "addon")}>
+                          <DropdownMenuItem
+                            onClick={() => onAdd(item.id, "addon")}
+                          >
                             <Plus className="h-4 w-4 mr-2" />
                             Add Add-on
                           </DropdownMenuItem>
                         )}
-                        {(item.type === "service" || item.type === "feature" || item.type === "addon") && (
-                          <DropdownMenuSeparator />
-                        )}
+                        {(item.type === "service" ||
+                          item.type === "feature" ||
+                          item.type === "addon") && <DropdownMenuSeparator />}
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.preventDefault();
@@ -511,10 +535,14 @@ export function PricingCardView({
                       <span className="text-orange-600 text-xs">
                         Optional
                         {item.basePrice && item.basePrice > 0 && (
-                          <span className="ml-1 text-green-600">+{formatPrice(item.basePrice)}</span>
+                          <span className="ml-1 text-green-600">
+                            +{formatPrice(item.basePrice)}
+                          </span>
                         )}
                         {(!item.basePrice || item.basePrice === 0) && (
-                          <span className="ml-1 text-gray-500">+{formatPrice(0)}</span>
+                          <span className="ml-1 text-gray-500">
+                            +{formatPrice(0)}
+                          </span>
                         )}
                       </span>
                     )}
@@ -544,7 +572,9 @@ export function PricingCardView({
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {item.type === "service" && (
-                      <DropdownMenuItem onClick={() => onAdd(item.id, "feature")}>
+                      <DropdownMenuItem
+                        onClick={() => onAdd(item.id, "feature")}
+                      >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Feature
                       </DropdownMenuItem>
@@ -555,9 +585,9 @@ export function PricingCardView({
                         Add Add-on
                       </DropdownMenuItem>
                     )}
-                    {(item.type === "service" || item.type === "feature" || item.type === "addon") && (
-                      <DropdownMenuSeparator />
-                    )}
+                    {(item.type === "service" ||
+                      item.type === "feature" ||
+                      item.type === "addon") && <DropdownMenuSeparator />}
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.preventDefault();
@@ -635,10 +665,12 @@ export function PricingCardView({
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>"{itemToDelete?.name}"</strong>?
+              Are you sure you want to delete{" "}
+              <strong>"{itemToDelete?.name}"</strong>?
               {itemToDelete?.children && itemToDelete.children.length > 0 && (
                 <span className="block mt-2 text-red-600 font-medium">
-                  ⚠️ This will also delete {itemToDelete.children.length} child item(s).
+                  ⚠️ This will also delete {itemToDelete.children.length} child
+                  item(s).
                 </span>
               )}
               <span className="block mt-2 text-sm text-muted-foreground">

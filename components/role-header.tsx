@@ -133,24 +133,6 @@ export function RoleHeader({ role }: RoleHeaderProps) {
             icon: <Users className="h-4 w-4 mr-2" />,
             isActive: pathname.startsWith(`${baseUrl}/patients`),
           },
-          {
-            name: "Reviews",
-            href: `${baseUrl}/reviews`,
-            icon: <FileText className="h-4 w-4 mr-2" />,
-            isActive: pathname.startsWith(`${baseUrl}/reviews`),
-          },
-          {
-            name: "Schedule",
-            href: `${baseUrl}/schedule`,
-            icon: <Calendar className="h-4 w-4 mr-2" />,
-            isActive: pathname.startsWith(`${baseUrl}/schedule`),
-          },
-          {
-            name: "Reports",
-            href: `${baseUrl}/reports`,
-            icon: <ClipboardList className="h-4 w-4 mr-2" />,
-            isActive: pathname.startsWith(`${baseUrl}/reports`),
-          },
         ];
       case "caregiver":
         return [
@@ -165,24 +147,6 @@ export function RoleHeader({ role }: RoleHeaderProps) {
             href: `${baseUrl}/patients`,
             icon: <Users className="h-4 w-4 mr-2" />,
             isActive: pathname.startsWith(`${baseUrl}/patients`),
-          },
-          {
-            name: "Vitals",
-            href: `${baseUrl}/vitals`,
-            icon: <Stethoscope className="h-4 w-4 mr-2" />,
-            isActive: pathname.startsWith(`${baseUrl}/vitals`),
-          },
-          {
-            name: "Schedule",
-            href: `${baseUrl}/schedule`,
-            icon: <Calendar className="h-4 w-4 mr-2" />,
-            isActive: pathname.startsWith(`${baseUrl}/schedule`),
-          },
-          {
-            name: "Tasks",
-            href: `${baseUrl}/tasks`,
-            icon: <ClipboardCheck className="h-4 w-4 mr-2" />,
-            isActive: pathname.startsWith(`${baseUrl}/tasks`),
           },
         ];
     }

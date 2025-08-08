@@ -27,33 +27,56 @@ export default function LoginPage() {
 
   // Check if user is already logged in
   useEffect(() => {
+    console.log("🔍 Login page useEffect:", {
+      authLoading,
+      user: user?.email,
+      role: user?.role,
+    });
+
     // Wait for auth to be ready
-    if (authLoading) return;
+    if (authLoading) {
+      console.log("⏳ Auth still loading...");
+      return;
+    }
 
     setIsAuthReady(true);
+    console.log("✅ Auth ready, isAuthReady set to true");
 
     // If user is already logged in, redirect to appropriate page
     if (user) {
+      console.log(
+        "👤 User already logged in, redirecting based on role:",
+        user.role
+      );
       redirectBasedOnRole(user.role);
+    } else {
+      console.log("❌ No user found, staying on login page");
     }
   }, [user, authLoading, router]);
 
   const redirectBasedOnRole = (role: string) => {
+    console.log("🔄 Redirecting based on role:", role);
+
     switch (role) {
       case "admin":
       case "super_admin":
+        console.log("🔑 Admin role detected, redirecting to /admin");
         router.push("/admin");
         break;
       case "reviewer":
+        console.log("👨‍⚕️ Reviewer role detected, redirecting to /reviewer");
         router.push("/reviewer");
         break;
       case "care_giver":
+        console.log("👩‍⚕️ Caregiver role detected, redirecting to /caregiver");
         router.push("/caregiver");
         break;
       case "patient":
+        console.log("🏥 Patient role detected, redirecting to /patient");
         router.push("/patient");
         break;
       default:
+        console.log("❓ Unknown role, redirecting to homepage:", role);
         router.push("/");
         break;
     }
@@ -64,21 +87,32 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
 
+    console.log("🚀 Login form submitted:", { emailOrUsername });
+
     if (!emailOrUsername || !password) {
+      console.log("❌ Missing fields");
       setError("Please fill in all fields");
       setIsLoading(false);
       return;
     }
 
     try {
+      console.log("📡 Calling login function...");
       const result = await login(emailOrUsername, password);
+      console.log("📥 Login result:", {
+        success: result.success,
+        error: result.error,
+      });
 
       if (result.success) {
+        console.log("✅ Login successful, waiting for useEffect redirect...");
         // This should redirect automatically via the useEffect above
       } else {
+        console.log("❌ Login failed:", result.error);
         setError(result.error || "Login failed");
       }
     } catch (err) {
+      console.log("💥 Login error:", err);
       setError("An unexpected error occurred");
     } finally {
       setIsLoading(false);
@@ -226,20 +260,20 @@ export default function LoginPage() {
             </div>
 
             {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-slate-50 rounded-lg">
+            <div className="mt-6 p-4 rounded-lg">
               <h3 className="text-sm font-semibold mb-2">Demo Credentials:</h3>
               <div className="text-xs space-y-1">
                 <div>
-                  <strong>Admin:</strong> admin / password
+                  <strong>Admin:</strong> admin@arc.com / password
                 </div>
                 <div>
-                  <strong>Reviewer:</strong> drmensah / password
+                  <strong>Reviewer:</strong> reviewer@arc.com / password
                 </div>
                 <div>
-                  <strong>Care Giver:</strong> nurseama / password
+                  <strong>Caregiver:</strong> caregiver@arc.com / password
                 </div>
                 <div>
-                  <strong>Patient:</strong> patient1 / password
+                  <strong>Patient:</strong> patient@arc.com / password
                 </div>
               </div>
             </div>

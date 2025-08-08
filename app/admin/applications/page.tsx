@@ -32,6 +32,7 @@ import { getApplications } from "@/lib/api/applications";
 import { ApplicationData } from "@/lib/types/applications";
 import { formatDate } from "@/lib/utils";
 import { Loader2, Search, Filter, Calendar, Clock, Plus } from "lucide-react";
+import { AdminApplicationsMobile } from "@/components/mobile/admin-applications";
 
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<ApplicationData[]>([]);
@@ -98,22 +99,28 @@ export default function ApplicationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Patient Applications</h1>
-          <p className="text-muted-foreground">
-            Review and manage client service applications
-          </p>
-        </div>
-        <div className="flex-shrink-0">
-          <Button className="flex items-center">
-            <Plus className="h-4 w-4 mr-2" />
-            New Application
-          </Button>
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <AdminApplicationsMobile
+          title="Patient Applications"
+          subtitle="Review and manage client service applications"
+        />
+      </div>
+
+      <div className="hidden md:flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Patient Applications
+            </h1>
+            <p className="text-muted-foreground">
+              Review and manage client service applications
+            </p>
+          </div>
         </div>
       </div>
 
-      <Card>
+      <Card className="hidden md:block">
         <CardHeader className="pb-3">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
             <CardTitle>Applications</CardTitle>
@@ -164,7 +171,19 @@ export default function ApplicationsPage() {
                 </TableHeader>
                 <TableBody>
                   {sortedApplications.map((application) => (
-                    <TableRow key={application.id}>
+                    <TableRow
+                      key={application.id}
+                      role="link"
+                      tabIndex={0}
+                      className="cursor-pointer hover:bg-accent/50"
+                      onClick={() => handleViewApplication(application.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleViewApplication(application.id);
+                        }
+                      }}
+                    >
                       <TableCell>
                         <div>
                           <div className="font-medium">
@@ -191,7 +210,10 @@ export default function ApplicationsPage() {
                       <TableCell>
                         {getStatusBadge(application.status)}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button
                           variant="outline"
                           size="sm"

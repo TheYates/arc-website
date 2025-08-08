@@ -23,6 +23,7 @@ import {
 import { CommandSearch } from "@/components/ui/command-search";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
+import { ReviewerPatientsMobile } from "@/components/mobile/reviewer-patients";
 import { useAuth } from "@/lib/auth";
 import { getPatientsByReviewer } from "@/lib/api/assignments";
 import { useToast } from "@/hooks/use-toast";
@@ -162,8 +163,13 @@ export default function ReviewerPatientsPage() {
       {/* Header Navigation */}
       <RoleHeader role="reviewer" />
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 w-full max-w-7xl">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <ReviewerPatientsMobile />
+      </div>
+
+      {/* Desktop */}
+      <main className="hidden md:block container mx-auto px-4 py-6 w-full max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>

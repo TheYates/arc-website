@@ -10,69 +10,52 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Package,
-  TrendingUp,
-  Users,
-  DollarSign,
-
-  Save,
-} from "lucide-react";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Package, TrendingUp, Users, DollarSign, Save } from "lucide-react";
+import { AdminServicesMobile } from "@/components/mobile/admin-services";
 import { useAuth } from "@/lib/auth";
 import { PricingCardView } from "@/components/admin/pricing-card-view";
 import PricingItemFormModal from "@/components/admin/pricing-item-form-modal";
-
 
 import type { PricingItem } from "@/lib/types/packages";
 
 export default function AdminPackagesPage() {
   const { user } = useAuth();
 
-  // Pricing tree view state - will be loaded from pricing.json
+  // Services data state - loaded from PostgreSQL database
   const [pricingItems, setPricingItems] = useState<PricingItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load services from pricing.json (consistent with rest of app)
+  // Load services from PostgreSQL database
   useEffect(() => {
     const loadServices = async () => {
       try {
-        const response = await fetch('/api/admin/pricing');
+        setIsLoading(true);
+        const response = await fetch("/api/admin/pricing");
         const result = await response.json();
 
         if (result.success && result.data) {
-          // Add color themes to services based on their names
-          const servicesWithColors = result.data.map((item: PricingItem) => {
-            if (item.type === 'service') {
-              const colorMap: Record<string, string> = {
-                'AHENEFIE': 'teal',
-                'ADAMFO PA': 'blue',
-                'FIE NE FIE': 'purple',
-                'YONKO PA': 'indigo',
-                'EVENT MEDICAL COVERAGE': 'red',
-                'CONFERENCE OPTION': 'green'
-              };
-              return {
-                ...item,
-                colorTheme: colorMap[item.name] || 'teal'
-              };
-            }
-            return item;
-          });
-          setPricingItems(servicesWithColors);
+          setPricingItems(result.data);
         } else {
-          console.error('Failed to load services:', result.error);
+          console.error("Failed to load services:", result.error);
           setPricingItems([]);
         }
       } catch (error) {
-        console.error('Error loading services:', error);
+        console.error("Error loading services:", error);
         setPricingItems([]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     loadServices();
   }, []);
-
-
-
-
 
   const [selectedPricingItem, setSelectedPricingItem] =
     useState<PricingItem | null>(null);
@@ -84,60 +67,97 @@ export default function AdminPackagesPage() {
   const [defaultItemType, setDefaultItemType] =
     useState<PricingItem["type"]>("service");
 
-
-
   // Save state
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Manual save function - memoized to prevent stale closures
+  // Notification dialog state
+  const [notificationDialog, setNotificationDialog] = useState({
+    open: false,
+    title: "",
+    message: "",
+    type: "success" as "success" | "error",
+  });
+
+  // Helper function to show notifications
+  const showNotification = (
+    title: string,
+    message: string,
+    type: "success" | "error" = "success"
+  ) => {
+    setNotificationDialog({
+      open: true,
+      title,
+      message,
+      type,
+    });
+  };
+
+  // Save function - now actually saves to PostgreSQL database
   const handleSavePricingData = useCallback(async () => {
     try {
-      console.log("handleSavePricingData called", {
+      console.log("💾 handleSavePricingData called", {
         hasUnsavedChanges,
         isSaving,
         itemsCount: pricingItems.length,
       });
 
       setIsSaving(true);
+
+      // Save all pricing data to PostgreSQL database
       const response = await fetch("/api/admin/pricing", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ data: pricingItems }),
+        body: JSON.stringify({
+          data: pricingItems,
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to save pricing data");
-      }
-
       const result = await response.json();
-      console.log("Save result:", result);
+      console.log("💾 Save response:", result);
 
       if (result.success) {
         setLastSaved(new Date());
         setHasUnsavedChanges(false);
-        console.log("Save successful, state updated");
+        console.log("✅ Save successful - data saved to PostgreSQL database");
+
+        // Log success message but don't show dialog
+        if (
+          result.details &&
+          (result.details.updated > 0 || result.details.created > 0)
+        ) {
+          console.log(
+            `✅ Save successful! Updated: ${result.details.updated}, Created: ${result.details.created}`
+          );
+        }
       } else {
-        throw new Error(result.error || "Failed to save pricing data");
+        console.error("❌ Save failed:", result.error);
+        showNotification(
+          "Save Failed",
+          `Failed to save changes: ${result.error}`,
+          "error"
+        );
+
+        // Show detailed errors if available
+        if (result.errors && result.errors.length > 0) {
+          console.error("Detailed errors:", result.errors);
+        }
       }
     } catch (error) {
-      console.error("Error saving pricing data:", error);
-      // You might want to show a toast notification here
-      alert("Failed to save changes. Please try again.");
+      console.error("💥 Error saving services data:", error);
+      showNotification(
+        "Save Error",
+        "Failed to save changes. Please check the console for details.",
+        "error"
+      );
     } finally {
       setIsSaving(false);
       console.log("Save process completed");
     }
   }, [hasUnsavedChanges, isSaving, pricingItems]);
-
-
-
-
-
-
 
   // Debug useEffect to track hasUnsavedChanges changes
   useEffect(() => {
@@ -164,7 +184,9 @@ export default function AdminPackagesPage() {
         // Check if modal has been open for too long (more than 5 minutes)
         const modalOpenTime = Date.now() - (window as any).modalOpenTimestamp;
         if ((window as any).modalOpenTimestamp && modalOpenTime > 300000) {
-          console.warn("Modal has been open for more than 5 minutes, might be frozen");
+          console.warn(
+            "Modal has been open for more than 5 minutes, might be frozen"
+          );
         }
       }
     }, 5000); // Check every 5 seconds
@@ -182,6 +204,36 @@ export default function AdminPackagesPage() {
       console.log("Modal closed at:", new Date().toISOString());
     }
   }, [isPricingItemDialogOpen]);
+
+  // Global cleanup effect to prevent UI freezing (simplified)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Emergency escape: Ctrl+Alt+R to force reset UI state
+      if (e.ctrlKey && e.altKey && e.key === "r") {
+        e.preventDefault();
+        console.log("🚨 Emergency UI reset triggered");
+
+        // Force close all dialogs
+        setIsPricingItemDialogOpen(false);
+        setSelectedPricingItem(null);
+        setParentItemId(null);
+        setNotificationDialog((prev) => ({ ...prev, open: false }));
+
+        // Force cleanup styles only (no DOM manipulation)
+        setTimeout(() => {
+          document.body.style.pointerEvents = "auto";
+          document.body.style.overflow = "auto";
+          console.log("🚨 Emergency UI reset completed");
+        }, 100);
+      }
+    };
+
+    document.addEventListener("keydown", handleGlobalKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -213,7 +265,7 @@ export default function AdminPackagesPage() {
     isPricingItemDialogOpen,
   ]);
 
-  // Check if user is admin
+  // Check if user is admin (using consistent lowercase roles)
   if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -221,9 +273,47 @@ export default function AdminPackagesPage() {
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
             <CardDescription>
-              You don't have permission to access the packages management page.
+              You don't have permission to access the services management page.
             </CardDescription>
           </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="text-sm text-gray-600">
+                <strong>Current Status:</strong>{" "}
+                {user ? `Logged in as ${user.email}` : "Not logged in"}
+              </div>
+              {user && (
+                <div className="text-sm text-gray-600">
+                  <strong>Your Role:</strong> {user.role}
+                </div>
+              )}
+              <div className="text-sm text-gray-600">
+                <strong>Required Roles:</strong> admin or super_admin
+              </div>
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800 font-medium">
+                  Need Access?
+                </p>
+                <p className="text-sm text-blue-700 mt-1">
+                  {!user ? (
+                    <>
+                      Please log in with admin credentials at{" "}
+                      <a href="/login" className="underline">
+                        /login
+                      </a>
+                    </>
+                  ) : (
+                    "Contact your administrator to upgrade your role permissions."
+                  )}
+                </p>
+                {!user && (
+                  <div className="mt-2 text-xs text-blue-600">
+                    <strong>Default Admin:</strong> admin@arc.com / password
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
     );
@@ -248,9 +338,88 @@ export default function AdminPackagesPage() {
   };
 
   const handleDeletePricingItem = async (item: PricingItem) => {
-    setPricingItems((prev) => removeItemFromTree(prev, item.id));
-    setHasUnsavedChanges(true);
-    console.log("Item deleted, hasUnsavedChanges set to true");
+    console.log("🗑️ Starting delete operation for:", item.name, item.type);
+
+    try {
+      // Ensure all modals are closed before starting delete
+      setIsPricingItemDialogOpen(false);
+      setSelectedPricingItem(null);
+      setParentItemId(null);
+
+      // Clear any existing notifications
+      setNotificationDialog((prev) => ({ ...prev, open: false }));
+
+      // Small delay to ensure UI state is clean
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      if (item.type === "service") {
+        console.log("🗑️ Deleting service via API...");
+        // Delete service via PostgreSQL API
+        const response = await fetch(`/api/services/${item.id}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to delete service from PostgreSQL");
+        }
+
+        console.log("✅ Service deleted, reloading data...");
+        // Reload services from database
+        const loadResponse = await fetch("/api/admin/pricing");
+        const loadResult = await loadResponse.json();
+        if (loadResult.success) {
+          setPricingItems(loadResult.data);
+
+          // Show success notification after a small delay
+          setTimeout(() => {
+            showNotification(
+              "Service Deleted",
+              `Service "${item.name}" has been deleted successfully.`,
+              "success"
+            );
+          }, 200);
+        }
+      } else {
+        console.log("🗑️ Deleting service item via API...");
+        // For features/addons, delete from database via API
+        const response = await fetch(`/api/services/items/${item.id}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to delete service item from database");
+        }
+
+        console.log("✅ Service item deleted, updating local state...");
+        // Remove from local state and mark as changed
+        setPricingItems((prev) => removeItemFromTree(prev, item.id));
+        setHasUnsavedChanges(true);
+
+        // Show success notification after a small delay
+        setTimeout(() => {
+          showNotification(
+            "Item Deleted",
+            `${item.type === "feature" ? "Feature" : "Addon"} "${
+              item.name
+            }" has been deleted successfully.`,
+            "success"
+          );
+        }, 200);
+      }
+
+      console.log("✅ Delete operation completed successfully");
+    } catch (error) {
+      console.error("💥 Error deleting item:", error);
+
+      // Show error notification after a small delay
+      setTimeout(() => {
+        showNotification(
+          "Delete Failed",
+          "Failed to delete item. Please try again.",
+          "error"
+        );
+      }, 200);
+    }
   };
 
   const handleClonePricingItem = (item: PricingItem) => {
@@ -274,71 +443,117 @@ export default function AdminPackagesPage() {
     setHasUnsavedChanges(true);
   };
 
-  const handleSavePricingItem = useCallback(async (itemData: Partial<PricingItem>) => {
-    try {
-      console.log("handleSavePricingItem called with:", itemData);
-      console.log("Current modal state:", { isPricingItemDialogOpen, pricingItemMode, parentItemId });
-
-      if (pricingItemMode === "create") {
-        const newItem: PricingItem = {
-          id: `item_${Date.now()}`,
-          name: itemData.name || "",
-          description: itemData.description,
-          type: itemData.type || "service",
-          basePrice: itemData.basePrice || 0,
-          isRequired:
-            itemData.isRequired !== undefined ? itemData.isRequired : true,
-          isRecurring:
-            itemData.isRecurring !== undefined ? itemData.isRecurring : true,
-          isMutuallyExclusive: itemData.isMutuallyExclusive || false,
-          parentId: parentItemId,
-          sortOrder: itemData.sortOrder || 0,
-          children: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        console.log("Adding new item to tree:", newItem);
-        setPricingItems((prev) => addItemToTree(prev, newItem, parentItemId));
-        console.log("New item created, setting hasUnsavedChanges to true");
-        setHasUnsavedChanges(true);
-      } else if (selectedPricingItem) {
-        const updatedItem: PricingItem = {
-          ...selectedPricingItem,
-          ...itemData,
-          updatedAt: new Date().toISOString(),
-        };
-
-        console.log("Updating item in tree:", updatedItem);
-        setPricingItems((prev) => updateItemInTree(prev, updatedItem));
-        console.log("Item updated, setting hasUnsavedChanges to true");
-        setHasUnsavedChanges(true);
-      }
-
-      // Force close modal with multiple approaches
-      console.log("Closing modal...");
-      setIsPricingItemDialogOpen(false);
-      setSelectedPricingItem(null);
-      setParentItemId(null);
-
-      // Add a small delay to ensure state updates are processed
-      setTimeout(() => {
-        console.log("Modal should be closed now, final state:", {
-          isPricingItemDialogOpen: false,
-          selectedPricingItem: null,
-          parentItemId: null
+  const handleSavePricingItem = useCallback(
+    async (itemData: Partial<PricingItem>) => {
+      try {
+        console.log("handleSavePricingItem called with:", itemData);
+        console.log("Current modal state:", {
+          isPricingItemDialogOpen,
+          pricingItemMode,
+          parentItemId,
         });
-      }, 100);
 
-    } catch (error) {
-      console.error("Error saving pricing item:", error);
-      // Force close dialog even on error
-      setIsPricingItemDialogOpen(false);
-      setSelectedPricingItem(null);
-      setParentItemId(null);
-      throw error;
-    }
-  }, [pricingItemMode, parentItemId, selectedPricingItem, isPricingItemDialogOpen]);
+        if (pricingItemMode === "create") {
+          if (itemData.type === "service") {
+            // Create new service via PostgreSQL API
+            const serviceData = {
+              name: itemData.name || "",
+              slug: (itemData.name || "").toLowerCase().replace(/\s+/g, "-"),
+              displayName: itemData.name || "",
+              description: itemData.description,
+              category: "HOME_CARE", // Default category
+              basePriceDaily: itemData.basePrice || 0,
+              isActive: true,
+              isPopular: false,
+              sortOrder: itemData.sortOrder || 0,
+              colorTheme: itemData.colorTheme || "teal", // Use selected color theme
+            };
+
+            const response = await fetch("/api/services", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(serviceData),
+            });
+
+            if (!response.ok) {
+              throw new Error("Failed to create service in PostgreSQL");
+            }
+
+            // Reload services from database
+            const loadResponse = await fetch("/api/admin/pricing");
+            const loadResult = await loadResponse.json();
+            if (loadResult.success) {
+              setPricingItems(loadResult.data);
+            }
+          } else {
+            // For features/addons, add to local state (would be service items in full implementation)
+            const newItem: PricingItem = {
+              id: `item_${Date.now()}`,
+              name: itemData.name || "",
+              description: itemData.description,
+              type: itemData.type || "feature",
+              basePrice: itemData.basePrice || 0,
+              isRequired:
+                itemData.isRequired !== undefined ? itemData.isRequired : true,
+              isRecurring:
+                itemData.isRecurring !== undefined
+                  ? itemData.isRecurring
+                  : true,
+              parentId: parentItemId,
+              sortOrder: itemData.sortOrder || 0,
+              children: [],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+
+            setPricingItems((prev) =>
+              addItemToTree(prev, newItem, parentItemId)
+            );
+            setHasUnsavedChanges(true);
+          }
+        } else if (selectedPricingItem) {
+          const updatedItem: PricingItem = {
+            ...selectedPricingItem,
+            ...itemData,
+            updatedAt: new Date().toISOString(),
+          };
+
+          console.log("Updating item in tree:", updatedItem);
+          setPricingItems((prev) => updateItemInTree(prev, updatedItem));
+          console.log("Item updated, setting hasUnsavedChanges to true");
+          setHasUnsavedChanges(true);
+        }
+
+        // Force close modal with multiple approaches
+        console.log("Closing modal...");
+        setIsPricingItemDialogOpen(false);
+        setSelectedPricingItem(null);
+        setParentItemId(null);
+
+        // Add a small delay to ensure state updates are processed
+        setTimeout(() => {
+          console.log("Modal should be closed now, final state:", {
+            isPricingItemDialogOpen: false,
+            selectedPricingItem: null,
+            parentItemId: null,
+          });
+        }, 100);
+      } catch (error) {
+        console.error("Error saving pricing item:", error);
+        // Force close dialog even on error
+        setIsPricingItemDialogOpen(false);
+        setSelectedPricingItem(null);
+        setParentItemId(null);
+        throw error;
+      }
+    },
+    [
+      pricingItemMode,
+      parentItemId,
+      selectedPricingItem,
+      isPricingItemDialogOpen,
+    ]
+  );
 
   // Helper functions for tree operations
   const removeItemFromTree = (
@@ -399,213 +614,288 @@ export default function AdminPackagesPage() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Services & Pricing
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your services, plans, features and pricing hierarchy
-          </p>
-        </div>
-
+    <div className="space-y-6">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <AdminServicesMobile
+          onCreateService={() => {
+            setParentItemId(null);
+            setDefaultItemType("service");
+            setSelectedPricingItem(null);
+            setPricingItemMode("create");
+            setIsPricingItemDialogOpen(true);
+          }}
+          onEditService={(service) => {
+            setSelectedPricingItem(service);
+            setPricingItemMode("edit");
+            setIsPricingItemDialogOpen(true);
+          }}
+        />
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Services
-            </CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {pricingItems.filter((item) => item.type === "service").length}
-            </div>
-            <p className="text-xs text-muted-foreground">Root services</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Plans</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {pricingItems.filter((item) => item.type === "feature").length}
-            </div>
-            <p className="text-xs text-muted-foreground">Service features</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Add-ons</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {pricingItems.filter((item) => item.type === "addon").length}
-            </div>
-            <p className="text-xs text-muted-foreground">Available add-ons</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Items</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pricingItems.length}</div>
-            <p className="text-xs text-muted-foreground">All pricing items</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Services & Pricing Management */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Pricing Structure</CardTitle>
-              <CardDescription>
-                Manage your services hierarchy and pricing configuration
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-4">
-              {/* Save Status Indicator */}
-              {(hasUnsavedChanges || lastSaved) && (
-                <div className="flex items-center gap-2">
-                  {hasUnsavedChanges && !isSaving && (
-                    <>
-                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                      <span className="text-sm text-amber-700 font-medium">
-                        Unsaved changes
-                      </span>
-                    </>
-                  )}
-                  {isSaving && (
-                    <>
-                      <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-                      <span className="text-sm text-gray-600">Saving...</span>
-                    </>
-                  )}
-                  {!hasUnsavedChanges && !isSaving && lastSaved && (
-                    <>
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-green-700 font-medium">
-                        Saved {lastSaved.toLocaleTimeString()}
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
-
-
-
-              {/* Header Save Button */}
-              <Button
-                onClick={(e) => {
-                  try {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log("Save button clicked", {
-                      hasUnsavedChanges,
-                      isSaving,
-                      timestamp: new Date().toISOString(),
-                    });
-
-                    // Ensure we can save
-                    if (!isSaving) {
-                      handleSavePricingData();
-                    } else {
-                      console.log("Save already in progress, ignoring click");
-                    }
-                  } catch (error) {
-                    console.error("Error in save button click handler:", error);
-                    // Fallback: try to save anyway
-                    if (!isSaving) {
-                      handleSavePricingData();
-                    }
-                  }
-                }}
-                disabled={isSaving}
-                variant={hasUnsavedChanges ? "default" : "outline"}
-                className={`${
-                  hasUnsavedChanges
-                    ? "bg-teal-600 hover:bg-teal-700 text-white"
-                    : ""
-                } transition-all duration-200`}
-                type="button"
-              >
-                {isSaving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    {hasUnsavedChanges ? "Save Changes" : "All Saved"}
-                  </>
-                )}
-              </Button>
+      {/* Desktop UI */}
+      <div className="hidden md:block space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Services & Pricing Management
+            </h1>
+            <p className="text-muted-foreground">
+              Manage your services catalog stored in PostgreSQL database
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-green-600">
+                Connected to PostgreSQL
+              </span>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <PricingCardView
-            items={pricingItems}
-            onAdd={handleAddPricingItem}
-            onEdit={handleEditPricingItem}
-            onDelete={handleDeletePricingItem}
-            onClone={handleClonePricingItem}
-            onReorder={handleReorderPricingItems}
-          />
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Pricing Item Form Modal */}
-      <PricingItemFormModal
-        isOpen={isPricingItemDialogOpen}
-        onClose={() => {
-          console.log("Modal onClose called - forcing cleanup");
-          setIsPricingItemDialogOpen(false);
-          setSelectedPricingItem(null);
-          setParentItemId(null);
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Services
+              </CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {pricingItems.filter((item) => item.type === "service").length}
+              </div>
+              <p className="text-xs text-muted-foreground">Root services</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Plans</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {pricingItems.filter((item) => item.type === "feature").length}
+              </div>
+              <p className="text-xs text-muted-foreground">Service features</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Add-ons</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {pricingItems.filter((item) => item.type === "addon").length}
+              </div>
+              <p className="text-xs text-muted-foreground">Available add-ons</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{pricingItems.length}</div>
+              <p className="text-xs text-muted-foreground">All pricing items</p>
+            </CardContent>
+          </Card>
+        </div>
 
-          // Force cleanup of any potential DOM issues
-          setTimeout(() => {
-            // Remove any lingering modal overlays
-            const overlays = document.querySelectorAll('[data-radix-popper-content-wrapper]');
-            overlays.forEach(overlay => overlay.remove());
+        {/* Services & Pricing Management */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Services Database</CardTitle>
+                <CardDescription>
+                  Manage your services catalog stored in PostgreSQL database
+                  with real-time updates
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-4">
+                {/* Save Status Indicator */}
+                {(hasUnsavedChanges || lastSaved) && (
+                  <div className="flex items-center gap-2">
+                    {hasUnsavedChanges && !isSaving && (
+                      <>
+                        <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                        <span className="text-sm text-amber-700 font-medium">
+                          Unsaved changes
+                        </span>
+                      </>
+                    )}
+                    {isSaving && (
+                      <>
+                        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                        <span className="text-sm text-gray-600">Saving...</span>
+                      </>
+                    )}
+                    {!hasUnsavedChanges && !isSaving && lastSaved && (
+                      <>
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm text-green-700 font-medium">
+                          Saved {lastSaved.toLocaleTimeString()}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
 
-            // Ensure body is scrollable
-            document.body.style.overflow = 'auto';
-            document.body.style.pointerEvents = 'auto';
+                {/* Header Save Button */}
+                <Button
+                  onClick={(e) => {
+                    try {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("Save button clicked", {
+                        hasUnsavedChanges,
+                        isSaving,
+                        timestamp: new Date().toISOString(),
+                      });
 
-            // Remove any potential backdrop elements
-            const backdrops = document.querySelectorAll('[data-state="open"]');
-            backdrops.forEach(backdrop => {
-              if (backdrop.getAttribute('role') === 'dialog') {
-                backdrop.remove();
-              }
-            });
+                      // Ensure we can save
+                      if (!isSaving) {
+                        handleSavePricingData();
+                      } else {
+                        console.log("Save already in progress, ignoring click");
+                      }
+                    } catch (error) {
+                      console.error(
+                        "Error in save button click handler:",
+                        error
+                      );
+                      // Fallback: try to save anyway
+                      if (!isSaving) {
+                        handleSavePricingData();
+                      }
+                    }
+                  }}
+                  disabled={isSaving}
+                  variant={hasUnsavedChanges ? "default" : "outline"}
+                  className={`${
+                    hasUnsavedChanges
+                      ? "bg-teal-600 hover:bg-teal-700 text-white"
+                      : ""
+                  } transition-all duration-200`}
+                  type="button"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      {hasUnsavedChanges ? "Save Changes" : "All Saved"}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 border-2 border-gray-300 border-t-teal-600 rounded-full animate-spin"></div>
+                  <span className="text-gray-600">
+                    Loading services from PostgreSQL...
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <PricingCardView
+                items={pricingItems}
+                onAdd={handleAddPricingItem}
+                onEdit={handleEditPricingItem}
+                onDelete={handleDeletePricingItem}
+                onClone={handleClonePricingItem}
+                onReorder={handleReorderPricingItems}
+              />
+            )}
+          </CardContent>
+        </Card>
 
-            console.log("Modal cleanup completed");
-          }, 100);
-        }}
-        onSave={handleSavePricingItem}
-        item={selectedPricingItem}
-        mode={pricingItemMode}
-        parentId={parentItemId}
-        defaultType={defaultItemType}
-      />
+        {/* Pricing Item Form Modal */}
+        <PricingItemFormModal
+          isOpen={isPricingItemDialogOpen}
+          onClose={() => {
+            console.log("Modal onClose called - forcing cleanup");
+            setIsPricingItemDialogOpen(false);
+            setSelectedPricingItem(null);
+            setParentItemId(null);
 
+            // Force cleanup of styles only (let React handle DOM)
+            setTimeout(() => {
+              // Ensure body is scrollable and interactive
+              document.body.style.overflow = "auto";
+              document.body.style.pointerEvents = "auto";
+              console.log("Modal cleanup completed");
+            }, 100);
+          }}
+          onSave={handleSavePricingItem}
+          item={selectedPricingItem}
+          mode={pricingItemMode}
+          parentId={parentItemId}
+          defaultType={defaultItemType}
+        />
 
+        {/* Notification Dialog */}
+        <Dialog
+          open={notificationDialog.open}
+          onOpenChange={(open) => {
+            console.log("🔔 Notification dialog onOpenChange:", open);
+            setNotificationDialog((prev) => ({ ...prev, open }));
+          }}
+        >
+          <DialogContent
+            className="sm:max-w-md z-[70]"
+            onEscapeKeyDown={(e) => {
+              e.preventDefault();
+              console.log("🔔 Notification dialog escape pressed");
+              setNotificationDialog((prev) => ({ ...prev, open: false }));
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle
+                className={
+                  notificationDialog.type === "error"
+                    ? "text-red-600"
+                    : "text-green-600"
+                }
+              >
+                {notificationDialog.title}
+              </DialogTitle>
+              <DialogDescription>
+                {notificationDialog.message}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("🔔 Notification dialog OK clicked");
+                  setNotificationDialog((prev) => ({ ...prev, open: false }));
+
+                  // Ensure UI is fully responsive after closing
+                  setTimeout(() => {
+                    document.body.style.pointerEvents = "auto";
+                    console.log("🔔 UI responsiveness restored");
+                  }, 100);
+                }}
+              >
+                OK
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

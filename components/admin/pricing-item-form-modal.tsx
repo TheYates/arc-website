@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
+import { useState, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -13,42 +13,34 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import type { PricingItem } from "@/lib/types/packages"
+} from "@/components/ui/select";
+import type { PricingItem } from "@/lib/types/packages";
 
-// Utility function to force cleanup modal artifacts
+// Utility function to cleanup modal styles (no DOM manipulation)
 const forceCleanupModal = () => {
-  // Remove any lingering modal overlays
-  const overlays = document.querySelectorAll('[data-radix-popper-content-wrapper], [data-radix-dialog-overlay], [data-state="open"]');
-  overlays.forEach(overlay => {
-    if (overlay.getAttribute('role') === 'dialog' || overlay.classList.contains('fixed')) {
-      overlay.remove();
-    }
-  });
-
-  // Ensure body is interactive
-  document.body.style.overflow = 'auto';
-  document.body.style.pointerEvents = 'auto';
-  document.body.classList.remove('overflow-hidden');
+  // Ensure body is interactive (let React handle DOM)
+  document.body.style.overflow = "auto";
+  document.body.style.pointerEvents = "auto";
+  document.body.classList.remove("overflow-hidden");
 
   console.log("Force cleanup completed");
 };
 
 interface PricingItemFormModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSave: (item: Partial<PricingItem>) => void
-  item?: PricingItem | null
-  parentId?: string | null
-  defaultType?: PricingItem["type"]
-  mode: "create" | "edit"
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (item: Partial<PricingItem>) => void;
+  item?: PricingItem | null;
+  parentId?: string | null;
+  defaultType?: PricingItem["type"];
+  mode: "create" | "edit";
 }
 
 export default function PricingItemFormModal({
@@ -58,7 +50,7 @@ export default function PricingItemFormModal({
   item,
   parentId,
   defaultType = "service",
-  mode
+  mode,
 }: PricingItemFormModalProps) {
   const [formData, setFormData] = useState<Partial<PricingItem>>({
     name: "",
@@ -69,32 +61,37 @@ export default function PricingItemFormModal({
     isRecurring: true, // Default to recurring
     isMutuallyExclusive: false,
     parentId: parentId || null,
-    sortOrder: 0
-  })
+    sortOrder: 0,
+    colorTheme: "teal", // Default color theme for services
+  });
 
-  const [isOptional, setIsOptional] = useState(false)
-  const [optionalPrice, setOptionalPrice] = useState(0)
+  const [isOptional, setIsOptional] = useState(false);
+  const [optionalPrice, setOptionalPrice] = useState(0);
 
-  const [loading, setLoading] = useState(false)
-  const nameInputRef = useRef<HTMLInputElement>(null)
+  const [loading, setLoading] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (item && mode === "edit") {
-      const itemIsOptional = (item.type === "feature" || item.type === "addon") && !item.isRequired && (item.basePrice || 0) > 0
+      const itemIsOptional =
+        (item.type === "feature" || item.type === "addon") &&
+        !item.isRequired &&
+        (item.basePrice || 0) > 0;
       setFormData({
         id: item.id,
         name: item.name,
         description: item.description || "",
         type: item.type,
-        basePrice: item.type === "service" ? (item.basePrice || 0) : 0, // Only services have base price
+        basePrice: item.type === "service" ? item.basePrice || 0 : 0, // Only services have base price
         isRequired: item.isRequired,
         isRecurring: item.isRecurring || true,
         isMutuallyExclusive: item.isMutuallyExclusive || false,
         parentId: item.parentId,
-        sortOrder: item.sortOrder || 0
-      })
-      setIsOptional(itemIsOptional)
-      setOptionalPrice(itemIsOptional ? (item.basePrice || 0) : 0)
+        sortOrder: item.sortOrder || 0,
+        colorTheme: item.colorTheme || "teal", // Load existing color theme or default to teal
+      });
+      setIsOptional(itemIsOptional);
+      setOptionalPrice(itemIsOptional ? item.basePrice || 0 : 0);
     } else if (mode === "create") {
       setFormData({
         name: "",
@@ -105,12 +102,13 @@ export default function PricingItemFormModal({
         isRecurring: true,
         isMutuallyExclusive: false,
         parentId: parentId || null,
-        sortOrder: 0
-      })
-      setIsOptional(false)
-      setOptionalPrice(0)
+        sortOrder: 0,
+        colorTheme: "teal", // Default color theme for new services
+      });
+      setIsOptional(false);
+      setOptionalPrice(0);
     }
-  }, [item, mode, defaultType, parentId])
+  }, [item, mode, defaultType, parentId]);
 
   // Cleanup effect when modal closes
   useEffect(() => {
@@ -122,29 +120,43 @@ export default function PricingItemFormModal({
 
       return () => clearTimeout(cleanup);
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // Focus the name input when modal opens
   useEffect(() => {
     if (isOpen && nameInputRef.current) {
-      // Small delay to ensure modal is fully rendered
-      const focusTimeout = setTimeout(() => {
-        nameInputRef.current?.focus()
-        nameInputRef.current?.select() // Select all text if editing
-      }, 100)
+      // Multiple attempts to ensure focus works reliably
+      const focusAttempts = [100, 200, 300]; // Try at different intervals
 
-      return () => clearTimeout(focusTimeout)
+      const timeouts = focusAttempts.map((delay) =>
+        setTimeout(() => {
+          if (nameInputRef.current && isOpen) {
+            nameInputRef.current.focus();
+            if (mode === "edit") {
+              nameInputRef.current.select(); // Select all text if editing
+            }
+            console.log(`🎯 Focus attempt at ${delay}ms`);
+          }
+        }, delay)
+      );
+
+      return () => {
+        timeouts.forEach((timeout) => clearTimeout(timeout));
+      };
     }
-  }, [isOpen])
+  }, [isOpen, mode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setLoading(true)
+    e.preventDefault();
+    e.stopPropagation();
+    setLoading(true);
 
     try {
       // Validation: Services must have a base price > 0
-      if (formData.type === "service" && (!formData.basePrice || formData.basePrice <= 0)) {
+      if (
+        formData.type === "service" &&
+        (!formData.basePrice || formData.basePrice <= 0)
+      ) {
         alert("Services must have a base price greater than 0");
         setLoading(false);
         return;
@@ -153,22 +165,26 @@ export default function PricingItemFormModal({
       const finalFormData = {
         ...formData,
         // Set basePrice based on item type
-        basePrice: formData.type === "service"
-          ? formData.basePrice  // Services have base price
-          : (isOptional ? optionalPrice : 0),  // Features/Add-ons use optional pricing
+        basePrice:
+          formData.type === "service"
+            ? formData.basePrice // Services have base price
+            : isOptional
+            ? optionalPrice
+            : 0, // Features/Add-ons use optional pricing
         // Set isRequired based on optional status (for features/add-ons)
-        isRequired: formData.type === "service"
-          ? true  // Services are always required
-          : !isOptional  // Features/Add-ons depend on optional status
-      }
+        isRequired:
+          formData.type === "service"
+            ? true // Services are always required
+            : !isOptional, // Features/Add-ons depend on optional status
+      };
 
-      console.log("Modal: Submitting form data:", finalFormData)
-      await onSave(finalFormData)
-      console.log("Modal: Form submission successful")
+      console.log("Modal: Submitting form data:", finalFormData);
+      await onSave(finalFormData);
+      console.log("Modal: Form submission successful");
 
       // Force close modal immediately
-      console.log("Modal: Calling onClose()")
-      onClose()
+      console.log("Modal: Calling onClose()");
+      onClose();
 
       // Additional safety: reset form state
       setFormData({
@@ -180,39 +196,38 @@ export default function PricingItemFormModal({
         isRecurring: true,
         isMutuallyExclusive: false,
         parentId: parentId || null,
-        sortOrder: 0
-      })
-      setIsOptional(false)
-      setOptionalPrice(0)
-
+        sortOrder: 0,
+      });
+      setIsOptional(false);
+      setOptionalPrice(0);
     } catch (error) {
-      console.error("Modal: Error saving pricing item:", error)
+      console.error("Modal: Error saving pricing item:", error);
       // Don't close modal on error so user can retry
     } finally {
-      setLoading(false)
-      console.log("Modal: Loading state set to false")
+      setLoading(false);
+      console.log("Modal: Loading state set to false");
     }
-  }
+  };
 
   const handleInputChange = (field: keyof PricingItem, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
-    }))
-  }
+      [field]: value,
+    }));
+  };
 
   const getTypeLabel = (type: PricingItem["type"]) => {
     switch (type) {
       case "service":
-        return "Service"
+        return "Service";
       case "feature":
-        return "Feature"
+        return "Feature";
       case "addon":
-        return "Add-on"
+        return "Add-on";
       default:
-        return type
+        return type;
     }
-  }
+  };
 
   return (
     <Dialog
@@ -232,8 +247,17 @@ export default function PricingItemFormModal({
       <DialogContent
         className="sm:max-w-[500px]"
         onOpenAutoFocus={(e) => {
-          // Prevent default auto-focus, we'll handle it manually
+          // Prevent default auto-focus, we'll handle it manually for better control
           e.preventDefault();
+          console.log("🎯 Dialog opened, preventing default focus");
+
+          // Immediate focus attempt
+          setTimeout(() => {
+            if (nameInputRef.current) {
+              nameInputRef.current.focus();
+              console.log("🎯 Immediate focus attempt");
+            }
+          }, 0);
         }}
         onEscapeKeyDown={(e) => {
           console.log("Dialog escape key pressed");
@@ -259,8 +283,7 @@ export default function PricingItemFormModal({
           <DialogDescription>
             {mode === "create"
               ? "Create a new pricing item in the service hierarchy."
-              : "Update the pricing item details."
-            }
+              : "Update the pricing item details."}
           </DialogDescription>
         </DialogHeader>
 
@@ -274,7 +297,6 @@ export default function PricingItemFormModal({
               onChange={(e) => handleInputChange("name", e.target.value)}
               placeholder="Enter item name"
               required
-              autoFocus
             />
           </div>
 
@@ -306,15 +328,80 @@ export default function PricingItemFormModal({
                 step="0.01"
                 min="0.01"
                 value={formData.basePrice || 0}
-                onChange={(e) => handleInputChange("basePrice", parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  handleInputChange(
+                    "basePrice",
+                    parseFloat(e.target.value) || 0
+                  )
+                }
                 placeholder="0.00"
                 required
               />
               {formData.type === "service" && (
                 <p className="text-xs text-slate-600">
-                  This is the base price customers will pay for this service. Optional features and add-ons will be added to this base price.
+                  This is the base price customers will pay for this service.
+                  Optional features and add-ons will be added to this base
+                  price.
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Color Theme - For Services Only */}
+          {formData.type === "service" && (
+            <div className="space-y-2">
+              <Label htmlFor="colorTheme">Color Theme</Label>
+              <Select
+                value={formData.colorTheme || "teal"}
+                onValueChange={(value) =>
+                  handleInputChange("colorTheme", value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select color theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="teal">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-teal-500"></div>
+                      Teal
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="blue">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                      Blue
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="purple">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                      Purple
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="indigo">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                      Indigo
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="green">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      Green
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="red">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      Red
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-600">
+                Choose a color theme for this service card
+              </p>
             </div>
           )}
 
@@ -338,14 +425,18 @@ export default function PricingItemFormModal({
               {/* Optional Price - Only shown when optional is enabled */}
               {isOptional && (
                 <div className="space-y-2">
-                  <Label htmlFor="optionalPrice">Additional Price (GHS) *</Label>
+                  <Label htmlFor="optionalPrice">
+                    Additional Price (GHS) *
+                  </Label>
                   <Input
                     id="optionalPrice"
                     type="number"
                     step="0.01"
                     min="0"
                     value={optionalPrice}
-                    onChange={(e) => setOptionalPrice(parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setOptionalPrice(parseFloat(e.target.value) || 0)
+                    }
                     placeholder="0.00"
                     required
                   />
@@ -354,18 +445,20 @@ export default function PricingItemFormModal({
             </div>
           )}
 
-
-
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !formData.name?.trim()}>
-              {loading ? "Saving..." : mode === "create" ? "Create Item" : "Update Item"}
+              {loading
+                ? "Saving..."
+                : mode === "create"
+                ? "Create Item"
+                : "Update Item"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

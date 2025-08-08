@@ -76,9 +76,7 @@ export function CommandSearch({
           shortcut: "⌘P",
           href: "/admin/patients",
         },
-        { icon: Package, label: "Packages", href: "/admin/services" },
-        { icon: Calendar, label: "Scheduling", href: "/admin/scheduling" },
-        { icon: PieChart, label: "Reports", href: "/admin/reports" },
+        { icon: Package, label: "Services", href: "/admin/services" },
       ],
     },
     {
@@ -108,9 +106,6 @@ export function CommandSearch({
           shortcut: "⌘P",
           href: "/reviewer/patients",
         },
-        { icon: Calendar, label: "Schedule", shortcut: "⌘S" },
-        { icon: ClipboardCheck, label: "Tasks", shortcut: "⌘T" },
-        { icon: FileText, label: "Reports", shortcut: "⌘R" },
       ],
     },
     {
@@ -129,10 +124,12 @@ export function CommandSearch({
       group: "Navigation",
       items: [
         { icon: Home, label: "Dashboard", shortcut: "⌘D", href: "/caregiver" },
-        { icon: Users, label: "My Patients", shortcut: "⌘P" },
-        { icon: Calendar, label: "Schedule", shortcut: "⌘S" },
-        { icon: ClipboardCheck, label: "Tasks", shortcut: "⌘T" },
-        { icon: FileText, label: "Reports", shortcut: "⌘R" },
+        {
+          icon: Users,
+          label: "My Patients",
+          shortcut: "⌘P",
+          href: "/caregiver/patients",
+        },
       ],
     },
     {

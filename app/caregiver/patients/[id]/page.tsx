@@ -67,6 +67,7 @@ import { RoleHeader } from "@/components/role-header";
 import { useToast } from "@/hooks/use-toast";
 
 import { PatientSymptomReportForm } from "@/components/medical/patient-symptom-report-form";
+import { CaregiverPatientMobile } from "@/components/mobile/caregiver-patient-detail";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -160,7 +161,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
 
   // Helper function to get the latest administration for a medication
   const getLatestAdministration = (medicationId: string) => {
-    const medicationAdministrations = administrations.filter(
+    const medicationAdministrations = (administrations || []).filter(
       (admin) => admin.medicationId === medicationId
     );
     if (medicationAdministrations.length === 0) return null;
@@ -311,8 +312,13 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
       {/* Header Navigation */}
       <RoleHeader role="caregiver" />
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <CaregiverPatientMobile patientId={resolvedParams.id} />
+      </div>
+
+      {/* Desktop */}
+      <div className="hidden md:block container mx-auto px-4 py-8 max-w-7xl">
         {/* Back Button */}
         <div className="mb-6">
           <Button
@@ -353,13 +359,13 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
           <div className="flex space-x-6 text-center">
             <div>
               <p className="text-2xl font-bold text-green-600">
-                {vitals.length}
+                {(vitals || []).length}
               </p>
               <p className="text-sm text-muted-foreground">Vitals Recorded</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-blue-600">
-                {medications.filter((m) => m.isActive).length}
+                {(medications || []).filter((m) => m.isActive).length}
               </p>
               <p className="text-sm text-muted-foreground">
                 Active Medications
@@ -367,7 +373,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
             </div>
             <div>
               <p className="text-2xl font-bold text-orange-600">
-                {medicalReviews.length}
+                {(medicalReviews || []).length}
               </p>
               <p className="text-sm text-muted-foreground">Medical Reviews</p>
             </div>
@@ -550,7 +556,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                 <CardTitle>Vital Signs Records</CardTitle>
               </CardHeader>
               <CardContent>
-                {vitals.length > 0 ? (
+                {(vitals || []).length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -567,7 +573,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {vitals.map((vital) => (
+                        {(vitals || []).map((vital) => (
                           <tr
                             key={vital.id}
                             className="border-b hover:bg-gray-50"
@@ -649,7 +655,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                 </p>
               </CardHeader>
               <CardContent>
-                {medications.filter((m) => m.isActive).length > 0 ? (
+                {(medications || []).filter((m) => m.isActive).length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
@@ -666,7 +672,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {medications
+                        {(medications || [])
                           .filter((m) => m.isActive)
                           .map((medication) => {
                             const latestAdmin = getLatestAdministration(
@@ -847,7 +853,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
 
             {/* Medical Reviews List (Read-only for Caregivers) */}
             <div className="space-y-4">
-              {medicalReviews.map((review) => (
+              {(medicalReviews || []).map((review) => (
                 <Card key={review.id}>
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -921,7 +927,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                 </Card>
               ))}
 
-              {medicalReviews.length === 0 && (
+              {(medicalReviews || []).length === 0 && (
                 <Card>
                   <CardContent className="text-center py-8">
                     <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

@@ -1,0 +1,444 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  username          String    @unique
+  passwordHash      String    @map("password_hash")
+  firstName         String    @map("first_name")
+  lastName          String    @map("last_name")
+  phone             String?
+  address           String?
+  role              UserRole
+  isEmailVerified   Boolean   @default(false) @map("is_email_verified")
+  isActive          Boolean   @default(true) @map("is_active")
+  profileComplete   Boolean   @default(false) @map("profile_complete")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at")
+  lastLogin         DateTime? @map("last_login")
+
+  // Relations
+  patient                    Patient?
+  caregiverAssignments       CaregiverAssignment[]
+  prescriptionsCreated       Prescription[]        @relation("PrescriptionCreatedBy")
+  prescriptionsApproved      Prescription[]        @relation("PrescriptionApprovedBy")
+  medicationAdministrations  MedicationAdministration[]
+  vitalSignsRecorded         VitalSigns[]
+  medicalReviewsCreated      MedicalReview[]       @relation("MedicalReviewCreatedBy")
+  medicalReviewsReviewed     MedicalReview[]       @relation("MedicalReviewReviewedBy")
+  symptomReportsCreated      SymptomReport[]       @relation("SymptomReportCreatedBy")
+  symptomReportsReviewed     SymptomReport[]       @relation("SymptomReportReviewedBy")
+  medicalSupplyRequestsApproved MedicalSupplyRequest[] @relation("MedicalSupplyRequestApprovedBy")
+
+  @@map("users")
+}
+
+model Patient {
+  id                           String    @id @default(uuid())
+  userId                       String    @unique @map("user_id")
+  dateOfBirth                  DateTime? @map("date_of_birth") @db.Date
+  gender                       Gender?
+  bloodType                    String?   @map("blood_type")
+  heightCm                     Int?      @map("height_cm")
+  weightKg                     Decimal?  @map("weight_kg") @db.Decimal(5, 2)
+  careLevel                    CareLevel @default(MEDIUM) @map("care_level")
+  status                       PatientStatus @default(STABLE)
+  assignedDate                 DateTime  @default(now()) @map("assigned_date") @db.Date
+  emergencyContactName         String?   @map("emergency_contact_name")
+  emergencyContactRelationship String?   @map("emergency_contact_relationship")
+  emergencyContactPhone        String?   @map("emergency_contact_phone")
+  medicalRecordNumber          String?   @unique @map("medical_record_number")
+  insuranceProvider            String?   @map("insurance_provider")
+  insurancePolicyNumber        String?   @map("insurance_policy_number")
+  primaryPhysician             String?   @map("primary_physician")
+  allergies                    String[]
+  chronicConditions            String[]  @map("chronic_conditions")
+  currentMedications           String[]  @map("current_medications")
+  medicalHistory               String?   @map("medical_history")
+  specialInstructions          String?   @map("special_instructions")
+
+  // Relations
+  user                      User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caregiverAssignments      CaregiverAssignment[]
+  prescriptions             Prescription[]
+  medicationAdministrations MedicationAdministration[]
+  vitalSigns                VitalSigns[]
+  medicalReviews            MedicalReview[]
+  symptomReports            SymptomReport[]
+  medicalSupplyRequests     MedicalSupplyRequest[]
+
+  @@map("patients")
+}
+
+model CaregiverAssignment {
+  id          String   @id @default(uuid())
+  caregiverId String   @map("caregiver_id")
+  patientId   String   @map("patient_id")
+  assignedAt  DateTime @default(now()) @map("assigned_at")
+  isActive    Boolean  @default(true) @map("is_active")
+
+  // Relations
+  caregiver User    @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([caregiverId, patientId])
+  @@map("caregiver_assignments")
+}
+
+model Medication {
+  id                           String   @id @default(uuid())
+  name                         String
+  genericName                  String?  @map("generic_name")
+  brandNames                   String[] @map("brand_names")
+  drugClass                    String?  @map("drug_class")
+  dosageForms                  String[] @map("dosage_forms")
+  strengthOptions              String[] @map("strength_options")
+  routeOfAdministration        String?  @map("route_of_administration")
+  contraindications            String[] @map("contraindications")
+  sideEffects                  String[] @map("side_effects")
+  drugInteractions             String[] @map("drug_interactions")
+  pregnancyCategory            String?  @map("pregnancy_category")
+  controlledSubstanceSchedule  String?  @map("controlled_substance_schedule")
+  createdAt                    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  prescriptions Prescription[]
+
+  @@map("medications")
+}
+
+model Prescription {
+  id                      String            @id @default(uuid())
+  patientId               String            @map("patient_id")
+  medicationId            String            @map("medication_id")
+  prescribedById          String            @map("prescribed_by_id")
+  dosage                  String
+  frequency               String
+  duration                String?
+  instructions            String?
+  status                  PrescriptionStatus @default(DRAFT)
+  prescribedDate          DateTime          @default(now()) @map("prescribed_date")
+  startDate               DateTime?         @map("start_date") @db.Date
+  endDate                 DateTime?         @map("end_date") @db.Date
+  approvedById            String?           @map("approved_by_id")
+  approvedDate            DateTime?         @map("approved_date")
+  dispensedDate           DateTime?         @map("dispensed_date")
+  notes                   String?
+  reviewerNotes           String?           @map("reviewer_notes")
+  pharmacyNotes           String?           @map("pharmacy_notes")
+  monitoringRequired      Boolean           @default(false) @map("monitoring_required")
+  monitoringInstructions  String?           @map("monitoring_instructions")
+  costEstimate            Decimal?          @map("cost_estimate") @db.Decimal(10, 2)
+  insuranceCovered        Boolean           @default(true) @map("insurance_covered")
+  createdAt               DateTime          @default(now()) @map("created_at")
+  updatedAt               DateTime          @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  patient                   Patient                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  medication                Medication                 @relation(fields: [medicationId], references: [id])
+  prescribedBy              User                       @relation("PrescriptionCreatedBy", fields: [prescribedById], references: [id])
+  approvedBy                User?                      @relation("PrescriptionApprovedBy", fields: [approvedById], references: [id])
+  medicationAdministrations MedicationAdministration[]
+
+  @@map("prescriptions")
+}
+
+model MedicationAdministration {
+  id                   String                        @id @default(uuid())
+  prescriptionId       String                        @map("prescription_id")
+  patientId            String                        @map("patient_id")
+  administeredById     String?                       @map("administered_by_id")
+  scheduledTime        DateTime                      @map("scheduled_time")
+  administeredTime     DateTime?                     @map("administered_time")
+  status               MedicationAdministrationStatus @default(SCHEDULED)
+  dosageGiven          String?                       @map("dosage_given")
+  notes                String?
+  sideEffectsObserved  String?                       @map("side_effects_observed")
+  vitalSigns           Json?                         @map("vital_signs")
+  nextDoseTime         DateTime?                     @map("next_dose_time")
+  createdAt            DateTime                      @default(now()) @map("created_at")
+
+  // Relations
+  prescription    Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  patient         Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  administeredBy  User?        @relation(fields: [administeredById], references: [id])
+
+  @@map("medication_administrations")
+}
+
+model VitalSigns {
+  id                 String               @id @default(uuid())
+  patientId          String               @map("patient_id")
+  recordedById       String?              @map("recorded_by_id")
+  recordedDate       DateTime             @default(now()) @map("recorded_date")
+  systolicBp         Int?                 @map("systolic_bp")
+  diastolicBp        Int?                 @map("diastolic_bp")
+  heartRate          Int?                 @map("heart_rate")
+  temperature        Decimal?             @db.Decimal(4, 1)
+  temperatureUnit    TemperatureUnit      @default(C) @map("temperature_unit")
+  oxygenSaturation   Int?                 @map("oxygen_saturation")
+  respiratoryRate    Int?                 @map("respiratory_rate")
+  weightKg           Decimal?             @map("weight_kg") @db.Decimal(5, 2)
+  heightCm           Int?                 @map("height_cm")
+  bloodSugar         Decimal?             @map("blood_sugar") @db.Decimal(5, 1)
+  bloodSugarType     BloodSugarType?      @map("blood_sugar_type")
+  painLevel          Int?                 @map("pain_level")
+  notes              String?
+
+  // Relations
+  patient    Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  recordedBy User?   @relation(fields: [recordedById], references: [id])
+
+  @@map("vital_signs")
+}
+
+model MedicalReview {
+  id               String              @id @default(uuid())
+  patientId        String              @map("patient_id")
+  reviewerId       String?             @map("reviewer_id")
+  createdById      String              @map("created_by_id")
+  reviewType       MedicalReviewType   @map("review_type")
+  status           MedicalReviewStatus @default(PENDING)
+  priority         Priority            @default(MEDIUM)
+  title            String
+  description      String
+  findings         String?
+  recommendations  String?
+  followUpRequired Boolean             @default(false) @map("follow_up_required")
+  followUpDate     DateTime?           @map("follow_up_date") @db.Date
+  reviewedDate     DateTime?           @map("reviewed_date")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  reviewer  User?   @relation("MedicalReviewReviewedBy", fields: [reviewerId], references: [id])
+  createdBy User    @relation("MedicalReviewCreatedBy", fields: [createdById], references: [id])
+
+  @@map("medical_reviews")
+}
+
+model SymptomReport {
+  id          String              @id @default(uuid())
+  patientId   String              @map("patient_id")
+  reportedById String?            @map("reported_by_id")
+  createdById String              @map("created_by_id")
+  symptoms    String[]
+  severity    Severity            @default(MILD)
+  status      SymptomReportStatus @default(REPORTED)
+  description String
+  notes       String?
+  reviewedDate DateTime?          @map("reviewed_date")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  patient    Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  reportedBy User?   @relation("SymptomReportReviewedBy", fields: [reportedById], references: [id])
+  createdBy  User    @relation("SymptomReportCreatedBy", fields: [createdById], references: [id])
+
+  @@map("symptom_reports")
+}
+
+model MedicalSupplyRequest {
+  id                    String                      @id @default(uuid())
+  patientId             String                      @map("patient_id")
+  requestedById         String                      @map("requested_by_id")
+  itemName              String                      @map("item_name")
+  category              MedicalSupplyCategory
+  quantity              Int
+  urgency               Priority                    @default(MEDIUM)
+  status                MedicalSupplyRequestStatus  @default(PENDING)
+  justification         String
+  medicalNecessity      String?                     @map("medical_necessity")
+  approvedById          String?                     @map("approved_by_id")
+  approvedDate          DateTime?                   @map("approved_date")
+  rejectionReason       String?                     @map("rejection_reason")
+  reviewerNotes         String?                     @map("reviewer_notes")
+  vendor                String?
+  deliveryDate          DateTime?                   @map("delivery_date") @db.Date
+  insuranceCovered      Boolean                     @default(true) @map("insurance_covered")
+  patientResponsibility Decimal?                    @map("patient_responsibility") @db.Decimal(10, 2)
+  createdAt             DateTime                    @default(now()) @map("created_at")
+  updatedAt             DateTime                    @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  patient    Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  approvedBy User?   @relation("MedicalSupplyRequestApprovedBy", fields: [approvedById], references: [id])
+
+  @@map("medical_supply_requests")
+}
+
+model Service {
+  id               String        @id @default(uuid())
+  name             String
+  slug             String        @unique
+  displayName      String        @map("display_name")
+  description      String?
+  shortDescription String?       @map("short_description")
+  category         ServiceCategory
+  basePrice        Decimal?      @map("base_price") @db.Decimal(10, 2)
+  priceDisplay     String?       @map("price_display")
+  isActive         Boolean       @default(true) @map("is_active")
+  isPopular        Boolean       @default(false) @map("is_popular")
+  sortOrder        Int           @default(0) @map("sort_order")
+  colorTheme       String        @default("teal") @map("color_theme")
+  icon             String?
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  serviceItems ServiceItem[]
+
+  @@map("services")
+}
+
+model ServiceItem {
+  id                String      @id @default(uuid())
+  serviceId         String      @map("service_id")
+  name              String
+  description       String?
+  isRequired        Boolean     @default(false) @map("is_required")
+  isPopular         Boolean     @default(false) @map("is_popular")
+  sortOrder         Int         @default(0) @map("sort_order")
+  level             Int         @default(1)
+  parentId          String?     @map("parent_id")
+  basePrice         Decimal?    @map("base_price") @db.Decimal(10, 2)
+  priceDisplay      String?     @map("price_display")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  service  Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  parent   ServiceItem?  @relation("ServiceItemHierarchy", fields: [parentId], references: [id])
+  children ServiceItem[] @relation("ServiceItemHierarchy")
+
+  @@map("service_items")
+}
+
+// Enums
+enum UserRole {
+  SUPER_ADMIN @map("super_admin")
+  ADMIN       @map("admin")
+  REVIEWER    @map("reviewer")
+  CARE_GIVER  @map("care_giver")
+  PATIENT     @map("patient")
+}
+
+enum Gender {
+  MALE   @map("male")
+  FEMALE @map("female")
+  OTHER  @map("other")
+}
+
+enum CareLevel {
+  LOW      @map("low")
+  MEDIUM   @map("medium")
+  HIGH     @map("high")
+  CRITICAL @map("critical")
+}
+
+enum PatientStatus {
+  STABLE     @map("stable")
+  IMPROVING  @map("improving")
+  DECLINING  @map("declining")
+  CRITICAL   @map("critical")
+}
+
+enum PrescriptionStatus {
+  DRAFT      @map("draft")
+  PENDING    @map("pending")
+  APPROVED   @map("approved")
+  DISPENSED  @map("dispensed")
+  COMPLETED  @map("completed")
+  CANCELLED  @map("cancelled")
+}
+
+enum MedicationAdministrationStatus {
+  SCHEDULED @map("scheduled")
+  ADMINISTERED @map("administered")
+  MISSED    @map("missed")
+  REFUSED   @map("refused")
+  DELAYED   @map("delayed")
+}
+
+enum TemperatureUnit {
+  C @map("C")
+  F @map("F")
+}
+
+enum BloodSugarType {
+  FASTING   @map("fasting")
+  RANDOM    @map("random")
+  POST_MEAL @map("post_meal")
+}
+
+enum MedicalReviewType {
+  ROUTINE     @map("routine")
+  URGENT      @map("urgent")
+  FOLLOW_UP   @map("follow_up")
+  CONSULTATION @map("consultation")
+}
+
+enum MedicalReviewStatus {
+  PENDING    @map("pending")
+  IN_REVIEW  @map("in_review")
+  COMPLETED  @map("completed")
+  CANCELLED  @map("cancelled")
+}
+
+enum Priority {
+  LOW      @map("low")
+  MEDIUM   @map("medium")
+  HIGH     @map("high")
+  CRITICAL @map("critical")
+}
+
+enum Severity {
+  MILD     @map("mild")
+  MODERATE @map("moderate")
+  SEVERE   @map("severe")
+}
+
+enum SymptomReportStatus {
+  REPORTED   @map("reported")
+  REVIEWED   @map("reviewed")
+  RESOLVED   @map("resolved")
+  ESCALATED  @map("escalated")
+}
+
+enum MedicalSupplyCategory {
+  MOBILITY_AIDS    @map("mobility_aids")
+  MONITORING       @map("monitoring")
+  THERAPEUTIC      @map("therapeutic")
+  SAFETY           @map("safety")
+  COMFORT          @map("comfort")
+  MEDICATION       @map("medication")
+  OTHER            @map("other")
+}
+
+enum MedicalSupplyRequestStatus {
+  PENDING    @map("pending")
+  APPROVED   @map("approved")
+  REJECTED   @map("rejected")
+  ORDERED    @map("ordered")
+  DELIVERED  @map("delivered")
+  CANCELLED  @map("cancelled")
+}
+
+enum ServiceCategory {
+  HOME_CARE @map("home_care")
+  NANNY     @map("nanny")
+  EMERGENCY @map("emergency")
+  CUSTOM    @map("custom")
+}

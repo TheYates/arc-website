@@ -18,46 +18,81 @@ export default function HomePage() {
     {
       Icon: Shield,
       name: "Event Medical Coverage",
-      description: "24/7 live-in home care with dedicated nursing support, emergency response, and comprehensive medical assistance.",
+      description:
+        "24/7 live-in home care with dedicated nursing support, emergency response, and comprehensive medical assistance.",
       href: "/services/ahenefie",
       cta: "Learn more",
-      background: <img className="absolute inset-0 w-full h-full object-cover opacity-65" src="https://images.pexels.com/photos/11187364/pexels-photo-11187364.jpeg" alt="Home care" />,
+      background: (
+        <img
+          className="absolute inset-0 w-full h-full object-cover opacity-65 group-hover:opacity-100 transition-opacity duration-300"
+          src="https://images.pexels.com/photos/11187364/pexels-photo-11187364.jpeg"
+          alt="Home care"
+        />
+      ),
       className: "lg:row-start-1 lg:row-end-4 lg:col-start-2 lg:col-end-3",
     },
     {
       Icon: Clock,
       name: "Ahenefie",
-      description: "24/7 live-in home care with dedicated nursing support, emergency response, and comprehensive medical assistance.",
+      description:
+        "24/7 live-in home care with dedicated nursing support, emergency response, and comprehensive medical assistance.",
       href: "/services/ahenefie",
       cta: "Learn more",
-      background: <img className="absolute inset-0 w-full h-full object-cover opacity-65" src="https://images.pexels.com/photos/339620/pexels-photo-339620.jpeg" alt="Medical visit" />,
+      background: (
+        <img
+          className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
+          src="ahenefie.jpg"
+          alt="Medical visit"
+        />
+      ),
       className: "lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3",
     },
     {
       Icon: Baby,
       name: "Adamfo Pa",
-      description: "Professional daily home visits with comprehensive nursing care, facility reviews, and emergency response support for your loved ones.",
+      description:
+        "Professional daily home visits with comprehensive nursing care, facility reviews, and emergency response support for your loved ones.",
       href: "/services/fie-ne-fie",
       cta: "Learn more",
-      background: <img className="absolute inset-0 w-full h-full object-cover opacity-65" src="https://images.pexels.com/photos/5721555/pexels-photo-5721555.jpeg" alt="Childcare" />,
+      background: (
+        <img
+          className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
+          src="https://images.pexels.com/photos/5721555/pexels-photo-5721555.jpeg"
+          alt="Childcare"
+        />
+      ),
       className: "lg:col-start-1 lg:col-end-2 lg:row-start-3 lg:row-end-4",
     },
     {
       Icon: Calendar,
       name: "Fie Ne Fie",
-      description: "Comprehensive live-in childcare with professional nanny support, basic nursing care, and emergency response capabilities for your precious little ones.",
+      description:
+        "Comprehensive live-in childcare with professional nanny support, basic nursing care, and emergency response capabilities for your precious little ones.",
       href: "/services/fie-ne-fie",
       cta: "Learn more",
-      background: <img className="absolute inset-0 w-full h-full object-cover opacity-65" src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=400&h=300&fit=crop&crop=center" alt="Flexible childcare" />,
+      background: (
+        <img
+          className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
+          src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=400&h=300&fit=crop&crop=center"
+          alt="Flexible childcare"
+        />
+      ),
       className: "lg:col-start-3 lg:col-end-3 lg:row-start-1 lg:row-end-2",
     },
     {
       Icon: AlertTriangle,
       name: "Yonko Pa",
-      description: "Flexible childcare support with professional nanny visits scheduled when you need them most. Perfect for busy families who need reliable, on-demand childcare assistance.",
+      description:
+        "Flexible childcare support with professional nanny visits scheduled when you need them most. Perfect for busy families who need reliable, on-demand childcare assistance.",
       href: "/services/yonko-pa",
       cta: "Learn more",
-      background: <img className="absolute inset-0 w-full h-full object-cover opacity-65" src="https://images.pexels.com/photos/69096/pexels-photo-69096.jpeg" alt="Event medical" />,
+      background: (
+        <img
+          className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
+          src="https://images.pexels.com/photos/69096/pexels-photo-69096.jpeg"
+          alt="Event medical"
+        />
+      ),
       className: "lg:col-start-3 lg:col-end-3 lg:row-start-2 lg:row-end-4",
     },
   ];
@@ -67,16 +102,24 @@ export default function HomePage() {
       <Header />
 
       {/* Hero Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <section
+        className="py-20 relative bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: "url('/hero image.jpg')",
+        }}
+      >
+        {/* Overlay for better text readability */}
+        <div className="absolute inset-0 bg-black/40"></div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="max-w-3xl">
             <div className="text-center lg:text-left">
-              <h1 className="text-4xl md:text-6xl font-bold  mb-6">
-                Professional Home Care & Nanny Services in Ghana
+              <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
+                Professional Home <br /> Care & Nanny <br /> Services in Ghana
               </h1>
-              <p className="text-xl mb-8 leading-relaxed">
-                We provide compassionate, professional care services tailored to
-                your family's unique needs across Ghana.
+              <p className="text-xl mb-8 leading-relaxed text-white/90">
+                We provide compassionate, professional care services tailored{" "}
+                <br /> to your family's unique needs across Ghana.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link href="/get-started">
@@ -87,35 +130,6 @@ export default function HomePage() {
                     Get Started Today
                   </Button>
                 </Link>
-                <Link href="/pricing">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-teal-600 text-teal-600 px-8 py-3 bg-transparent"
-                  >
-                    View Pricing
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            {/* Hero Image */}
-            <div className="relative">
-              <div className="bg-teal-100 rounded-2xl p-8 text-center">
-                <div className="bg-white rounded-xl p-6 shadow-lg">
-                  <div className="text-teal-600 text-sm font-medium mb-2">
-                    IMAGE PLACEHOLDER
-                  </div>
-                  <div className="text-slate-700 text-xs leading-relaxed">
-                    "Happy Ghanaian family with professional caregiver in modern
-                    home setting"
-                    <br />
-                    <br />
-                    Search terms: Ghanaian family, professional caregiver, home
-                    healthcare, happy family, African healthcare, family care
-                    services
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -315,11 +329,7 @@ export default function HomePage() {
                     About Us
                   </Link>
                 </li>
-                <li>
-                  <Link href="/pricing" className="hover:text-teal-400">
-                    Pricing
-                  </Link>
-                </li>
+
                 <li>
                   <Link href="/contact" className="hover:text-teal-400">
                     Contact
@@ -335,7 +345,10 @@ export default function HomePage() {
           </div>
 
           <div className="border-t border-slate-700 mt-8 pt-8 text-center text-slate-400">
-            <p>&copy; 2024 Alpha Rescue Consult. All rights reserved.</p>
+            <p>
+              &copy; {new Date().getFullYear()} Alpha Rescue Consult. All rights
+              reserved.
+            </p>
           </div>
         </div>
       </footer>

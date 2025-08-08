@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Pill, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ReviewerMedicationsMobile } from "@/components/mobile/reviewer-medications";
 
 interface PageProps {
   params: Promise<{ patientId: string }>;
@@ -28,12 +29,14 @@ export default function ReviewerMedicationsPage({ params }: PageProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = () => {
+    const fetchData = async () => {
       try {
-        const patientData = getPatientById(resolvedParams.patientId);
+        const patientData = await getPatientById(resolvedParams.patientId);
         if (patientData) {
           setPatient(patientData);
-          const medicationsData = getMedications(resolvedParams.patientId);
+          const medicationsData = await getMedications(
+            resolvedParams.patientId
+          );
           setMedications(medicationsData);
         }
       } catch (error) {
@@ -60,8 +63,13 @@ export default function ReviewerMedicationsPage({ params }: PageProps) {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center space-x-4">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <ReviewerMedicationsMobile patientId={resolvedParams.patientId} />
+      </div>
+
+      {/* Desktop */}
+      <div className="hidden md:flex items-center space-x-4">
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -73,7 +81,7 @@ export default function ReviewerMedicationsPage({ params }: PageProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="prescribe" className="space-y-6">
+      <Tabs defaultValue="prescribe" className="hidden md:block space-y-6">
         <TabsList>
           <TabsTrigger value="prescribe">Prescribe Medication</TabsTrigger>
           <TabsTrigger value="current">Current Medications</TabsTrigger>

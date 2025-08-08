@@ -12,6 +12,7 @@ import { VitalSigns } from "@/lib/types/vitals";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CaregiverVitalsMobile } from "@/components/mobile/caregiver-vitals";
 
 interface PageProps {
   params: Promise<{ patientId: string }>;
@@ -26,12 +27,12 @@ export default function CaregiverVitalsPage({ params }: PageProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = () => {
+    const fetchData = async () => {
       try {
-        const patientData = getPatientById(resolvedParams.patientId);
+        const patientData = await getPatientById(resolvedParams.patientId);
         if (patientData) {
           setPatient(patientData);
-          const vitalsData = getVitalSigns(resolvedParams.patientId);
+          const vitalsData = await getVitalSigns(resolvedParams.patientId);
           setVitals(vitalsData);
         }
       } catch (error) {
@@ -58,8 +59,13 @@ export default function CaregiverVitalsPage({ params }: PageProps) {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center space-x-4">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <CaregiverVitalsMobile patientId={resolvedParams.patientId} />
+      </div>
+
+      {/* Header (Desktop) */}
+      <div className="hidden md:flex items-center space-x-4">
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -71,7 +77,7 @@ export default function CaregiverVitalsPage({ params }: PageProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="record" className="space-y-6">
+      <Tabs defaultValue="record" className="hidden md:block space-y-6">
         <TabsList>
           <TabsTrigger value="record">Record Vitals</TabsTrigger>
           <TabsTrigger value="trends">View Trends</TabsTrigger>

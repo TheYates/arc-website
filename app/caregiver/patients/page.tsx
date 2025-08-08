@@ -23,6 +23,7 @@ import {
 import { CommandSearch } from "@/components/ui/command-search";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
+import { CaregiverPatientsMobile } from "@/components/mobile/caregiver-patients";
 import { useAuth } from "@/lib/auth";
 import { getPatientsByCaregiverClient } from "@/lib/api/client";
 import { Patient, CareLevel, PatientStatus } from "@/lib/types/patients";
@@ -148,12 +149,17 @@ export default function CaregiverPatientsPage() {
       {/* Header Navigation */}
       <RoleHeader role="caregiver" />
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 w-full max-w-7xl">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <CaregiverPatientsMobile />
+      </div>
+
+      {/* Desktop */}
+      <main className="hidden md:block container mx-auto px-4 py-6 w-full max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Patients</h1>
+            <h1 className="text-3xl font-bold ">My Patients</h1>
             <p className="text-muted-foreground">
               Manage and view your assigned patients
             </p>
@@ -329,7 +335,7 @@ export default function CaregiverPatientsPage() {
                                 ? "text-amber-800"
                                 : patient.careLevel === "high"
                                 ? "text-red-800"
-                                : "text-gray-600"
+                                : ""
                             }`}
                           >
                             {patient.careLevel === "low"
@@ -352,7 +358,7 @@ export default function CaregiverPatientsPage() {
                                 ? "text-amber-800"
                                 : patient.status === "critical"
                                 ? "text-red-800"
-                                : "text-gray-600"
+                                : ""
                             }`}
                           >
                             {patient.status === "stable"
@@ -483,7 +489,7 @@ export default function CaregiverPatientsPage() {
                           ? "text-amber-800"
                           : patient.careLevel === "high"
                           ? "text-red-800"
-                          : "text-gray-600"
+                          : ""
                       }`}
                     >
                       {patient.careLevel === "low"
@@ -504,7 +510,7 @@ export default function CaregiverPatientsPage() {
                           ? "text-amber-800"
                           : patient.status === "critical"
                           ? "text-red-800"
-                          : "text-gray-600"
+                          : ""
                       }`}
                     >
                       {patient.status === "stable"

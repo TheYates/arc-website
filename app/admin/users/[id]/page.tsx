@@ -36,6 +36,7 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { AdminUserDetailMobile } from "@/components/mobile/admin-user-detail";
 
 interface UserAccount {
   user: User;
@@ -75,8 +76,10 @@ export default function UserDetailsPage({
             role: "admin",
             isEmailVerified: true,
             createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             lastLogin: new Date().toISOString(),
             profileComplete: true,
+            isActive: true,
           },
           {
             id: "2",
@@ -89,8 +92,10 @@ export default function UserDetailsPage({
             role: "reviewer",
             isEmailVerified: false,
             createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             lastLogin: new Date().toISOString(),
             profileComplete: false,
+            isActive: true,
           },
           {
             id: "3",
@@ -103,8 +108,10 @@ export default function UserDetailsPage({
             role: "care_giver",
             isEmailVerified: true,
             createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             lastLogin: new Date().toISOString(),
             profileComplete: true,
+            isActive: true,
           },
         ];
 
@@ -296,8 +303,13 @@ export default function UserDetailsPage({
 
   return (
     <div className="space-y-6">
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <AdminUserDetailMobile id={id} />
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="hidden md:flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -339,7 +351,7 @@ export default function UserDetailsPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Profile Card */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -464,7 +476,7 @@ export default function UserDetailsPage({
         </Card>
 
         {/* Account Status & Activity */}
-        <div className="space-y-6">
+        <div className="hidden md:block space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Account Status</CardTitle>
@@ -528,7 +540,7 @@ export default function UserDetailsPage({
                 <div>
                   <div className="text-sm font-medium">Last Login</div>
                   <div className="text-xs text-muted-foreground">
-                    {formatDate(userDetails.lastLogin)}
+                    {formatDate(userDetails.lastLogin || "")}
                   </div>
                 </div>
               </div>

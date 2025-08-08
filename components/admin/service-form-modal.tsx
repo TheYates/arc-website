@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +44,7 @@ export default function ServiceFormModal({
   const [loading, setLoading] = useState(false);
   const [showHierarchyEditor, setShowHierarchyEditor] = useState(false);
   const [serviceCategories, setServiceCategories] = useState<any[]>([]);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -102,6 +103,30 @@ export default function ServiceFormModal({
       });
     }
   }, [service, mode, isOpen]);
+
+  // Focus the name input when modal opens
+  useEffect(() => {
+    if (isOpen && nameInputRef.current) {
+      // Multiple attempts to ensure focus works reliably
+      const focusAttempts = [100, 200, 300]; // Try at different intervals
+
+      const timeouts = focusAttempts.map((delay) =>
+        setTimeout(() => {
+          if (nameInputRef.current && isOpen) {
+            nameInputRef.current.focus();
+            if (mode === "edit") {
+              nameInputRef.current.select(); // Select all text if editing
+            }
+            console.log(`🎯 Service form focus attempt at ${delay}ms`);
+          }
+        }, delay)
+      );
+
+      return () => {
+        timeouts.forEach((timeout) => clearTimeout(timeout));
+      };
+    }
+  }, [isOpen, mode]);
 
   const generateSlug = (name: string) => {
     return name
@@ -179,7 +204,22 @@ export default function ServiceFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        onOpenAutoFocus={(e) => {
+          // Prevent default auto-focus, we'll handle it manually for better control
+          e.preventDefault();
+          console.log("🎯 Service dialog opened, preventing default focus");
+
+          // Immediate focus attempt
+          setTimeout(() => {
+            if (nameInputRef.current) {
+              nameInputRef.current.focus();
+              console.log("🎯 Service form immediate focus attempt");
+            }
+          }, 0);
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? "Create New Service" : "Edit Service"}
@@ -200,6 +240,7 @@ export default function ServiceFormModal({
               <div className="space-y-2">
                 <Label htmlFor="name">Service Name *</Label>
                 <Input
+                  ref={nameInputRef}
                   id="name"
                   value={formData.name}
                   onChange={(e) => handleNameChange(e.target.value)}

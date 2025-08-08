@@ -2,9 +2,19 @@
 
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Check,
   Baby,
@@ -16,6 +26,7 @@ import {
   Users,
   Clock,
   ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
@@ -48,7 +59,8 @@ interface FieNeFieService {
 }
 
 export default function FieNeFiePage() {
-  const [fieNeFieService, setFieNeFieService] = useState<FieNeFieService | null>(null);
+  const [fieNeFieService, setFieNeFieService] =
+    useState<FieNeFieService | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -57,19 +69,19 @@ export default function FieNeFiePage() {
   useEffect(() => {
     const fetchServiceData = async () => {
       try {
-        const response = await fetch('/api/services/fie-ne-fie');
+        const response = await fetch("/api/services/fie-ne-fie");
         const result = await response.json();
 
         if (result.success && result.data) {
           setFieNeFieService(result.data);
-          console.log('Using dynamic data from admin');
+          console.log("Using dynamic data from admin");
         } else {
-          setError('No service data found');
-          console.log('No dynamic data found');
+          setError("No service data found");
+          console.log("No dynamic data found");
         }
       } catch (err) {
-        console.error('Error fetching service data:', err);
-        setError('Failed to load service data');
+        console.error("Error fetching service data:", err);
+        setError("Failed to load service data");
       } finally {
         setLoading(false);
       }
@@ -106,68 +118,92 @@ export default function FieNeFiePage() {
     // Only render top-level items as cards for the main style
     if (item.level === 1) {
       return (
-        <Card key={item.id} className="overflow-hidden">
+        <Card
+          key={item.id}
+          className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-200"
+        >
           {hasChildren ? (
             <Collapsible
               open={isExpanded}
               onOpenChange={() => toggleItemExpansion(item.id)}
             >
               <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-slate-50 transition-colors py-3 px-4">
+                <CardHeader
+                  className="cursor-pointer hover:bg-slate-50 transition-colors duration-200 py-4 px-6"
+                  role="button"
+                  aria-expanded={isExpanded}
+                  aria-controls={`service-content-${item.id}`}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-base text-pink-600 flex items-center gap-2">
-                          <Check className="h-4 w-4 text-green-500" />
+                        <CardTitle className="text-lg font-semibold text-pink-700 flex items-center gap-3">
+                          <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                           {item.name}
                         </CardTitle>
                         {item.isOptional && (
-                          <span className="text-orange-600 text-xs">
+                          <Badge
+                            variant="outline"
+                            className="text-orange-600 border-orange-200 bg-orange-50"
+                          >
                             Optional
                             {item.basePrice && item.basePrice > 0 && (
-                              <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                              <span className="ml-2 text-green-600 font-medium">
+                                + {formatPrice(item.basePrice)}
+                              </span>
                             )}
-                          </span>
+                          </Badge>
                         )}
                       </div>
                       {item.description && (
-                        <CardDescription className="text-xs text-slate-600 mt-1">
+                        <CardDescription className="text-slate-600 mt-2 text-sm leading-relaxed">
                           {item.description}
                         </CardDescription>
                       )}
                     </div>
-                    <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200 data-[state=open]:rotate-180" />
+                    {isExpanded ? (
+                      <ChevronDown className="h-5 w-5 text-slate-400 ml-4 flex-shrink-0 transition-transform" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-slate-400 ml-4 flex-shrink-0 transition-transform" />
+                    )}
                   </div>
                 </CardHeader>
               </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="pt-0 px-4 pb-4">
-                  <div className="space-y-2">
-                    {item.children?.map((child) => renderServiceItem(child))}
+              <CollapsibleContent id={`service-content-${item.id}`}>
+                <CardContent className="pt-0 pb-4 px-6">
+                  <div className="border-t border-slate-100 pt-4">
+                    <div className="space-y-3">
+                      {item.children?.map((child) => renderServiceItem(child))}
+                    </div>
                   </div>
                 </CardContent>
               </CollapsibleContent>
             </Collapsible>
           ) : (
-            <CardHeader className="py-3 px-4">
+            <CardHeader className="py-4 px-6">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base text-pink-600 flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-500" />
+                    <CardTitle className="text-lg font-semibold text-pink-700 flex items-center gap-3">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                       {item.name}
                     </CardTitle>
                     {item.isOptional && (
-                      <span className="text-orange-600 text-xs">
+                      <Badge
+                        variant="outline"
+                        className="text-orange-600 border-orange-200 bg-orange-50"
+                      >
                         Optional
                         {item.basePrice && item.basePrice > 0 && (
-                          <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                          <span className="ml-2 text-green-600 font-medium">
+                            + {formatPrice(item.basePrice)}
+                          </span>
                         )}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   {item.description && (
-                    <CardDescription className="text-xs text-slate-600 mt-1">
+                    <CardDescription className="text-slate-600 mt-2 text-sm leading-relaxed">
                       {item.description}
                     </CardDescription>
                   )}
@@ -179,28 +215,79 @@ export default function FieNeFiePage() {
       );
     }
 
-    // Render nested items (level > 1) as simple list items
+    // Render nested items (level > 1) with improved styling
     return (
-      <div key={item.id} className="flex items-start gap-2 py-1">
-        <Check className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-700">{item.name}</span>
-            {item.isOptional && item.basePrice && item.basePrice > 0 && (
-              <span className="text-orange-600 text-xs ml-2">
-                Optional +{formatPrice(item.basePrice)}
-              </span>
-            )}
-          </div>
-          {item.description && (
-            <p className="text-xs text-slate-500 mt-0.5">{item.description}</p>
-          )}
-          {item.children && item.children.length > 0 && (
-            <div className="ml-4 mt-1 space-y-1">
-              {item.children.map((child) => renderServiceItem(child))}
+      <div key={item.id} className="border-l-4 border-pink-200 pl-4 py-2">
+        <h4 className="font-semibold text-slate-900 flex items-center gap-2 mb-2">
+          <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+          {item.name}
+        </h4>
+        {item.description && (
+          <p className="text-sm text-slate-600 mb-3 ml-6 leading-relaxed">
+            {item.description}
+          </p>
+        )}
+        {item.children && item.children.length > 0 && (
+          <div className="ml-6 space-y-2">
+            <div className="text-sm font-medium text-slate-700 mb-2">
+              Includes:
             </div>
-          )}
-        </div>
+            <div className="space-y-1">
+              {item.children.map((child) => (
+                <div
+                  key={child.id}
+                  className="flex items-start gap-3 text-sm py-1"
+                >
+                  <div className="w-2 h-2 bg-pink-500 rounded-full mt-2 flex-shrink-0"></div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-700 font-medium">
+                        {child.name}
+                      </span>
+                      {child.isOptional &&
+                        child.basePrice &&
+                        child.basePrice > 0 && (
+                          <Badge
+                            variant="outline"
+                            className="text-orange-600 border-orange-200 bg-orange-50 text-xs"
+                          >
+                            Optional +{formatPrice(child.basePrice)}
+                          </Badge>
+                        )}
+                    </div>
+                    {child.description && (
+                      <p className="text-slate-500 text-sm mt-1 leading-relaxed">
+                        {child.description}
+                      </p>
+                    )}
+                    {child.children && child.children.length > 0 && (
+                      <div className="ml-4 mt-2 space-y-1">
+                        {child.children.map((grandchild) => (
+                          <div
+                            key={grandchild.id}
+                            className="flex items-start gap-2 text-sm"
+                          >
+                            <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1">
+                              <span className="text-slate-600 font-medium">
+                                {grandchild.name}
+                              </span>
+                              {grandchild.description && (
+                                <p className="text-slate-400 text-sm mt-1 leading-relaxed">
+                                  {grandchild.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -243,7 +330,10 @@ export default function FieNeFiePage() {
               {fieNeFieService?.basePrice && (
                 <div className="flex items-center gap-4 mb-8">
                   <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
-                    <span className="text-white font-semibold">Starting from {formatPrice(fieNeFieService.basePrice || 0)}</span>
+                    <span className="text-white font-semibold">
+                      Starting from{" "}
+                      {formatPrice(fieNeFieService.basePrice || 0)}
+                    </span>
                   </div>
                 </div>
               )}
@@ -267,8 +357,6 @@ export default function FieNeFiePage() {
                 </Link>
               </div>
             </div>
-
-            
           </div>
         </div>
       </section>
@@ -310,7 +398,7 @@ export default function FieNeFiePage() {
 
             <div className="space-y-6">
               {/* Service Overview Image */}
-              
+
               <div className="grid grid-cols-2 gap-6">
                 <Card className="text-center">
                   <CardContent className="p-6">
@@ -366,40 +454,49 @@ export default function FieNeFiePage() {
       </section>
 
       {/* Services Included */}
-      <section className="py-20 bg-white">
+      <section className="py-16 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-slate-900 mb-4">
               Complete Service Breakdown
             </h2>
-            <p className="text-xl text-slate-600">
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               Comprehensive childcare services included in your Fie Ne Fie
               package
             </p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {loading ? (
-              <div className="text-center py-6">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
-                <p className="text-slate-600 mt-2">Loading service details...</p>
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto"></div>
+                <p className="text-slate-600 mt-4 text-base">
+                  Loading service details...
+                </p>
               </div>
             ) : error ? (
-              <div className="text-center py-6">
-                <p className="text-red-600 mb-4">{error}</p>
-                <Button
-                  onClick={() => window.location.reload()}
-                  variant="outline"
-                  className="border-pink-600 text-pink-600"
-                >
-                  Retry
-                </Button>
+              <div className="text-center py-12">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+                  <p className="text-red-700 mb-4 text-base">{error}</p>
+                  <Button
+                    onClick={() => window.location.reload()}
+                    variant="outline"
+                    size="default"
+                    className="border-red-300 text-red-700 hover:bg-red-50"
+                  >
+                    Try Again
+                  </Button>
+                </div>
               </div>
             ) : fieNeFieService ? (
               fieNeFieService.items.map((item) => renderServiceItem(item))
             ) : (
-              <div className="text-center py-6">
-                <p className="text-slate-600 text-sm">No service details available.</p>
+              <div className="text-center py-12">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 max-w-md mx-auto">
+                  <p className="text-slate-600 text-base">
+                    No service details available.
+                  </p>
+                </div>
               </div>
             )}
           </div>

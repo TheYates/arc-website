@@ -2,10 +2,31 @@
 
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Check, Zap, Shield, Phone, Car, Heart, Users, Clock, Flag, ChevronDown } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Check,
+  Zap,
+  Shield,
+  Phone,
+  Car,
+  Heart,
+  Users,
+  Clock,
+  Flag,
+  ChevronDown,
+} from "lucide-react";
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
 import { useState, useEffect } from "react";
@@ -36,7 +57,8 @@ interface RallyPackService {
 }
 
 export default function RallyPackPage() {
-  const [rallyPackService, setRallyPackService] = useState<RallyPackService | null>(null);
+  const [rallyPackService, setRallyPackService] =
+    useState<RallyPackService | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -45,19 +67,19 @@ export default function RallyPackPage() {
   useEffect(() => {
     const fetchServiceData = async () => {
       try {
-        const response = await fetch('/api/services/rally-pack');
+        const response = await fetch("/api/services/rally-pack");
         const result = await response.json();
 
         if (result.success && result.data) {
           setRallyPackService(result.data);
-          console.log('Using dynamic data from admin');
+          console.log("Using dynamic data from admin");
         } else {
-          setError('No service data found');
-          console.log('No dynamic data found');
+          setError("No service data found");
+          console.log("No dynamic data found");
         }
       } catch (err) {
-        console.error('Error fetching service data:', err);
-        setError('Failed to load service data');
+        console.error("Error fetching service data:", err);
+        setError("Failed to load service data");
       } finally {
         setLoading(false);
       }
@@ -113,7 +135,9 @@ export default function RallyPackPage() {
                           <span className="text-orange-600 text-xs">
                             Optional
                             {item.basePrice && item.basePrice > 0 && (
-                              <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                              <span className="ml-1 text-green-600">
+                                + {formatPrice(item.basePrice)}
+                              </span>
                             )}
                           </span>
                         )}
@@ -149,7 +173,9 @@ export default function RallyPackPage() {
                       <span className="text-orange-600 text-xs">
                         Optional
                         {item.basePrice && item.basePrice > 0 && (
-                          <span className="ml-1 text-green-600">+ {formatPrice(item.basePrice)}</span>
+                          <span className="ml-1 text-green-600">
+                            + {formatPrice(item.basePrice)}
+                          </span>
                         )}
                       </span>
                     )}
@@ -219,15 +245,22 @@ export default function RallyPackPage() {
                   {rallyPackService?.name || "Rally Pack"}
                 </h1>
               </div>
-              <Badge className="bg-white/20 text-white border border-white/30 mb-4">Day Option</Badge>
-              <p className="text-2xl text-green-100 mb-4">High-Energy Event Medical Services</p>
+              <Badge className="bg-white/20 text-white border border-white/30 mb-4">
+                Day Option
+              </Badge>
+              <p className="text-2xl text-green-100 mb-4">
+                High-Energy Event Medical Services
+              </p>
               <p className="text-xl font-medium text-white/90 leading-relaxed mb-8">
                 {rallyPackService?.description}
               </p>
               {rallyPackService?.basePrice && (
                 <div className="flex items-center gap-4 mb-8">
                   <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
-                    <span className="text-white font-semibold">Starting from {formatPrice(rallyPackService.basePrice || 0)}</span>
+                    <span className="text-white font-semibold">
+                      Starting from{" "}
+                      {formatPrice(rallyPackService.basePrice || 0)}
+                    </span>
                   </div>
                 </div>
               )}
@@ -251,8 +284,6 @@ export default function RallyPackPage() {
                 </Link>
               </div>
             </div>
-
-
           </div>
         </div>
       </section>
@@ -266,14 +297,16 @@ export default function RallyPackPage() {
                 Specialized Rally Medical Support
               </h2>
               <p className="text-lg text-slate-600 mb-6 leading-relaxed">
-                Our Rally Pack is specifically designed for high-energy events, rallies, and 
-                demonstrations where rapid medical response and crowd safety are paramount. 
-                Our experienced medical teams are trained to handle dynamic environments and 
-                provide immediate care when needed.
+                Our Rally Pack is specifically designed for high-energy events,
+                rallies, and demonstrations where rapid medical response and
+                crowd safety are paramount. Our experienced medical teams are
+                trained to handle dynamic environments and provide immediate
+                care when needed.
               </p>
               <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                Perfect for political rallies, protest demonstrations, community gatherings, 
-                outdoor festivals, and any high-energy event where crowd safety is essential.
+                Perfect for political rallies, protest demonstrations, community
+                gatherings, outdoor festivals, and any high-energy event where
+                crowd safety is essential.
               </p>
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <div className="flex items-center space-x-3 mb-2">
@@ -283,7 +316,8 @@ export default function RallyPackPage() {
                   </h3>
                 </div>
                 <p className="text-slate-600">
-                  Pricing varies based on event size, duration, and crowd density.
+                  Pricing varies based on event size, duration, and crowd
+                  density.
                 </p>
               </div>
             </div>
@@ -292,12 +326,17 @@ export default function RallyPackPage() {
               {/* Service Overview Image */}
               <div className="bg-emerald-100 rounded-2xl p-6 text-center">
                 <div className="bg-white rounded-xl p-4 shadow-lg">
-                  <div className="text-emerald-600 text-sm font-medium mb-2">IMAGE PLACEHOLDER</div>
+                  <div className="text-emerald-600 text-sm font-medium mb-2">
+                    IMAGE PLACEHOLDER
+                  </div>
                   <div className="text-slate-700 text-xs leading-relaxed">
-                    "Medical professionals with portable equipment monitoring crowd at rally"
+                    "Medical professionals with portable equipment monitoring
+                    crowd at rally"
                     <br />
                     <br />
-                    Search terms: crowd medical monitoring, rally safety, portable medical equipment, emergency medical response, crowd control medical
+                    Search terms: crowd medical monitoring, rally safety,
+                    portable medical equipment, emergency medical response,
+                    crowd control medical
                   </div>
                 </div>
               </div>
@@ -372,7 +411,9 @@ export default function RallyPackPage() {
             {loading ? (
               <div className="text-center py-6">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-                <p className="text-slate-600 mt-2">Loading service details...</p>
+                <p className="text-slate-600 mt-2">
+                  Loading service details...
+                </p>
               </div>
             ) : error ? (
               <div className="text-center py-6">
@@ -389,7 +430,9 @@ export default function RallyPackPage() {
               rallyPackService.items.map((item) => renderServiceItem(item))
             ) : (
               <div className="text-center py-6">
-                <p className="text-slate-600 text-sm">No service details available.</p>
+                <p className="text-slate-600 text-sm">
+                  No service details available.
+                </p>
               </div>
             )}
           </div>
@@ -455,7 +498,8 @@ export default function RallyPackPage() {
                 Rapid Deployment
               </h3>
               <p className="text-slate-600">
-                Quick setup and immediate response capabilities for dynamic events
+                Quick setup and immediate response capabilities for dynamic
+                events
               </p>
             </div>
 
@@ -467,7 +511,8 @@ export default function RallyPackPage() {
                 Crowd Expertise
               </h3>
               <p className="text-slate-600">
-                Specialized experience in managing medical needs in crowd situations
+                Specialized experience in managing medical needs in crowd
+                situations
               </p>
             </div>
 
@@ -479,7 +524,8 @@ export default function RallyPackPage() {
                 Safety Focused
               </h3>
               <p className="text-slate-600">
-                Comprehensive safety protocols designed for high-energy environments
+                Comprehensive safety protocols designed for high-energy
+                environments
               </p>
             </div>
           </div>
@@ -496,16 +542,24 @@ export default function RallyPackPage() {
             Secure Medical Coverage for Your Rally
           </h2>
           <p className="text-xl text-green-100 mb-8">
-            Contact us today to discuss your rally medical coverage needs and ensure participant safety.
+            Contact us today to discuss your rally medical coverage needs and
+            ensure participant safety.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/get-started">
-              <Button size="lg" className="bg-white text-green-600 hover:bg-green-50">
+              <Button
+                size="lg"
+                className="bg-white text-green-600 hover:bg-green-50"
+              >
                 Book Rally Coverage
               </Button>
             </Link>
             <Link href="/contact">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white text-white hover:bg-white/10"
+              >
                 <Phone className="h-5 w-5 mr-2" />
                 Call Us Today
               </Button>
@@ -518,7 +572,8 @@ export default function RallyPackPage() {
       <footer className="bg-slate-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-slate-400">
-            © 2024 Alpha Rescue Consult. Professional rally medical services you can trust.
+            © 2024 Alpha Rescue Consult. Professional rally medical services you
+            can trust.
           </p>
         </div>
       </footer>

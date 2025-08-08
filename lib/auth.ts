@@ -16,13 +16,15 @@ export interface User {
   username: string;
   firstName: string;
   lastName: string;
-  phone: string;
-  address: string;
+  phone?: string;
+  address?: string;
   role: UserRole;
   isEmailVerified: boolean;
-  createdAt: string;
-  lastLogin: string;
+  isActive: boolean;
   profileComplete: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastLogin?: string;
 }
 
 interface AuthContextType {
@@ -39,120 +41,45 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const USERS_STORAGE_KEY = "auth_users";
 
-const getFromStorage = <T>(key: string, defaultValue: T): T => {
-  if (typeof window === "undefined") return defaultValue;
-  try {
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : defaultValue;
-  } catch {
-    return defaultValue;
-  }
-};
-
-// Demo users for development/testing
-const demoUsers: Record<string, { password: string; user: User }> = {
-  admin: {
-    password: "password",
-    user: {
-      id: "1",
-      email: "admin@alpharescue.com",
-      username: "admin",
-      firstName: "Admin",
-      lastName: "User",
-      phone: "+233 XX XXX XXXX",
-      address: "Accra, Ghana",
-      role: "admin",
-      isEmailVerified: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      profileComplete: true,
-    },
-  },
-  drmensah: {
-    password: "password",
-    user: {
-      id: "2",
-      email: "dr.mensah@alpharescue.com",
-      username: "drmensah",
-      firstName: "Dr. Kwame",
-      lastName: "Mensah",
-      phone: "+233 XX XXX XXXX",
-      address: "Kumasi, Ghana",
-      role: "reviewer",
-      isEmailVerified: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      profileComplete: true,
-    },
-  },
-  nurseama: {
-    password: "password",
-    user: {
-      id: "3",
-      email: "ama.nurse@alpharescue.com",
-      username: "nurseama",
-      firstName: "Ama",
-      lastName: "Asante",
-      phone: "+233 XX XXX XXXX",
-      address: "Tema, Ghana",
-      role: "care_giver",
-      isEmailVerified: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      profileComplete: true,
-    },
-  },
-  patient1: {
-    password: "password",
-    user: {
-      id: "4",
-      email: "patient@example.com",
-      username: "patient1",
-      firstName: "John",
-      lastName: "Doe",
-      phone: "+233 XX XXX XXXX",
-      address: "Accra, Ghana",
-      role: "patient",
-      isEmailVerified: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      profileComplete: true,
-    },
-  },
-  // Stealth super admin - only accessible via direct credentials
-  stealth_admin_2024: {
-    password: "StealthAdmin@2024!",
-    user: {
-      id: "0",
-      email: "stealth@system.internal",
-      username: "stealth_admin_2024",
-      firstName: "System",
-      lastName: "Administrator",
-      phone: "",
-      address: "",
-      role: "super_admin",
-      isEmailVerified: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      profileComplete: true,
-    },
-  },
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true); // Start with loading true
 
   // Check for stored user on mount
   React.useEffect(() => {
+    console.log("🔍 Auth context initializing, checking localStorage...");
     const storedUser = localStorage.getItem("auth_user");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        console.log("👤 Found stored user:", {
+          email: parsedUser.email,
+          role: parsedUser.role,
+        });
+
+        // Check if user has old uppercase role format - if so, clear and force re-login
+        if (
+          parsedUser.role &&
+          parsedUser.role === parsedUser.role.toUpperCase()
+        ) {
+          console.log(
+            "🔄 Detected old uppercase role format, clearing stored user"
+          );
+          localStorage.removeItem("auth_user");
+          setUser(null);
+        } else {
+          setUser(parsedUser);
+        }
       } catch (error) {
+        console.log("❌ Error parsing stored user, removing:", error);
         localStorage.removeItem("auth_user");
       }
+    } else {
+      console.log("❌ No stored user found");
     }
+    console.log(
+      "✅ Auth context initialization complete, setting isLoading to false"
+    );
     setIsLoading(false); // Set loading to false after checking localStorage
   }, []);
 
@@ -164,13 +91,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loginUser = async (emailOrUsername: string, password: string) => {
+    console.log("🔐 Auth context loginUser called:", { emailOrUsername });
     setIsLoading(true);
 
     try {
+      console.log("📡 Calling authenticateUserClient...");
       // Use client-side API to authenticate
       const result = await authenticateUserClient(emailOrUsername, password);
+      console.log("📥 authenticateUserClient result:", result);
 
       if (!result.success || !result.user) {
+        console.log("❌ Authentication failed:", result.error);
         setIsLoading(false);
         return {
           success: false,
@@ -178,14 +109,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
+      console.log("✅ Authentication successful, setting user:", result.user);
       setUser(result.user);
 
       // Always store in localStorage for session persistence
       localStorage.setItem("auth_user", JSON.stringify(result.user));
+      console.log("💾 User stored in localStorage");
 
       setIsLoading(false);
       return { success: true };
     } catch (error) {
+      console.log("💥 Login error in auth context:", error);
       setIsLoading(false);
       return { success: false, error: "Login failed" };
     }

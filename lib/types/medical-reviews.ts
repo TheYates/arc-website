@@ -11,7 +11,7 @@ export interface MedicalReview {
   treatmentPlan?: string;
   followUpRequired: boolean;
   followUpDate?: string;
-  priority: "low" | "medium" | "high" | "urgent";
+  priority: "low" | "medium" | "high";
   status: ReviewStatus;
   createdAt: string;
   updatedAt: string;
@@ -26,21 +26,16 @@ export interface MedicalReview {
 }
 
 export type ReviewType =
-  | "initial_assessment"
-  | "routine_checkup"
+  | "routine"
+  | "urgent"
   | "follow_up"
-  | "emergency_consultation"
-  | "medication_review"
-  | "symptom_evaluation"
-  | "care_plan_update"
-  | "discharge_planning";
+  | "consultation";
 
 export type ReviewStatus =
-  | "draft"
-  | "in_progress"
+  | "pending"
+  | "in_review"
   | "completed"
-  | "requires_follow_up"
-  | "archived";
+  | "cancelled";
 
 export interface ReviewAttachment {
   id: string;

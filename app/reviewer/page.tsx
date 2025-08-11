@@ -139,7 +139,7 @@ export default function ReviewerPage() {
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold ">
                 Good{" "}
                 {new Date().getHours() < 12
                   ? "morning"
@@ -271,7 +271,7 @@ export default function ReviewerPage() {
                   {assignedPatients.slice(0, 3).map((patient) => (
                     <div
                       key={patient.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 hover:accent rounded-lg"
                     >
                       <div className="flex items-center">
                         <div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">

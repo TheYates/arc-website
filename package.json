@@ -25,6 +25,15 @@
     "test:auth": "node scripts/test-auth.js",
     "check:role": "node scripts/check-user-role.js",
     "setup-postgres": "node scripts/setup-postgres.js",
+    "seed:users": "node scripts/seed-users.js",
+    "seed:applications": "node scripts/seed-applications.js",
+    "seed:patients": "node scripts/seed-patients.js",
+    "test:users-api": "node scripts/test-users-api.js",
+    "test:patients-api": "node scripts/test-patients-api.js",
+    "test:all-patients": "node scripts/test-all-patients-endpoints.js",
+    "test:assignments": "node scripts/test-assignment-api.js",
+    "test:staff": "node scripts/test-staff-api.js",
+    "test:reviewer-assignment": "node scripts/test-reviewer-assignment.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

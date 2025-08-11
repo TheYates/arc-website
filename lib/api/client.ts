@@ -7,6 +7,69 @@ import {
 
 // Client-side API functions that call Next.js API routes
 
+// Simple in-memory cache for API responses
+const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+
+function getCachedData(key: string): any | null {
+  const cached = apiCache.get(key);
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+    console.log(`💾 Cache HIT for ${key}`);
+    return cached.data;
+  }
+  if (cached) {
+    apiCache.delete(key); // Remove expired cache
+  }
+  return null;
+}
+
+function setCachedData(key: string, data: any, ttlMs: number = 60000): void {
+  apiCache.set(key, {
+    data,
+    timestamp: Date.now(),
+    ttl: ttlMs
+  });
+  console.log(`💾 Cache SET for ${key} (TTL: ${ttlMs}ms)`);
+
+  // Clean up old cache entries periodically
+  if (apiCache.size > 100) {
+    cleanupCache();
+  }
+}
+
+function cleanupCache(): void {
+  const now = Date.now();
+  let cleaned = 0;
+  for (const [key, value] of apiCache.entries()) {
+    if (now - value.timestamp > value.ttl) {
+      apiCache.delete(key);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    console.log(`🧹 Cache cleanup: removed ${cleaned} expired entries`);
+  }
+}
+
+function invalidateCache(pattern?: string): void {
+  if (!pattern) {
+    const size = apiCache.size;
+    apiCache.clear();
+    console.log(`🗑️ Cache cleared: removed ${size} entries`);
+    return;
+  }
+
+  let removed = 0;
+  for (const key of apiCache.keys()) {
+    if (key.includes(pattern)) {
+      apiCache.delete(key);
+      removed++;
+    }
+  }
+  if (removed > 0) {
+    console.log(`🗑️ Cache invalidated: removed ${removed} entries matching "${pattern}"`);
+  }
+}
+
 // Authentication
 export async function authenticateUserClient(
   email: string,
@@ -46,7 +109,17 @@ export async function getPatientByIdClient(
   patientId: string
 ): Promise<Patient | null> {
   try {
-    const response = await fetch(`/api/patients/${patientId}`);
+    const cacheKey = `patient-${patientId}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const start = performance.now();
+    const response = await fetch(`/api/patients/${patientId}`, {
+      next: { revalidate: 30 } // Cache for 30 seconds
+    });
+    const fetchEnd = performance.now();
 
     if (!response.ok) {
       console.error("Failed to fetch patient:", response.statusText);
@@ -54,6 +127,13 @@ export async function getPatientByIdClient(
     }
 
     const data = await response.json();
+    const parseEnd = performance.now();
+
+    console.log(`🔍 Patient API: fetch ${(fetchEnd - start).toFixed(2)}ms, parse ${(parseEnd - fetchEnd).toFixed(2)}ms, total ${(parseEnd - start).toFixed(2)}ms`);
+
+    // Cache the result for 30 seconds
+    setCachedData(cacheKey, data.patient, 30000);
+
     return data.patient;
   } catch (error) {
     console.error("Get patient error:", error);
@@ -85,7 +165,18 @@ export async function getMedicationsClient(
   patientId: string
 ): Promise<Medication[]> {
   try {
-    const response = await fetch(`/api/medications/${patientId}`);
+    const cacheKey = `medications-${patientId}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+      console.log(`💊 Medications: Using cached data (${cached.length} items)`);
+      return cached;
+    }
+
+    const start = performance.now();
+    const response = await fetch(`/api/medications/${patientId}`, {
+      next: { revalidate: 120 } // Increased cache time to 2 minutes
+    });
+    const fetchEnd = performance.now();
 
     if (!response.ok) {
       console.error("Failed to fetch medications:", response.statusText);
@@ -93,6 +184,13 @@ export async function getMedicationsClient(
     }
 
     const data = await response.json();
+    const parseEnd = performance.now();
+
+    console.log(`💊 Medications API: fetch ${(fetchEnd - start).toFixed(2)}ms, parse ${(parseEnd - fetchEnd).toFixed(2)}ms, total ${(parseEnd - start).toFixed(2)}ms, found ${(data.prescriptions || []).length} medications`);
+
+    // Cache the result for 5 minutes
+    setCachedData(cacheKey, data.prescriptions || [], 300000);
+
     return data.prescriptions || [];
   } catch (error) {
     console.error("Get medications error:", error);
@@ -104,9 +202,21 @@ export async function getMedicationAdministrationsClient(
   patientId: string
 ): Promise<MedicationAdministration[]> {
   try {
+    const cacheKey = `administrations-${patientId}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+      console.log(`💉 Administrations: Using cached data (${cached.length} items)`);
+      return cached;
+    }
+
+    const start = performance.now();
     const response = await fetch(
-      `/api/medications/administrations/${patientId}`
+      `/api/medications/administrations/${patientId}`,
+      {
+        next: { revalidate: 60 } // Increased cache time to 1 minute
+      }
     );
+    const fetchEnd = performance.now();
 
     if (!response.ok) {
       console.error("Failed to fetch administrations:", response.statusText);
@@ -114,6 +224,13 @@ export async function getMedicationAdministrationsClient(
     }
 
     const data = await response.json();
+    const parseEnd = performance.now();
+
+    console.log(`💉 Administrations API: fetch ${(fetchEnd - start).toFixed(2)}ms, parse ${(parseEnd - fetchEnd).toFixed(2)}ms, total ${(parseEnd - start).toFixed(2)}ms, found ${(data.administrations || []).length} administrations`);
+
+    // Cache the result for 2 minutes
+    setCachedData(cacheKey, data.administrations || [], 120000);
+
     return data.administrations || [];
   } catch (error) {
     console.error("Get administrations error:", error);

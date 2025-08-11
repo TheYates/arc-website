@@ -35,20 +35,27 @@ export default function LoginPage() {
 
     // Wait for auth to be ready
     if (authLoading) {
-      console.log("⏳ Auth still loading...");
+     
       return;
     }
 
     setIsAuthReady(true);
     console.log("✅ Auth ready, isAuthReady set to true");
 
-    // If user is already logged in, redirect to appropriate page
+    // If user is already logged in, check if they need to change password
     if (user) {
       console.log(
-        "👤 User already logged in, redirecting based on role:",
-        user.role
+        "👤 User already logged in, checking password change requirement:",
+        { role: user.role, mustChangePassword: user.mustChangePassword }
       );
-      redirectBasedOnRole(user.role);
+
+      if (user.mustChangePassword) {
+        console.log("🔐 User must change password, redirecting to change-password");
+        router.push("/change-password");
+      } else {
+        console.log("✅ Password is current, redirecting based on role");
+        redirectBasedOnRole(user.role);
+      }
     } else {
       console.log("❌ No user found, staying on login page");
     }
@@ -67,7 +74,7 @@ export default function LoginPage() {
         console.log("👨‍⚕️ Reviewer role detected, redirecting to /reviewer");
         router.push("/reviewer");
         break;
-      case "care_giver":
+      case "caregiver":
         console.log("👩‍⚕️ Caregiver role detected, redirecting to /caregiver");
         router.push("/caregiver");
         break;
@@ -105,8 +112,8 @@ export default function LoginPage() {
       });
 
       if (result.success) {
-        console.log("✅ Login successful, waiting for useEffect redirect...");
-        // This should redirect automatically via the useEffect above
+        console.log("✅ Login successful, checking for password change requirement...");
+        // The useEffect will handle redirection based on mustChangePassword flag
       } else {
         console.log("❌ Login failed:", result.error);
         setError(result.error || "Login failed");

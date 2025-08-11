@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MedicationPrescriptionForm } from "@/components/medical/medication-prescription-form";
-import { getPatientById } from "@/lib/api/patients";
-import { getMedications } from "@/lib/api/medications";
+import { getPatientByIdClient } from "@/lib/api/client";
+import { getMedicationsClient } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
 import { Patient } from "@/lib/types/patients";
 import { Medication } from "@/lib/types/medications";
@@ -31,10 +31,10 @@ export default function ReviewerMedicationsPage({ params }: PageProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const patientData = await getPatientById(resolvedParams.patientId);
+        const patientData = await getPatientByIdClient(resolvedParams.patientId);
         if (patientData) {
           setPatient(patientData);
-          const medicationsData = await getMedications(
+          const medicationsData = await getMedicationsClient(
             resolvedParams.patientId
           );
           setMedications(medicationsData);

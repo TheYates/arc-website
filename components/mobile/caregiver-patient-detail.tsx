@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getPatientByIdClient } from "@/lib/api/client";
 import { getVitalSigns } from "@/lib/api/vitals";
 import { getMedicationsClient } from "@/lib/api/client";
-import { getMedicalReviews } from "@/lib/api/medical-reviews";
+import { getMedicalReviews } from "@/lib/api/medical-reviews-client";
 import { Patient } from "@/lib/types/patients";
 import type { VitalSigns } from "@/lib/types/vitals";
 import type { Medication } from "@/lib/types/medications";
@@ -32,7 +32,7 @@ export function CaregiverPatientMobile({ patientId }: { patientId: string }) {
         const p = await getPatientByIdClient(patientId);
         const v = getVitalSigns(patientId);
         const m = await getMedicationsClient(patientId);
-        const r = getMedicalReviews(patientId);
+        const r = await getMedicalReviews(patientId);
         if (!mounted) return;
         setPatient(p);
         setVitals(v);

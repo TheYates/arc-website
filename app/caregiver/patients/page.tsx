@@ -54,7 +54,7 @@ import {
 } from "lucide-react";
 
 export default function CaregiverPatientsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [assignedPatients, setAssignedPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,16 +79,19 @@ export default function CaregiverPatientsPage() {
 
   // Check permissions
   useEffect(() => {
+    // Wait for auth to finish loading before making redirect decisions
+    if (authLoading) return;
+
     if (!user) {
       router.push("/login");
       return;
     }
 
-    if (user.role !== "care_giver") {
+    if (user.role !== "caregiver") {
       router.push("/");
       return;
     }
-  }, [user, router]);
+  }, [user, router, authLoading]);
 
   useEffect(() => {
     const fetchAssignedPatients = async () => {
@@ -131,7 +134,22 @@ export default function CaregiverPatientsPage() {
     return formatDate(date);
   };
 
-  if (!user || user.role !== "care_giver") {
+  // Show loading while auth is loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background w-full">
+        <RoleHeader role="caregiver" />
+        <main className="container mx-auto px-4 py-6 w-full max-w-7xl">
+          <div className="space-y-6">
+            <div className="h-8 bg-gray-200 rounded animate-pulse w-48"></div>
+            <div className="h-96 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "caregiver") {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
@@ -278,15 +296,18 @@ export default function CaregiverPatientsPage() {
                       <th className="px-6 py-4 text-left font-medium">
                         Patient
                       </th>
-                      <th className="px-6 py-4 text-left font-medium">Email</th>
-                      <th className="px-6 py-4 text-left font-medium">Phone</th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Contact
+                      </th>
                       <th className="px-6 py-4 text-left font-medium">
                         Care Level
                       </th>
                       <th className="px-6 py-4 text-left font-medium">
                         Status
                       </th>
-                      <th className="px-6 py-4 text-left font-medium">Age</th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Service
+                      </th>
                       <th className="px-6 py-4 text-left font-medium">
                         Assigned
                       </th>
@@ -308,22 +329,26 @@ export default function CaregiverPatientsPage() {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-3">
-                            <div className="bg-teal-100 p-2 rounded-full">
-                              <User className="h-4 w-4 text-teal-600" />
+                            <div className="bg-purple-100 p-2 rounded-full">
+                              <User className="h-4 w-4 text-purple-600" />
                             </div>
-                            <div className="font-medium whitespace-nowrap">
-                              {patient.firstName} {patient.lastName}
+                            <div>
+                              <div className="font-medium whitespace-nowrap">
+                                {patient.firstName} {patient.lastName}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm whitespace-nowrap">
-                            {patient.email}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm whitespace-nowrap">
-                            {patient.phone || "N/A"}
+                          <div className="space-y-1">
+                            <div className="flex items-center text-sm whitespace-nowrap">
+                              <Mail className="h-3 w-3 mr-2 text-muted-foreground" />
+                              {patient.email}
+                            </div>
+                            <div className="flex items-center text-sm whitespace-nowrap">
+                              <Phone className="h-3 w-3 mr-2 text-muted-foreground" />
+                              {patient.phone || "N/A"}
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -353,7 +378,7 @@ export default function CaregiverPatientsPage() {
                               patient.status === "stable"
                                 ? "text-green-800"
                                 : patient.status === "improving"
-                                ? "text-teal-800"
+                                ? "text-purple-800"
                                 : patient.status === "declining"
                                 ? "text-amber-800"
                                 : patient.status === "critical"
@@ -373,8 +398,8 @@ export default function CaregiverPatientsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm whitespace-nowrap">
-                            {calculateAge(patient.dateOfBirth)}
+                          <div className="text-sm text-muted-foreground whitespace-nowrap">
+                            Care Service
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -394,7 +419,7 @@ export default function CaregiverPatientsPage() {
                               onClick={() =>
                                 router.push(`/caregiver/patients/${patient.id}`)
                               }
-                              className="bg-teal-600 hover:bg-teal-700"
+                              className="bg-purple-600 hover:bg-purple-700"
                             >
                               View Details
                             </Button>
@@ -505,7 +530,7 @@ export default function CaregiverPatientsPage() {
                         patient.status === "stable"
                           ? "text-green-800"
                           : patient.status === "improving"
-                          ? "text-teal-800"
+                          ? "text-purple-800"
                           : patient.status === "declining"
                           ? "text-amber-800"
                           : patient.status === "critical"
@@ -525,11 +550,11 @@ export default function CaregiverPatientsPage() {
                     </div>
                   </div>
 
-                  {/* Age */}
-                  <div className="p-2 bg-teal-50 rounded">
-                    <p className="text-xs text-teal-600 font-medium">Age</p>
-                    <p className="text-sm text-teal-800">
-                      {calculateAge(patient.dateOfBirth)}
+                  {/* Service */}
+                  <div className="p-2 bg-purple-50 rounded">
+                    <p className="text-xs text-purple-600 font-medium">Service</p>
+                    <p className="text-sm text-purple-800">
+                      Care Service
                     </p>
                   </div>
 

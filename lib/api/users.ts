@@ -60,15 +60,15 @@ function generateUsername(firstName: string, lastName: string): string {
 // Determine role based on job category
 function determineRoleFromJobCategory(jobCategory: string): UserRole {
   const categoryRoleMap: Record<string, UserRole> = {
-    Healthcare: "care_giver",
-    Childcare: "care_giver",
-    "Event Medical": "care_giver",
+    Healthcare: "caregiver",
+    Childcare: "caregiver",
+    "Event Medical": "caregiver",
     Administrative: "reviewer",
     "Medical Review": "reviewer",
     Management: "reviewer",
   };
 
-  return categoryRoleMap[jobCategory] || "care_giver"; // Default to care_giver
+  return categoryRoleMap[jobCategory] || "caregiver"; // Default to caregiver
 }
 
 // Check if user already exists

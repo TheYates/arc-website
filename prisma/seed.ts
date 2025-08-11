@@ -51,7 +51,7 @@ async function main() {
       passwordHash: hashedPassword,
       firstName: 'Care',
       lastName: 'Giver',
-      role: 'CARE_GIVER',
+      role: 'CAREGIVER',
       isEmailVerified: true,
       profileComplete: true,
     },

@@ -51,7 +51,7 @@ const mockAuditLogs: AuditLogEntry[] = [
     action: "admin.user.create",
     resource: "user",
     resourceId: "6",
-    details: { newUserRole: "care_giver", newUserEmail: "nurse.kwame@arc.com" },
+    details: { newUserRole: "caregiver", newUserEmail: "nurse.kwame@arc.com" },
     ipAddress: "192.168.1.101",
     userAgent:
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",

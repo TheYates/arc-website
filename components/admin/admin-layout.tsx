@@ -4,6 +4,7 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RoleBottomNav } from "@/components/mobile/role-bottom-nav";
+import { Toaster } from "@/components/ui/toaster";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -29,6 +30,8 @@ export function AdminLayout({ children, breadcrumbs }: AdminLayoutProps) {
       </SidebarProvider>
       {/* Mobile bottom nav */}
       <RoleBottomNav role="admin" />
+      {/* Toast notifications */}
+      <Toaster />
     </div>
   );
 }

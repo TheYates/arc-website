@@ -162,7 +162,7 @@ export function CommandSearch({
       <Button
         variant="outline"
         className={`relative w-full justify-start text-sm text-muted-foreground sm:pr-12 ${
-          size === "sm" ? "md:w-48 lg:w-64" : "md:w-64 lg:w-96"
+          size === "sm" ? "w-32 md:w-36 lg:w-40" : "md:w-64 lg:w-96"
         }`}
         onClick={() => setOpen(true)}
       >

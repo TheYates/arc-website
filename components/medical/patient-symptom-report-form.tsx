@@ -274,16 +274,16 @@ export function PatientSymptomReportForm({
               medication, please select it.
             </p>
             <Select
-              value={formData.medicationId || ""}
+              value={formData.medicationId || "none"}
               onValueChange={(value) =>
-                handleInputChange("medicationId", value)
+                handleInputChange("medicationId", value === "none" ? "" : value)
               }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select a medication (optional)..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None / Not sure</SelectItem>
+                <SelectItem value="none">None / Not sure</SelectItem>
                 {medications.map((medication) => (
                   <SelectItem key={medication.id} value={medication.id}>
                     <div className="flex items-center">

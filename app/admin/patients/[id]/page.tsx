@@ -42,6 +42,7 @@ import {
   UserPlus,
   Edit,
   Eye,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Dialog,
@@ -51,6 +52,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -115,15 +117,15 @@ export default function AdminPatientDetailPage({
   const getCareLevelBadge = (careLevel?: CareLevel) => {
     switch (careLevel) {
       case "low":
-        return <Badge className="bg-green-100 text-green-800">Low Care</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Low</Badge>;
       case "medium":
-        return (
-          <Badge className="bg-amber-100 text-amber-800">Medium Care</Badge>
-        );
+        return <Badge className="bg-blue-100 text-blue-800">Medium</Badge>;
       case "high":
-        return <Badge className="bg-red-100 text-red-800">High Care</Badge>;
+        return <Badge className="bg-amber-100 text-amber-800">High</Badge>;
+      case "critical":
+        return <Badge className="bg-red-100 text-red-800">Critical</Badge>;
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return <Badge>Unknown</Badge>;
     }
   };
 
@@ -138,7 +140,7 @@ export default function AdminPatientDetailPage({
       case "critical":
         return <Badge className="bg-red-100 text-red-800">Critical</Badge>;
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return <Badge>Unknown</Badge>;
     }
   };
 
@@ -154,6 +156,7 @@ export default function AdminPatientDetailPage({
 
   const handleOpenAssignmentDialog = () => {
     if (!patient) return;
+    // Initialize selections with current assignments, ensuring the values persist
     setSelectedCaregiver(patient.assignedCaregiverId || "none");
     setSelectedReviewer(patient.assignedReviewerId || "none");
     setShowAssignmentDialog(true);
@@ -259,40 +262,71 @@ export default function AdminPatientDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="space-y-6">
       {/* Mobile (distinct UI) */}
       <div className="md:hidden">
         <AdminPatientMobile patientId={id} />
       </div>
 
-      <div className="hidden md:block container mx-auto px-4 py-8 max-w-7xl">
+      {/* Desktop View */}
+      <div className="hidden md:block space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              onClick={() => router.push("/admin/patients")}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Patients
-            </Button>
+        <div className="space-y-4">
+          {/* Back Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/admin/patients")}
+            className="w-fit"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Patients
+          </Button>
+
+          {/* Patient Info and Actions */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold">
+              <h1 className="text-3xl font-bold tracking-tight">
                 {patient.firstName} {patient.lastName}
               </h1>
               <p className="text-muted-foreground">
                 Patient Details & Management
               </p>
             </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            {getCareLevelBadge(patient.careLevel)}
-            {getStatusBadge(patient.status)}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAssignmentDialog(true)}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Manage Care Team
+              </Button>
+              {getCareLevelBadge(patient.careLevel)}
+              {getStatusBadge(patient.status)}
+            </div>
           </div>
         </div>
 
+        {/* Assignment Alert */}
+        {(!patient.assignedCaregiver || !patient.assignedReviewer) && (
+          <Alert className="border-amber-200 bg-amber-50">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800">
+              <div className="font-medium mb-1">Assignment Required</div>
+              <div className="text-sm">
+                {!patient.assignedCaregiver && !patient.assignedReviewer
+                  ? "This patient needs both a caregiver and reviewer assigned."
+                  : !patient.assignedCaregiver
+                  ? "This patient needs a caregiver assigned."
+                  : "This patient needs a reviewer assigned."}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Patient Information */}
+          {/* Main Patient Information */}
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Information */}
             <Card>
@@ -300,11 +334,11 @@ export default function AdminPatientDetailPage({
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center">
                     <UserIcon className="h-5 w-5 mr-2" />
-                    Basic Information
+                    Patient Information
                   </div>
                   <Button variant="outline" size="sm">
                     <Edit className="h-4 w-4 mr-2" />
-                    Edit
+                    Edit Profile
                   </Button>
                 </CardTitle>
               </CardHeader>
@@ -508,52 +542,56 @@ export default function AdminPatientDetailPage({
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Activity className="h-5 w-5 mr-2" />
-                  Admin Actions
+                  Quick Actions
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Patient Information
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={handleOpenAssignmentDialog}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Manage Care Team
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <FileText className="h-4 w-4 mr-2" />
-                  View Medical Records
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Schedule Appointment
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => {
-                    // Navigate to appropriate role-specific view based on assignment
-                    if (patient.assignedReviewerId) {
-                      router.push(`/reviewer/patients/${patient.id}`);
-                    } else if (patient.assignedCaregiverId) {
-                      router.push(`/caregiver/patients/${patient.id}`);
-                    } else {
-                      toast({
-                        title: "No Staff Assigned",
-                        description:
-                          "Please assign a caregiver or reviewer first.",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View as Staff
-                </Button>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 gap-2">
+                  <Button variant="outline" size="sm" className="justify-start">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Patient Information
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="justify-start"
+                    onClick={handleOpenAssignmentDialog}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Manage Care Team
+                  </Button>
+                  <Button variant="outline" size="sm" className="justify-start">
+                    <FileText className="h-4 w-4 mr-2" />
+                    View Medical Records
+                  </Button>
+                  <Button variant="outline" size="sm" className="justify-start">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Schedule Appointment
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => {
+                      // Navigate to appropriate role-specific view based on assignment
+                      if (patient.assignedReviewerId) {
+                        router.push(`/reviewer/patients/${patient.id}`);
+                      } else if (patient.assignedCaregiverId) {
+                        router.push(`/caregiver/patients/${patient.id}`);
+                      } else {
+                        toast({
+                          title: "No Staff Assigned",
+                          description:
+                            "Please assign a caregiver or reviewer first.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View as Staff
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 

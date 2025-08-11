@@ -187,15 +187,17 @@ export function RoleHeader({ role }: RoleHeaderProps) {
           </nav>
         </div>
 
-        {/* Center section - Search */}
-        <div className="flex-1 flex justify-center max-w-md mx-6">
-          <div className="hidden md:block w-full">
-            <CommandSearch variant={config.searchVariant} size="sm" />
-          </div>
+        {/* Center section - Empty for now */}
+        <div className="flex-1">
         </div>
 
-        {/* Right side - Theme Toggle, Notifications and User Menu */}
-        <div className="flex items-center space-x-4">
+        {/* Right side - Search, Theme Toggle, Notifications and User Menu */}
+        <div className="flex items-center space-x-3">
+          {/* Search - smaller and moved to right */}
+          <div className="hidden md:block">
+            <CommandSearch variant={config.searchVariant} size="sm" />
+          </div>
+          
           {/* Theme Toggle */}
           <ThemeToggle />
 

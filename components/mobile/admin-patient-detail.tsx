@@ -9,7 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Users, Eye, Stethoscope, Calendar } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Users, Eye, Stethoscope, Calendar, AlertTriangle } from "lucide-react";
 
 export function AdminPatientMobile({ patientId }: { patientId: string }) {
   const router = useRouter();
@@ -57,20 +58,20 @@ export function AdminPatientMobile({ patientId }: { patientId: string }) {
 
   return (
     <div className="px-4 py-4 space-y-4">
+      <Button
+        variant="ghost"
+        onClick={() => router.push("/admin/patients")}
+        className="px-0 w-fit"
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" /> Back to Patients
+      </Button>
+
       <div>
         <h1 className="text-2xl font-bold">Patient Details</h1>
         <p className="text-sm text-muted-foreground">
           View and manage patient information
         </p>
       </div>
-
-      <Button
-        variant="ghost"
-        onClick={() => router.push("/admin/patients")}
-        className="px-0"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" /> Back
-      </Button>
 
       <div className="flex items-center gap-3">
         <Avatar className="h-12 w-12">
@@ -93,6 +94,23 @@ export function AdminPatientMobile({ patientId }: { patientId: string }) {
           </div>
         </div>
       </div>
+
+      {/* Assignment Alert */}
+      {(!patient.assignedCaregiver || !patient.assignedReviewer) && (
+        <Alert className="border-amber-200 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            <div className="font-medium mb-1">Assignment Required</div>
+            <div className="text-sm">
+              {!patient.assignedCaregiver && !patient.assignedReviewer
+                ? "This patient needs both a caregiver and reviewer assigned."
+                : !patient.assignedCaregiver
+                ? "This patient needs a caregiver assigned."
+                : "This patient needs a reviewer assigned."}
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardContent className="p-4">

@@ -47,8 +47,62 @@ export async function getAllPatients(): Promise<PatientWithUser[]> {
   }
 }
 
-// Get patient by ID
+// Get patient by ID - optimized for basic patient info only
 export async function getPatientById(id: string): Promise<PatientWithUser | null> {
+  try {
+    return await prisma.patient.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            address: true,
+          }
+        },
+        caregiverAssignments: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            assignedAt: true,
+            caregiver: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              }
+            }
+          },
+          take: 1, // Only get the active caregiver
+        },
+        reviewerAssignments: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            assignedAt: true,
+            reviewer: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              }
+            }
+          },
+          take: 1, // Only get the active reviewer
+        },
+      },
+    })
+  } catch (error) {
+    console.error('Get patient by ID error:', error)
+    return null
+  }
+}
+
+// Get patient by ID with full details (for admin use)
+export async function getPatientByIdWithDetails(id: string): Promise<PatientWithUser | null> {
   try {
     return await prisma.patient.findUnique({
       where: { id },
@@ -77,7 +131,7 @@ export async function getPatientById(id: string): Promise<PatientWithUser | null
       },
     })
   } catch (error) {
-    console.error('Get patient by ID error:', error)
+    console.error('Get patient by ID with details error:', error)
     return null
   }
 }
@@ -179,6 +233,33 @@ export async function getPatientsByCaregiver(caregiverId: string): Promise<Patie
     })
   } catch (error) {
     console.error('Get patients by caregiver error:', error)
+    return []
+  }
+}
+
+// Get patients by reviewer
+export async function getPatientsByReviewer(reviewerId: string): Promise<PatientWithUser[]> {
+  try {
+    return await prisma.patient.findMany({
+      where: {
+        reviewerAssignments: {
+          some: {
+            reviewerId,
+            isActive: true,
+          },
+        },
+      },
+      include: {
+        user: true,
+      },
+      orderBy: {
+        user: {
+          lastName: 'asc',
+        },
+      },
+    })
+  } catch (error) {
+    console.error('Get patients by reviewer error:', error)
     return []
   }
 }

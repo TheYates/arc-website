@@ -107,15 +107,15 @@ export default function AuthHeader() {
                           ? "bg-blue-100 text-blue-800"
                           : user.role === "reviewer"
                           ? "bg-orange-100 text-orange-800"
-                          : user.role === "care_giver"
+                          : user.role === "caregiver"
                           ? "bg-green-100 text-green-800"
                           : "bg-slate-100 text-slate-800"
                       }`}
                     >
                       {user.role === "super_admin"
                         ? "System Admin"
-                        : user.role === "care_giver"
-                        ? "Care Giver"
+                        : user.role === "caregiver"
+                        ? "Caregiver"
                         : user.role?.charAt(0).toUpperCase() +
                           user.role?.slice(1)}
                     </Badge>

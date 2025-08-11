@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import type { PricingItem } from "@/lib/types/packages";
-import { getAllServices, getServiceItems } from "@/lib/api/services-prisma";
+import { getAllServicesWithItems, getServiceItems } from "@/lib/api/services-prisma";
 
-// Transform service to PricingItem format for admin interface
-const transformServiceToPricingItem = async (
-  service: any
-): Promise<PricingItem> => {
-  const serviceItems = await getServiceItems(service.id);
-
+// Ultra-optimized transform function (works with pre-loaded service items)
+const transformServiceToPricingItemUltraOptimized = (
+  serviceWithItems: any
+): PricingItem => {
   // Helper function to build hierarchical structure
   const buildHierarchy = (
     items: any[],
@@ -21,12 +19,10 @@ const transformServiceToPricingItem = async (
         name: item.name,
         description: item.description || "",
         type: item.level === 1 ? "feature" : ("addon" as "feature" | "addon"),
-        basePrice: Number(
-          item.priceDaily || item.priceMonthly || item.priceHourly || 0
-        ),
+        basePrice: Number(item.basePrice || 0),
         isRequired: item.isRequired,
         isRecurring: true,
-        parentId: item.parentId || service.id,
+        parentId: item.parentId || serviceWithItems.id,
         sortOrder: item.sortOrder,
         children: buildHierarchy(items, item.id), // Recursively build children
         createdAt: item.createdAt.toISOString(),
@@ -35,27 +31,22 @@ const transformServiceToPricingItem = async (
   };
 
   // Build hierarchical structure starting with top-level items (parentId = null)
-  const children = buildHierarchy(serviceItems, null);
+  const children = buildHierarchy(serviceWithItems.serviceItems, null);
 
   return {
-    id: service.id,
-    name: service.name,
-    description: service.description || "",
+    id: serviceWithItems.id,
+    name: serviceWithItems.name,
+    description: serviceWithItems.description || "",
     type: "service",
-    basePrice: Number(
-      service.basePriceDaily ||
-        service.basePriceMonthly ||
-        service.basePriceHourly ||
-        0
-    ),
+    basePrice: Number(serviceWithItems.basePrice || 0),
     isRequired: true,
     isRecurring: true,
     parentId: null,
-    sortOrder: service.sortOrder,
-    colorTheme: service.colorTheme,
+    sortOrder: serviceWithItems.sortOrder,
+    colorTheme: serviceWithItems.colorTheme,
     children,
-    createdAt: service.createdAt.toISOString(),
-    updatedAt: service.updatedAt.toISOString(),
+    createdAt: serviceWithItems.createdAt.toISOString(),
+    updatedAt: serviceWithItems.updatedAt.toISOString(),
   };
 };
 
@@ -63,18 +54,24 @@ const transformServiceToPricingItem = async (
 
 export async function GET() {
   try {
-    // Get all services from database
-    const services = await getAllServices(true); // Include inactive for admin
+    // Get all services with their items in a single optimized query
+    const servicesWithItems = await getAllServicesWithItems(true); // Include inactive for admin
 
-    // Transform services to PricingItem format
-    const data = await Promise.all(
-      services.map((service) => transformServiceToPricingItem(service))
+    // Transform to PricingItem format (no additional queries needed!)
+    const data = servicesWithItems.map((service) =>
+      transformServiceToPricingItemUltraOptimized(service)
     );
 
-    return NextResponse.json({
+    // Add cache headers for better performance
+    const response = NextResponse.json({
       success: true,
       data: data,
     });
+
+    // Cache for 30 seconds to reduce database load
+    response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+
+    return response;
   } catch (error) {
     console.error("Error fetching admin pricing data:", error);
     return NextResponse.json(
@@ -172,7 +169,7 @@ export async function POST(request: Request) {
             sortOrder: index, // Use array index to preserve order
             level: level,
             parentId: parentId || undefined, // Convert null to undefined
-            priceDaily: item.basePrice,
+            basePrice: item.basePrice,
           };
 
           let savedItem = null;
@@ -267,7 +264,7 @@ export async function POST(request: Request) {
             name: item.name,
             displayName: item.name,
             description: item.description,
-            basePriceDaily: item.basePrice,
+            basePrice: item.basePrice,
             sortOrder: serviceIndex, // Use array index to preserve service order
             colorTheme: item.colorTheme || "teal",
           };

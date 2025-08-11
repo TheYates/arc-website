@@ -94,7 +94,7 @@ export default function CaregiverPage() {
       return;
     }
 
-    if (user.role !== "care_giver") {
+    if (user.role !== "caregiver") {
       router.push("/");
       return;
     }
@@ -116,7 +116,7 @@ export default function CaregiverPage() {
     });
   };
 
-  if (!user || user.role !== "care_giver") {
+  if (!user || user.role !== "caregiver") {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-center">

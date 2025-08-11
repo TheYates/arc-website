@@ -190,40 +190,55 @@ export async function getAllPrescriptions(): Promise<PrescriptionWithDetails[]> 
   }
 }
 
-// Get prescriptions by patient
+// Get prescriptions by patient - optimized
 export async function getPrescriptionsByPatient(patientId: string): Promise<PrescriptionWithDetails[]> {
   try {
     return await prisma.prescription.findMany({
-      where: { patientId },
-      include: {
-        patient: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
+      where: {
+        patientId,
+        status: { not: 'CANCELLED' } // Exclude cancelled prescriptions
+      },
+      select: {
+        id: true,
+        dosage: true,
+        frequency: true,
+        duration: true,
+        instructions: true,
+        status: true,
+        prescribedDate: true,
+        startDate: true,
+        endDate: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+        medication: {
+          select: {
+            id: true,
+            name: true,
+            genericName: true,
+            drugClass: true,
+            dosageForms: true,
+            strengthOptions: true,
+            routeOfAdministration: true,
+          }
         },
-        medication: true,
         prescribedBy: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
-            email: true,
           },
         },
         approvedBy: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
-            email: true,
           },
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: 50, // Limit to recent prescriptions
     })
   } catch (error) {
     console.error('Get prescriptions by patient error:', error)
@@ -306,25 +321,45 @@ export async function recordMedicationAdministration(data: {
   }
 }
 
-// Get medication administrations by patient
+// Get medication administrations by patient - optimized
 export async function getMedicationAdministrationsByPatient(patientId: string): Promise<MedicationAdministration[]> {
   try {
     return await prisma.medicationAdministration.findMany({
       where: { patientId },
-      include: {
+      select: {
+        id: true,
+        prescriptionId: true,
+        scheduledTime: true,
+        administeredTime: true,
+        status: true,
+        dosageGiven: true,
+        notes: true,
+        sideEffectsObserved: true,
+        createdAt: true,
         prescription: {
-          include: {
-            medication: true,
+          select: {
+            id: true,
+            dosage: true,
+            frequency: true,
+            medication: {
+              select: {
+                id: true,
+                name: true,
+                genericName: true,
+              }
+            },
           },
         },
         administeredBy: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
           },
         },
       },
       orderBy: { scheduledTime: 'desc' },
+      take: 100, // Limit to recent administrations
     })
   } catch (error) {
     console.error('Get medication administrations by patient error:', error)

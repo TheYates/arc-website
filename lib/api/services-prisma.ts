@@ -53,6 +53,30 @@ export async function getAllServices(
   }
 }
 
+// Get all services with their items in a single query (OPTIMIZED)
+export async function getAllServicesWithItems(
+  includeInactive = false
+): Promise<ServiceWithItems[]> {
+  try {
+    return await prisma.service.findMany({
+      where: includeInactive ? {} : { isActive: true },
+      include: {
+        serviceItems: {
+          orderBy: [{ level: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+        },
+      },
+      orderBy: [
+        { createdAt: "asc" },
+        { sortOrder: "asc" },
+        { name: "asc" },
+      ],
+    });
+  } catch (error) {
+    console.error("Get all services with items error:", error);
+    return [];
+  }
+}
+
 // Get service by ID
 export async function getServiceById(id: string): Promise<Service | null> {
   try {

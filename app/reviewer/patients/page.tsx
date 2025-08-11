@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -54,7 +54,7 @@ import {
 } from "lucide-react";
 
 export default function ReviewerPatientsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [assignedPatients, setAssignedPatients] = useState<Patient[]>([]);
@@ -65,6 +65,9 @@ export default function ReviewerPatientsPage() {
 
   // Check permissions
   useEffect(() => {
+    // Wait for auth to finish loading before making redirect decisions
+    if (authLoading) return;
+
     if (!user) {
       router.push("/login");
       return;
@@ -74,7 +77,7 @@ export default function ReviewerPatientsPage() {
       router.push("/");
       return;
     }
-  }, [user, router]);
+  }, [user, router, authLoading]);
 
   useEffect(() => {
     const fetchAssignedPatients = async () => {
@@ -94,7 +97,8 @@ export default function ReviewerPatientsPage() {
     fetchAssignedPatients();
   }, [user]);
 
-  const getCareLevelColor = (careLevel?: CareLevel) => {
+  // Memoize helper functions to prevent recreation on every render
+  const getCareLevelColor = useCallback((careLevel?: CareLevel) => {
     switch (careLevel) {
       case "low":
         return "text-green-700 font-medium";
@@ -103,11 +107,11 @@ export default function ReviewerPatientsPage() {
       case "high":
         return "text-red-700 font-medium";
       default:
-        return "text-gray-600 font-medium";
+        return "text-red-600 font-medium";
     }
-  };
+  }, []);
 
-  const getStatusColor = (status?: PatientStatus) => {
+  const getStatusColor = useCallback((status?: PatientStatus) => {
     switch (status) {
       case "stable":
         return "text-green-700 font-medium";
@@ -118,32 +122,50 @@ export default function ReviewerPatientsPage() {
       case "critical":
         return "text-red-700 font-medium";
       default:
-        return "text-gray-600 font-medium";
+        return "text-green-600 font-medium";
     }
-  };
+  }, []);
 
-  const filteredPatients = assignedPatients.filter((patient) => {
-    const matchesSearch =
-      searchTerm === "" ||
-      patient.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (patient.medicalRecordNumber &&
-        patient.medicalRecordNumber
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()));
+  // Memoize filtered patients to prevent unnecessary recalculations
+  const filteredPatients = useMemo(() => {
+    return assignedPatients.filter((patient) => {
+      const matchesSearch =
+        searchTerm === "" ||
+        patient.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        patient.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (patient.medicalRecordNumber &&
+          patient.medicalRecordNumber
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()));
 
-    const matchesFilter =
-      filterLevel === "all" || patient.careLevel === filterLevel;
+      const matchesFilter =
+        filterLevel === "all" || patient.careLevel === filterLevel;
 
-    return matchesSearch && matchesFilter;
-  });
+      return matchesSearch && matchesFilter;
+    });
+  }, [assignedPatients, searchTerm, filterLevel]);
 
   const formatAssignedDate = (dateString?: string) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
     return formatDate(date);
   };
+
+  // Show loading while auth is loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background w-full">
+        <RoleHeader role="reviewer" />
+        <main className="container mx-auto px-4 py-6 w-full max-w-7xl">
+          <div className="space-y-6">
+            <div className="h-8 bg-gray-200 rounded animate-pulse w-48"></div>
+            <div className="h-96 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (!user || user.role !== "reviewer") {
     return (
@@ -173,7 +195,7 @@ export default function ReviewerPatientsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Patients</h1>
+            <h1 className="text-3xl font-bold ">My Patients</h1>
             <p className="text-muted-foreground">
               Manage and view your assigned patients
             </p>
@@ -251,13 +273,56 @@ export default function ReviewerPatientsPage() {
         {/* Patients Table */}
         {isLoading ? (
           <Card>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3"></div>
-                <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="px-6 py-4 text-left font-medium">Patient</th>
+                      <th className="px-6 py-4 text-left font-medium">Contact</th>
+                      <th className="px-6 py-4 text-left font-medium">Care Level</th>
+                      <th className="px-6 py-4 text-left font-medium">Status</th>
+                      <th className="px-6 py-4 text-left font-medium">Service</th>
+                      <th className="px-6 py-4 text-left font-medium">Assigned</th>
+                      <th className="px-6 py-4 text-center font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...Array(5)].map((_, index) => (
+                      <tr key={index} className="border-b">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="bg-gray-200 p-2 rounded-full animate-pulse w-8 h-8"></div>
+                            <div className="h-4 bg-gray-200 rounded animate-pulse w-32"></div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="space-y-2">
+                            <div className="h-3 bg-gray-200 rounded animate-pulse w-40"></div>
+                            <div className="h-3 bg-gray-200 rounded animate-pulse w-32"></div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-16"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center">
+                            <div className="h-8 bg-gray-200 rounded animate-pulse w-24"></div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
@@ -355,7 +420,7 @@ export default function ReviewerPatientsPage() {
                           >
                             {patient.careLevel
                               ? patient.careLevel.charAt(0).toUpperCase() +
-                                patient.careLevel.slice(1)
+                                patient.careLevel.slice(1).toLowerCase()
                               : "Standard"}{" "}
                             Care
                           </span>
@@ -368,7 +433,7 @@ export default function ReviewerPatientsPage() {
                           >
                             {patient.status
                               ? patient.status.charAt(0).toUpperCase() +
-                                patient.status.slice(1)
+                                patient.status.slice(1).toLowerCase()
                               : "Unknown"}
                           </span>
                         </td>

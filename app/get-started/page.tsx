@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Users, Phone, Check, Plus, Minus } from "lucide-react";
+import { Users, Phone, Check, Plus, Minus } from "lucide-react";
 import { createApplication } from "@/lib/api/applications";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useSearchParams } from "next/navigation";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 
 // Types for dynamic service data
 interface ServiceItem {
@@ -42,7 +47,7 @@ interface SelectedAddon {
   parentFeatureId: string;
 }
 
-export default function GetStartedPage() {
+function GetStartedContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
@@ -60,12 +65,13 @@ export default function GetStartedPage() {
     address: "",
     serviceId: "",
     startDate: "",
-    duration: "",
     careNeeds: "",
     preferredContact: "",
     selectedFeatures: [] as string[], // IDs of selected optional features
     customizations: "", // Additional customization notes
   });
+
+  const [selectedDate, setSelectedDate] = useState<Date>();
 
   // Fetch dynamic services data
   useEffect(() => {
@@ -127,6 +133,17 @@ export default function GetStartedPage() {
 
     fetchServices();
   }, [toast, searchParams]);
+
+  // Sync selected date with form data
+  useEffect(() => {
+    if (selectedDate) {
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      setFormData(prev => ({
+        ...prev,
+        startDate: formattedDate
+      }));
+    }
+  }, [selectedDate]);
 
   // Helper functions for pricing and selections
   const formatPrice = (price: number): string => {
@@ -649,49 +666,39 @@ export default function GetStartedPage() {
                   {/* Care Details */}
                   <div>
                     <h3 className="text-lg font-semibold mb-4">Care Details</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <label
-                          htmlFor="startDate"
-                          className="block text-sm font-medium mb-2"
-                        >
-                          Preferred Start Date
-                        </label>
-                        <Input
-                          id="startDate"
-                          name="startDate"
-                          type="date"
-                          value={formData.startDate}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="duration"
-                          className="block text-sm font-medium mb-2"
-                        >
-                          Expected Duration
-                        </label>
-                        <select
-                          id="duration"
-                          name="duration"
-                          value={formData.duration}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                        >
-                          <option value="">Select duration</option>
-                          <option value="short-term">
-                            Short-term (1-4 weeks)
-                          </option>
-                          <option value="medium-term">
-                            Medium-term (1-6 months)
-                          </option>
-                          <option value="long-term">
-                            Long-term (6+ months)
-                          </option>
-                          <option value="ongoing">Ongoing</option>
-                        </select>
-                      </div>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-2">
+                        Preferred Start Date
+                      </label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !selectedDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDate ? (
+                              format(selectedDate, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            disabled={(date) =>
+                              date < new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
                     <div className="mt-4">
@@ -850,5 +857,25 @@ export default function GetStartedPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function GetStartedPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+              <p className="text-slate-600">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <GetStartedContent />
+    </Suspense>
   );
 }

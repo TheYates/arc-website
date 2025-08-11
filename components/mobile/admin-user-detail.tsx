@@ -73,7 +73,7 @@ export function AdminUserDetailMobile({ id }: { id: string }) {
             lastName: "Asante",
             phone: "+233 XX XXX XXXX",
             address: "Tema, Ghana",
-            role: "care_giver",
+            role: "caregiver",
             isEmailVerified: true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -121,7 +121,7 @@ export function AdminUserDetailMobile({ id }: { id: string }) {
         icon: <Eye className="h-3 w-3 mr-1" />,
         label: "Reviewer",
       },
-      care_giver: {
+      caregiver: {
         cls: "bg-green-100 text-green-800",
         icon: <UserCheck className="h-3 w-3 mr-1" />,
         label: "Care Giver",
@@ -187,19 +187,20 @@ export function AdminUserDetailMobile({ id }: { id: string }) {
 
   return (
     <div className="px-4 py-4 space-y-4">
+      <Button
+        variant="ghost"
+        onClick={() => router.push("/admin/users")}
+        className="px-0 w-fit"
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" /> Back to Users
+      </Button>
+
       <div>
         <h1 className="text-2xl font-bold">User Details</h1>
         <p className="text-sm text-muted-foreground">
           View and manage user information
         </p>
       </div>
-      <Button
-        variant="ghost"
-        onClick={() => router.push("/admin/users")}
-        className="px-0"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" /> Back
-      </Button>
 
       <Card>
         <CardContent className="p-4">

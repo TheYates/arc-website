@@ -11,9 +11,9 @@ Standardized all role checking and handling throughout the application to use **
   ```typescript
   export type UserRole =
     | "super_admin"
-    | "admin" 
+    | "admin"
     | "reviewer"
-    | "care_giver"
+    | "caregiver"
     | "patient";
   ```
 
@@ -23,7 +23,7 @@ Standardized all role checking and handling throughout the application to use **
     super_admin: [...],
     admin: [...],
     reviewer: [...],
-    care_giver: [...],
+    caregiver: [...],
     patient: [...]
   };
   ```
@@ -66,14 +66,14 @@ enum UserRole {
   SUPER_ADMIN @map("super_admin")
   ADMIN       @map("admin") 
   REVIEWER    @map("reviewer")
-  CARE_GIVER  @map("care_giver")
+  CAREGIVER   @map("caregiver")
   PATIENT     @map("patient")
 }
 ```
 
 ### **Frontend (Consistent Lowercase)**
 ```typescript
-type UserRole = "super_admin" | "admin" | "reviewer" | "care_giver" | "patient"
+type UserRole = "super_admin" | "admin" | "reviewer" | "caregiver" | "patient"
 ```
 
 ### **Conversion Layer**

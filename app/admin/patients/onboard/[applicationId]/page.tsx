@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -41,8 +41,9 @@ import { ArrowLeft, Loader2, Save, CheckCircle } from "lucide-react";
 export default function PatientOnboardingPage({
   params,
 }: {
-  params: { applicationId: string };
+  params: Promise<{ applicationId: string }>;
 }) {
+  const { applicationId } = use(params);
   const [application, setApplication] = useState<ApplicationData | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,7 +73,7 @@ export default function PatientOnboardingPage({
       try {
         // Check if a patient already exists for this application
         const existingPatient = await getPatientByApplicationId(
-          params.applicationId
+          applicationId
         );
 
         if (existingPatient) {
@@ -96,7 +97,7 @@ export default function PatientOnboardingPage({
         } else {
           // If no existing patient, fetch application data
           const applicationData = await getApplicationById(
-            params.applicationId
+            applicationId
           );
           if (!applicationData || applicationData.status !== "approved") {
             toast({
@@ -122,7 +123,7 @@ export default function PatientOnboardingPage({
     };
 
     fetchData();
-  }, [params.applicationId, router, toast]);
+  }, [applicationId, router, toast]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -175,7 +176,7 @@ export default function PatientOnboardingPage({
       } else if (application) {
         // Create a new patient from the application
         updatedPatient = await createPatientFromApplication(
-          params.applicationId,
+          applicationId,
           patientData
         );
 
@@ -258,250 +259,296 @@ export default function PatientOnboardingPage({
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {person!.firstName} {person!.lastName}
-          </CardTitle>
-          <CardDescription>
-            {person!.email} • {person!.phone}
-          </CardDescription>
-        </CardHeader>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Form */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>
+              {patient ? "Update Patient Information" : "Complete Patient Onboarding"}
+            </CardTitle>
+            <CardDescription>
+              {patient
+                ? "Modify the patient's medical details and information"
+                : "Enter comprehensive patient information to complete the onboarding process"}
+            </CardDescription>
+          </CardHeader>
+          
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-8">
+              {/* Basic Medical Information */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold border-b pb-2">Basic Medical Information</h3>
+                
+                {/* Personal Details Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Input
+                      id="dateOfBirth"
+                      name="dateOfBirth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={handleInputChange}
+                    />
+                  </div>
 
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-6">
-            {/* Basic Medical Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Basic Medical Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                  <Input
-                    id="dateOfBirth"
-                    name="dateOfBirth"
-                    type="date"
-                    value={formData.dateOfBirth}
-                    onChange={handleInputChange}
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="gender">Gender</Label>
+                    <Select
+                      value={formData.gender || ""}
+                      onValueChange={(value) =>
+                        handleSelectChange(value, "gender")
+                      }
+                    >
+                      <SelectTrigger id="gender">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bloodType">Blood Type</Label>
+                    <Select
+                      value={formData.bloodType || ""}
+                      onValueChange={(value) =>
+                        handleSelectChange(value, "bloodType")
+                      }
+                    >
+                      <SelectTrigger id="bloodType">
+                        <SelectValue placeholder="Select blood type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A+">A+</SelectItem>
+                        <SelectItem value="A-">A-</SelectItem>
+                        <SelectItem value="B+">B+</SelectItem>
+                        <SelectItem value="B-">B-</SelectItem>
+                        <SelectItem value="AB+">AB+</SelectItem>
+                        <SelectItem value="AB-">AB-</SelectItem>
+                        <SelectItem value="O+">O+</SelectItem>
+                        <SelectItem value="O-">O-</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="gender">Gender</Label>
-                  <Select
-                    value={formData.gender || ""}
-                    onValueChange={(value) =>
-                      handleSelectChange(value, "gender")
-                    }
-                  >
-                    <SelectTrigger id="gender">
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                {/* Physical Measurements Row */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="heightCm">Height (cm)</Label>
+                    <Input
+                      id="heightCm"
+                      name="heightCm"
+                      type="number"
+                      value={formData.heightCm}
+                      onChange={handleInputChange}
+                      placeholder="170"
+                    />
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="bloodType">Blood Type</Label>
-                  <Select
-                    value={formData.bloodType || ""}
-                    onValueChange={(value) =>
-                      handleSelectChange(value, "bloodType")
-                    }
-                  >
-                    <SelectTrigger id="bloodType">
-                      <SelectValue placeholder="Select blood type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A+">A+</SelectItem>
-                      <SelectItem value="A-">A-</SelectItem>
-                      <SelectItem value="B+">B+</SelectItem>
-                      <SelectItem value="B-">B-</SelectItem>
-                      <SelectItem value="AB+">AB+</SelectItem>
-                      <SelectItem value="AB-">AB-</SelectItem>
-                      <SelectItem value="O+">O+</SelectItem>
-                      <SelectItem value="O-">O-</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="weightKg">Weight (kg)</Label>
+                    <Input
+                      id="weightKg"
+                      name="weightKg"
+                      type="number"
+                      value={formData.weightKg}
+                      onChange={handleInputChange}
+                      placeholder="70.5"
+                      step="0.1"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="heightCm">Height (cm)</Label>
-                  <Input
-                    id="heightCm"
-                    name="heightCm"
-                    type="number"
-                    value={formData.heightCm}
-                    onChange={handleInputChange}
-                    placeholder="Height in centimeters"
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="careLevel">Care Level</Label>
+                    <Select
+                      value={formData.careLevel}
+                      onValueChange={(value) =>
+                        handleSelectChange(value, "careLevel")
+                      }
+                    >
+                      <SelectTrigger id="careLevel">
+                        <SelectValue placeholder="Select care level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="weightKg">Weight (kg)</Label>
-                  <Input
-                    id="weightKg"
-                    name="weightKg"
-                    type="number"
-                    value={formData.weightKg}
-                    onChange={handleInputChange}
-                    placeholder="Weight in kilograms"
-                    step="0.1"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="careLevel">Care Level</Label>
-                  <Select
-                    value={formData.careLevel}
-                    onValueChange={(value) =>
-                      handleSelectChange(value, "careLevel")
-                    }
-                  >
-                    <SelectTrigger id="careLevel">
-                      <SelectValue placeholder="Select care level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">Patient Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) =>
-                      handleSelectChange(value, "status")
-                    }
-                  >
-                    <SelectTrigger id="status">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="stable">Stable</SelectItem>
-                      <SelectItem value="improving">Improving</SelectItem>
-                      <SelectItem value="declining">Declining</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Emergency Contact */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Emergency Contact</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyContactName">Contact Name</Label>
-                  <Input
-                    id="emergencyContactName"
-                    name="emergencyContactName"
-                    value={formData.emergencyContactName}
-                    onChange={handleInputChange}
-                    placeholder="Full name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyContactRelationship">
-                    Relationship
-                  </Label>
-                  <Input
-                    id="emergencyContactRelationship"
-                    name="emergencyContactRelationship"
-                    value={formData.emergencyContactRelationship}
-                    onChange={handleInputChange}
-                    placeholder="e.g. Spouse, Parent, Child, etc."
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Patient Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value) =>
+                        handleSelectChange(value, "status")
+                      }
+                    >
+                      <SelectTrigger id="status">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="stable">Stable</SelectItem>
+                        <SelectItem value="improving">Improving</SelectItem>
+                        <SelectItem value="declining">Declining</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="emergencyContactPhone">Contact Phone</Label>
-                <Input
-                  id="emergencyContactPhone"
-                  name="emergencyContactPhone"
-                  value={formData.emergencyContactPhone}
-                  onChange={handleInputChange}
-                  placeholder="Phone number"
-                />
-              </div>
-            </div>
+              <Separator />
 
-            <Separator />
+              {/* Emergency Contact */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold border-b pb-2">Emergency Contact</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-2 space-y-2">
+                    <Label htmlFor="emergencyContactName">Contact Name</Label>
+                    <Input
+                      id="emergencyContactName"
+                      name="emergencyContactName"
+                      value={formData.emergencyContactName}
+                      onChange={handleInputChange}
+                      placeholder="Full name of emergency contact"
+                    />
+                  </div>
 
-            {/* Insurance Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Insurance Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="insuranceProvider">Insurance Provider</Label>
-                  <Input
-                    id="insuranceProvider"
-                    name="insuranceProvider"
-                    value={formData.insuranceProvider}
-                    onChange={handleInputChange}
-                    placeholder="e.g. National Health Insurance"
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="emergencyContactRelationship">
+                      Relationship
+                    </Label>
+                    <Input
+                      id="emergencyContactRelationship"
+                      name="emergencyContactRelationship"
+                      value={formData.emergencyContactRelationship}
+                      onChange={handleInputChange}
+                      placeholder="Spouse, Parent, etc."
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="insurancePolicyNumber">Policy Number</Label>
-                  <Input
-                    id="insurancePolicyNumber"
-                    name="insurancePolicyNumber"
-                    value={formData.insurancePolicyNumber}
-                    onChange={handleInputChange}
-                    placeholder="Insurance policy number"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="emergencyContactPhone">Contact Phone</Label>
+                    <Input
+                      id="emergencyContactPhone"
+                      name="emergencyContactPhone"
+                      value={formData.emergencyContactPhone}
+                      onChange={handleInputChange}
+                      placeholder="Phone number"
+                    />
+                  </div>
+                  <div></div> {/* Empty column for spacing */}
                 </div>
               </div>
+
+              <Separator />
+
+              {/* Insurance Information */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold border-b pb-2">Insurance Information</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="insuranceProvider">Insurance Provider</Label>
+                    <Input
+                      id="insuranceProvider"
+                      name="insuranceProvider"
+                      value={formData.insuranceProvider}
+                      onChange={handleInputChange}
+                      placeholder="e.g. National Health Insurance"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="insurancePolicyNumber">Policy Number</Label>
+                    <Input
+                      id="insurancePolicyNumber"
+                      name="insurancePolicyNumber"
+                      value={formData.insurancePolicyNumber}
+                      onChange={handleInputChange}
+                      placeholder="Insurance policy number"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex justify-between">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => router.push("/admin/applications")}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} variant="default">
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : patient ? (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Update Patient
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Complete Onboarding
+                  </>
+                )}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+        {/* Patient Info Card */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>{person!.firstName} {person!.lastName}</span>
+            </CardTitle>
+            <CardDescription className="space-y-1">
+              <div>{person!.email}</div>
+              <div>{person!.phone}</div>
+              {person!.address && <div className="text-xs">{person!.address}</div>}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="text-sm">
+                <span className="font-medium text-muted-foreground">Service:</span>
+                <div className="mt-1">{application?.serviceName || 'N/A'}</div>
+              </div>
+              {application?.careNeeds && (
+                <div className="text-sm">
+                  <span className="font-medium text-muted-foreground">Care Needs:</span>
+                  <div className="mt-1 text-xs">{application.careNeeds}</div>
+                </div>
+              )}
+              {application?.startDate && (
+                <div className="text-sm">
+                  <span className="font-medium text-muted-foreground">Start Date:</span>
+                  <div className="mt-1">{new Date(application.startDate).toLocaleDateString()}</div>
+                </div>
+              )}
             </div>
           </CardContent>
+        </Card>
 
-          <CardFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/admin/applications")}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} variant="default">
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : patient ? (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Update Patient
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Complete Onboarding
-                </>
-              )}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+        
+      </div>
     </div>
   );
 }

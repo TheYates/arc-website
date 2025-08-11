@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client' 
 
 declare global {
   // allow global `var` declarations
@@ -9,7 +9,7 @@ declare global {
 export const prisma =
   globalThis.prisma ??
   new PrismaClient({
-    log: ['query'],
+    log: ['error', 'warn'],
   })
 
 if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma

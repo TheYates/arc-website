@@ -45,6 +45,8 @@ export async function POST(request: NextRequest) {
       isEmailVerified: result.user!.isEmailVerified,
       isActive: result.user!.isActive,
       profileComplete: result.user!.profileComplete,
+      mustChangePassword: result.user!.mustChangePassword,
+      passwordChangedAt: result.user!.passwordChangedAt?.toISOString(),
       createdAt: result.user!.createdAt.toISOString(),
       updatedAt: result.user!.updatedAt.toISOString(),
       lastLogin: result.user!.lastLogin?.toISOString(),
@@ -53,8 +55,13 @@ export async function POST(request: NextRequest) {
     console.log("✅ API route success, returning user:", {
       email: user.email,
       role: user.role,
+      mustChangePassword: user.mustChangePassword,
     });
-    return NextResponse.json({ success: true, user });
+    return NextResponse.json({ 
+      success: true, 
+      user,
+      requiresPasswordChange: user.mustChangePassword,
+    });
   } catch (error) {
     console.error("Login API error:", error);
     return NextResponse.json(

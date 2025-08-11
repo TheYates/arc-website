@@ -1,193 +1,141 @@
-import { v4 as uuidv4 } from "uuid";
 import { Patient } from "../types/patients";
 import { getApplicationById } from "./applications";
 
-const PATIENTS_STORAGE_KEY = "patients_data";
-
-// Default patients data
-const defaultPatients: Patient[] = [
-  {
-    id: "101",
-    firstName: "Michael",
-    lastName: "Smith",
-    email: "michael.s@example.com",
-    phone: "+233 24 987 6543",
-    address: "456 Oak Ave, Kumasi",
-    dateOfBirth: "1975-05-12",
-    gender: "male",
-    bloodType: "O+",
-    heightCm: 175,
-    weightKg: 82,
-    careLevel: "medium",
-    status: "improving",
-    assignedDate: "2023-09-16",
-    emergencyContactName: "Sarah Smith",
-    emergencyContactRelationship: "Spouse",
-    emergencyContactPhone: "+233 24 987 6544",
-    medicalRecordNumber: "ARC-PAT-10001",
-    insuranceProvider: "National Health Insurance",
-    insurancePolicyNumber: "NHIS-23456789",
-    createdAt: "2023-09-16T10:30:00Z",
-    applicationId: "2",
-    serviceId: "adamfo-pa",
-    serviceName: "ADAMFO PA",
-  },
-  {
-    id: "102",
-    firstName: "Jessica",
-    lastName: "Wilson",
-    email: "jessica.w@example.com",
-    phone: "+233 54 234 5678",
-    address: "567 Maple Dr, Cape Coast",
-    dateOfBirth: "1962-03-24",
-    gender: "female",
-    bloodType: "A+",
-    heightCm: 165,
-    weightKg: 68,
-    careLevel: "high",
-    status: "stable",
-    assignedDate: "2023-09-14",
-    emergencyContactName: "David Wilson",
-    emergencyContactRelationship: "Son",
-    emergencyContactPhone: "+233 54 234 5679",
-    medicalRecordNumber: "ARC-PAT-10002",
-    insuranceProvider: "Ghana Health Service",
-    insurancePolicyNumber: "GHS-34567890",
-    createdAt: "2023-09-14T14:45:00Z",
-    applicationId: "5",
-    serviceId: "ahenefie",
-    serviceName: "AHENEFIE",
-  },
-];
-
-// Utility functions for localStorage
-function getFromStorage(): Patient[] {
-  try {
-    const stored = localStorage.getItem(PATIENTS_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error("Error reading patients from storage:", error);
-  }
-
-  // Initialize with default data if nothing in storage
-  saveToStorage(defaultPatients);
-  return defaultPatients;
-}
-
-function saveToStorage(patients: Patient[]): void {
-  try {
-    localStorage.setItem(PATIENTS_STORAGE_KEY, JSON.stringify(patients));
-  } catch (error) {
-    console.error("Error saving patients to storage:", error);
-  }
-}
+// API-based patient functions using Neon DB
 
 export async function getPatients(): Promise<Patient[]> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 150));
-  return getFromStorage();
+  try {
+    const response = await fetch('/api/admin/patients');
+    if (!response.ok) {
+      throw new Error('Failed to fetch patients');
+    }
+    const data = await response.json();
+    return data.patients || [];
+  } catch (error) {
+    console.error('Error fetching patients:', error);
+    return [];
+  }
 }
 
 export async function getPatientById(id: string): Promise<Patient | null> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const patients = getFromStorage();
-  return patients.find((patient) => patient.id === id) || null;
+  try {
+    const response = await fetch(`/api/admin/patients/${id}`);
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error('Failed to fetch patient');
+    }
+    const data = await response.json();
+    return data.patient || null;
+  } catch (error) {
+    console.error('Error fetching patient:', error);
+    return null;
+  }
 }
 
-export async function getPatientByApplicationId(
-  applicationId: string
-): Promise<Patient | null> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  const patients = getFromStorage();
-  return (
-    patients.find((patient) => patient.applicationId === applicationId) || null
-  );
+export async function getPatientByApplicationId(applicationId: string): Promise<Patient | null> {
+  try {
+    // For now, we'll get all patients and filter by applicationId
+    // In a real app, you might want a dedicated endpoint for this
+    const patients = await getPatients();
+    return patients.find((patient) => patient.applicationId === applicationId) || null;
+  } catch (error) {
+    console.error('Error fetching patient by application ID:', error);
+    return null;
+  }
 }
 
-export async function createPatient(
-  data: Omit<Patient, "id" | "createdAt">
-): Promise<Patient> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 800));
+export async function createPatient(patientData: Omit<Patient, 'id' | 'createdAt'>): Promise<Patient | null> {
+  try {
+    const response = await fetch('/api/admin/patients', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(patientData),
+    });
 
-  const patients = getFromStorage();
-  const newPatient: Patient = {
-    ...data,
-    id: uuidv4(),
-    createdAt: new Date().toISOString(),
-  };
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create patient');
+    }
 
-  const updatedPatients = [...patients, newPatient];
-  saveToStorage(updatedPatients);
-  return newPatient;
+    const data = await response.json();
+    return data.patient || null;
+  } catch (error) {
+    console.error('Error creating patient:', error);
+    throw error; // Re-throw to allow calling code to handle
+  }
 }
 
-export async function updatePatient(
-  id: string,
-  data: Partial<Patient>
-): Promise<Patient | null> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 600));
+export async function updatePatient(id: string, updates: Partial<Patient>): Promise<Patient | null> {
+  try {
+    const response = await fetch(`/api/admin/patients/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
 
-  const patients = getFromStorage();
-  const index = patients.findIndex((patient) => patient.id === id);
-  if (index === -1) return null;
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update patient');
+    }
 
-  const updatedPatient = {
-    ...patients[index],
-    ...data,
-  };
-
-  const updatedPatients = [
-    ...patients.slice(0, index),
-    updatedPatient,
-    ...patients.slice(index + 1),
-  ];
-
-  saveToStorage(updatedPatients);
-  return updatedPatient;
+    const data = await response.json();
+    return data.patient || null;
+  } catch (error) {
+    console.error('Error updating patient:', error);
+    throw error; // Re-throw to allow calling code to handle
+  }
 }
 
 export async function createPatientFromApplication(
   applicationId: string,
-  additionalData: Partial<Patient> = {}
+  patientData: Partial<Patient>
 ): Promise<Patient | null> {
-  // Get the application data first
-  const application = await getApplicationById(applicationId);
-  if (!application || application.status !== "approved") return null;
+  try {
+    // First, get the application details
+    const application = await getApplicationById(applicationId);
+    if (!application) {
+      throw new Error('Application not found');
+    }
 
-  // Generate a unique medical record number
-  const medicalRecordNumber = `ARC-PAT-${Math.floor(
-    10000 + Math.random() * 90000
-  )}`;
+    // Create patient data from application
+    const newPatientData = {
+      firstName: application.firstName,
+      lastName: application.lastName,
+      email: application.email,
+      phone: application.phone,
+      address: application.address,
+      serviceId: application.serviceId,
+      serviceName: application.serviceName,
+      applicationId: applicationId,
+      ...patientData, // Override with any specific patient data
+    };
 
-  // Create the new patient
-  const newPatient: Patient = {
-    id: uuidv4(),
-    firstName: application.firstName,
-    lastName: application.lastName,
-    email: application.email,
-    phone: application.phone,
-    address: application.address || "",
-    createdAt: new Date().toISOString(),
-    assignedDate: new Date().toISOString(),
-    medicalRecordNumber,
-    applicationId: application.id,
-    serviceId: application.serviceId,
-    serviceName: application.serviceName,
-    careLevel: "medium", // Default value
-    status: "stable", // Default value
-    ...additionalData,
-  };
+    return await createPatient(newPatientData);
+  } catch (error) {
+    console.error('Error creating patient from application:', error);
+    throw error;
+  }
+}
 
-  // Save the patient
-  const patients = getFromStorage();
-  const updatedPatients = [...patients, newPatient];
-  saveToStorage(updatedPatients);
+// Utility functions for backward compatibility
+export async function addPatient(data: Omit<Patient, "id" | "createdAt">): Promise<Patient | null> {
+  return createPatient(data);
+}
 
-  return newPatient;
+export async function deletePatient(id: string): Promise<boolean> {
+  try {
+    // For now, we'll just mark patients as inactive since there's no delete endpoint
+    // In a real app, you might want to implement soft delete
+    console.warn('Patient deletion not implemented - patients should be marked inactive instead');
+    return false;
+  } catch (error) {
+    console.error('Error deleting patient:', error);
+    return false;
+  }
 }

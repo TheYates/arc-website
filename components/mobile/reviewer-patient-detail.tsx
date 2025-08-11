@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getPatientById } from "@/lib/api/patients";
+import { getPatientByIdClient } from "@/lib/api/client";
 import { getVitalSigns } from "@/lib/api/vitals";
-import { getMedications } from "@/lib/api/medications";
-import { getMedicalReviews } from "@/lib/api/medical-reviews";
+import { getMedicationsClient } from "@/lib/api/client";
+import { getMedicalReviews } from "@/lib/api/medical-reviews-client";
 import { Patient } from "@/lib/types/patients";
 import type { VitalSigns } from "@/lib/types/vitals";
 import type { Medication } from "@/lib/types/medications";
@@ -29,10 +29,10 @@ export function ReviewerPatientMobile({ patientId }: { patientId: string }) {
     let mounted = true;
     (async () => {
       try {
-        const p = await getPatientById(patientId);
+        const p = await getPatientByIdClient(patientId);
         const v = getVitalSigns(patientId);
-        const m = getMedications(patientId);
-        const r = getMedicalReviews(patientId);
+        const m = await getMedicationsClient(patientId);
+        const r = await getMedicalReviews(patientId);
         if (!mounted) return;
         setPatient(p);
         setVitals(v);

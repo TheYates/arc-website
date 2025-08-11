@@ -38,11 +38,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { AdminUserDetailMobile } from "@/components/mobile/admin-user-detail";
 
-interface UserAccount {
-  user: User;
-  password: string;
-}
-
 export default function UserDetailsPage({
   params,
 }: {
@@ -63,88 +58,16 @@ export default function UserDetailsPage({
     const fetchUserDetails = async () => {
       setIsLoading(true);
       try {
-        // Get demo users (excluding patients)
-        const demoUsers: User[] = [
-          {
-            id: "1",
-            email: "admin@alpharescue.com",
-            username: "admin",
-            firstName: "Admin",
-            lastName: "User",
-            phone: "+233 XX XXX XXXX",
-            address: "Accra, Ghana",
-            role: "admin",
-            isEmailVerified: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            profileComplete: true,
-            isActive: true,
-          },
-          {
-            id: "2",
-            email: "dr.mensah@alpharescue.com",
-            username: "drmensah",
-            firstName: "Dr. Kwame",
-            lastName: "Mensah",
-            phone: "+233 XX XXX XXXX",
-            address: "Kumasi, Ghana",
-            role: "reviewer",
-            isEmailVerified: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            profileComplete: false,
-            isActive: true,
-          },
-          {
-            id: "3",
-            email: "ama.nurse@alpharescue.com",
-            username: "nurseama",
-            firstName: "Ama",
-            lastName: "Asante",
-            phone: "+233 XX XXX XXXX",
-            address: "Tema, Ghana",
-            role: "care_giver",
-            isEmailVerified: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            profileComplete: true,
-            isActive: true,
-          },
-        ];
-
-        // Get created users from localStorage (excluding patients)
-        const createdUsersData = localStorage.getItem("auth_users");
-        let createdUsers: User[] = [];
-
-        if (createdUsersData) {
-          try {
-            const userAccounts: UserAccount[] = JSON.parse(createdUsersData);
-            createdUsers = userAccounts
-              .map((account) => account.user)
-              .filter((user) => user.role !== "patient");
-          } catch (error) {
-            console.error("Error loading created users:", error);
-          }
+        const response = await fetch(`/api/admin/users/${id}`);
+        if (!response.ok) {
+          throw new Error('User not found');
         }
-
-        // Find the user by ID
-        const allUsers = [...demoUsers, ...createdUsers];
-        const foundUser = allUsers.find((u) => u.id === id);
-
-        if (foundUser) {
-          setUserDetails(foundUser);
-          setEditForm({
-            firstName: foundUser.firstName,
-            lastName: foundUser.lastName,
-            phone: foundUser.phone,
-            address: foundUser.address,
-          });
-        }
+        const data = await response.json();
+        setUserDetails(data.user);
+        setEditForm(data.user);
       } catch (error) {
         console.error("Failed to fetch user details:", error);
+        setUserDetails(null);
       } finally {
         setIsLoading(false);
       }
@@ -159,34 +82,34 @@ export default function UserDetailsPage({
     const roleConfig = {
       super_admin: {
         label: "Super Admin",
-        className: "bg-purple-100 text-purple-800",
+        variant: "default" as const,
         icon: <Crown className="h-3 w-3 mr-1" />,
       },
       admin: {
         label: "Admin",
-        className: "bg-red-100 text-red-800",
+        variant: "secondary" as const,
         icon: <Shield className="h-3 w-3 mr-1" />,
       },
       reviewer: {
         label: "Reviewer",
-        className: "bg-blue-100 text-blue-800",
+        variant: "outline" as const,
         icon: <Eye className="h-3 w-3 mr-1" />,
       },
-      care_giver: {
+      caregiver: {
         label: "Care Giver",
-        className: "bg-green-100 text-green-800",
+        variant: "outline" as const,
         icon: <UserCheck className="h-3 w-3 mr-1" />,
       },
       patient: {
         label: "Patient",
-        className: "bg-gray-100 text-gray-800",
+        variant: "secondary" as const,
         icon: <Users className="h-3 w-3 mr-1" />,
       },
     };
 
     const config = roleConfig[role];
     return (
-      <Badge className={config.className}>
+      <Badge variant={config.variant}>
         {config.icon}
         {config.label}
       </Badge>
@@ -196,7 +119,7 @@ export default function UserDetailsPage({
   const getStatusBadge = (user: User) => {
     if (!user.isEmailVerified) {
       return (
-        <Badge variant="destructive" className="flex items-center">
+        <Badge variant="secondary" className="flex items-center">
           <XCircle className="h-3 w-3 mr-1" />
           Unverified
         </Badge>
@@ -204,14 +127,14 @@ export default function UserDetailsPage({
     }
     if (!user.profileComplete) {
       return (
-        <Badge className="bg-amber-100 text-amber-800 flex items-center">
+        <Badge variant="outline" className="flex items-center">
           <AlertCircle className="h-3 w-3 mr-1" />
-          Incomplete Profile
+          Incomplete
         </Badge>
       );
     }
     return (
-      <Badge className="bg-green-100 text-green-800 flex items-center">
+      <Badge variant="default" className="flex items-center">
         <CheckCircle className="h-3 w-3 mr-1" />
         Active
       </Badge>
@@ -309,45 +232,49 @@ export default function UserDetailsPage({
       </div>
 
       {/* Header */}
-      <div className="hidden md:flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push("/admin/users")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Users
-          </Button>
+      <div className="hidden md:block space-y-4">
+        {/* Back Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push("/admin/users")}
+          className="w-fit"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Users
+        </Button>
+
+        {/* User Info and Actions */}
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">User Details</h1>
             <p className="text-muted-foreground">
               View and manage user information
             </p>
           </div>
-        </div>
-        <div className="flex gap-2">
-          {isEditing ? (
-            <>
-              <Button variant="outline" size="sm" onClick={handleCancelEdit}>
-                <X className="h-4 w-4 mr-2" />
-                Cancel
+          <div className="flex gap-2">
+            {isEditing ? (
+              <>
+                <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleSaveEdit}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Profile
               </Button>
-              <Button size="sm" onClick={handleSaveEdit}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditing(true)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Profile
-            </Button>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

@@ -385,20 +385,20 @@ export default function PatientsPage() {
                           </div>
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center space-x-2">
+                          <div className="flex flex-col space-y-1">
                             {patient.assignedCaregiver && (
-                              <div className="flex items-center space-x-1 text-green-600">
-                                <Eye className="h-4 w-4" />
-                                <span className="text-sm font-medium">
-                                  {patient.assignedCaregiver.name}
+                              <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                                <span className="text-xs font-medium text-green-600">
+                                  CG: {patient.assignedCaregiver.name}
                                 </span>
                               </div>
                             )}
                             {patient.assignedReviewer && (
-                              <div className="flex items-center space-x-1 text-purple-600">
-                                <Stethoscope className="h-4 w-4" />
-                                <span className="text-sm font-medium">
-                                  {patient.assignedReviewer.name}
+                              <div className="flex items-center space-x-1">
+                                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                                <span className="text-xs font-medium text-purple-600">
+                                  RV: {patient.assignedReviewer.name}
                                 </span>
                               </div>
                             )}
@@ -412,27 +412,28 @@ export default function PatientsPage() {
                           </div>
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
-                          {patient.status === "stable" ||
-                          patient.status === "improving" ? (
+                          <div className="flex items-center space-x-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleRemoveAssignment(patient)}
-                            >
-                              <X className="h-4 w-4 mr-2" />
-                              Unassign
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                handleOpenAssignmentDialog(patient)
-                              }
+                              onClick={() => handleOpenAssignmentDialog(patient)}
                             >
                               <UserPlus className="h-4 w-4 mr-2" />
-                              Assign
+                              {patient.assignedCaregiver || patient.assignedReviewer 
+                                ? "Manage" 
+                                : "Assign"}
                             </Button>
-                          )}
+                            {(patient.assignedCaregiver || patient.assignedReviewer) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRemoveAssignment(patient)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

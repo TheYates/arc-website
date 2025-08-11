@@ -60,13 +60,13 @@ export default function ApplicationsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge className="bg-amber-100 text-amber-800">Pending</Badge>;
+        return <Badge variant="outline">Pending</Badge>;
       case "approved":
-        return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
+        return <Badge variant="default">Approved</Badge>;
       case "rejected":
-        return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
+        return <Badge variant="secondary">Rejected</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -111,7 +111,7 @@ export default function ApplicationsPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              Patient Applications
+              Applications
             </h1>
             <p className="text-muted-foreground">
               Review and manage client service applications

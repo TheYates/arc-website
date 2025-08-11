@@ -26,13 +26,21 @@ export function formatOptionalPrice(amount: number): string {
 
 /**
  * Formats a date to the standard app format: "28th July, 2025"
- * @param date - The date to format
+ * @param date - The date to format (Date object or ISO string)
  * @returns Formatted date string
  */
-export function formatDate(date: Date): string {
-  const day = date.getDate();
-  const month = date.toLocaleDateString("en-US", { month: "long" });
-  const year = date.getFullYear();
+export function formatDate(date: Date | string): string {
+  // Convert string to Date if needed
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+
+  // Check if the date is valid
+  if (!dateObj || isNaN(dateObj.getTime())) {
+    return 'Invalid Date';
+  }
+
+  const day = dateObj.getDate();
+  const month = dateObj.toLocaleDateString("en-US", { month: "long" });
+  const year = dateObj.getFullYear();
 
   // Add ordinal suffix to day
   const getOrdinalSuffix = (day: number): string => {

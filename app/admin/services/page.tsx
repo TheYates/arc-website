@@ -32,7 +32,7 @@ export default function AdminPackagesPage() {
   const [pricingItems, setPricingItems] = useState<PricingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load services from PostgreSQL database
+  // Load services from database
   useEffect(() => {
     const loadServices = async () => {
       try {
@@ -462,7 +462,7 @@ export default function AdminPackagesPage() {
               displayName: itemData.name || "",
               description: itemData.description,
               category: "HOME_CARE", // Default category
-              basePriceDaily: itemData.basePrice || 0,
+              basePrice: itemData.basePrice || 0,
               isActive: true,
               isPopular: false,
               sortOrder: itemData.sortOrder || 0,
@@ -639,15 +639,15 @@ export default function AdminPackagesPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              Services & Pricing Management
+              Service Management
             </h1>
             <p className="text-muted-foreground">
-              Manage your services catalog stored in PostgreSQL database
+              Configure and manage your healthcare service offerings
             </p>
             <div className="flex items-center gap-2 mt-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <span className="text-sm text-green-600">
-                Connected to PostgreSQL
+                Database Connected
               </span>
             </div>
           </div>
@@ -710,10 +710,9 @@ export default function AdminPackagesPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Services Database</CardTitle>
+                <CardTitle>Service Catalog</CardTitle>
                 <CardDescription>
-                  Manage your services catalog stored in PostgreSQL database
-                  with real-time updates
+                  Manage your healthcare services and pricing structure
                 </CardDescription>
               </div>
               <div className="flex items-center gap-4">
@@ -804,7 +803,7 @@ export default function AdminPackagesPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 border-2 border-gray-300 border-t-teal-600 rounded-full animate-spin"></div>
                   <span className="text-gray-600">
-                    Loading services from PostgreSQL...
+                    Loading services...
                   </span>
                 </div>
               </div>

@@ -1,114 +1,36 @@
-import { Patient, AssignedStaff } from "../types/patients";
+import { Patient } from "../types/patients";
 import { User } from "../auth";
 
-// Get available staff for assignment (max 5 patients each)
+// Get available staff for assignment from database
 export async function getAvailableStaff(): Promise<{
   caregivers: User[];
   reviewers: User[];
 }> {
-  // Get demo users (excluding patients)
-  const demoUsers: User[] = [
-    {
-      id: "1",
-      email: "admin@alpharescue.com",
-      username: "admin",
-      firstName: "Admin",
-      lastName: "User",
-      phone: "+233 XX XXX XXXX",
-      address: "Accra, Ghana",
-      role: "admin",
-      isEmailVerified: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      profileComplete: true,
-    },
-    {
-      id: "2",
-      email: "dr.mensah@alpharescue.com",
-      username: "drmensah",
-      firstName: "Dr. Kwame",
-      lastName: "Mensah",
-      phone: "+233 XX XXX XXXX",
-      address: "Kumasi, Ghana",
-      role: "reviewer",
-      isEmailVerified: false,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      profileComplete: false,
-    },
-    {
-      id: "3",
-      email: "ama.nurse@alpharescue.com",
-      username: "nurseama",
-      firstName: "Ama",
-      lastName: "Asante",
-      phone: "+233 XX XXX XXXX",
-      address: "Tema, Ghana",
-      role: "care_giver",
-      isEmailVerified: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-      profileComplete: true,
-    },
-  ];
-
-  // Get created users from localStorage (excluding patients)
-  const createdUsersData = localStorage.getItem("auth_users");
-  let createdUsers: User[] = [];
-
-  if (createdUsersData) {
-    try {
-      const userAccounts = JSON.parse(createdUsersData);
-      createdUsers = userAccounts
-        .map((account: any) => account.user)
-        .filter((user: User) => user.role !== "patient");
-    } catch (error) {
-      console.error("Error loading created users:", error);
-    }
-  }
-
-  // Combine all users
-  const allUsers = [...demoUsers, ...createdUsers];
-
-  // Get current assignments to calculate workload
-  const patients = await getCurrentPatients();
-  const workloadCount: Record<string, number> = {};
-
-  patients.forEach((patient) => {
-    if (patient.assignedCaregiverId) {
-      workloadCount[patient.assignedCaregiverId] =
-        (workloadCount[patient.assignedCaregiverId] || 0) + 1;
-    }
-    if (patient.assignedReviewerId) {
-      workloadCount[patient.assignedReviewerId] =
-        (workloadCount[patient.assignedReviewerId] || 0) + 1;
-    }
-  });
-
-  // Filter available staff (under 5 patients)
-  const caregivers = allUsers
-    .filter((user) => user.role === "care_giver")
-    .filter((user) => (workloadCount[user.id] || 0) < 5);
-
-  const reviewers = allUsers
-    .filter((user) => user.role === "reviewer")
-    .filter((user) => (workloadCount[user.id] || 0) < 5);
-
-  return { caregivers, reviewers };
-}
-
-// Get current patients (this would import from patients.ts, but avoiding circular imports)
-async function getCurrentPatients(): Promise<Patient[]> {
   try {
-    const patientsData = localStorage.getItem("patients_data");
-    if (patientsData) {
-      return JSON.parse(patientsData);
+    const response = await fetch('/api/admin/staff');
+    
+    if (!response.ok) {
+      throw new Error(`Staff API failed: ${response.status}`);
     }
+    
+    const data = await response.json();
+    
+    return {
+      caregivers: data.caregivers || [],
+      reviewers: data.reviewers || [],
+    };
   } catch (error) {
-    console.error("Error loading patients:", error);
+    console.error('Error fetching available staff:', error);
+    
+    // Return empty arrays as fallback
+    return {
+      caregivers: [],
+      reviewers: [],
+    };
   }
-  return [];
 }
+
+
 
 // Assign patient to caregiver
 export async function assignPatientToCaregiver(
@@ -117,33 +39,16 @@ export async function assignPatientToCaregiver(
   assignedBy: string
 ): Promise<boolean> {
   try {
-    const patients = await getCurrentPatients();
-    const patientIndex = patients.findIndex((p) => p.id === patientId);
+    // Use the API endpoint for consistency
+    const response = await fetch('/api/admin/assignments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId, caregiverId, type: 'caregiver' })
+    });
 
-    if (patientIndex === -1) {
-      throw new Error("Patient not found");
+    if (!response.ok) {
+      throw new Error(`Assignment API failed: ${response.status}`);
     }
-
-    // Get caregiver info
-    const staff = await getAvailableStaff();
-    const caregiver = [...staff.caregivers].find((c) => c.id === caregiverId);
-
-    if (!caregiver) {
-      throw new Error("Caregiver not available or at capacity");
-    }
-
-    // Update patient with assignment
-    patients[patientIndex].assignedCaregiverId = caregiverId;
-    patients[patientIndex].assignedCaregiver = {
-      id: caregiver.id,
-      name: `${caregiver.firstName} ${caregiver.lastName}`,
-      email: caregiver.email,
-      assignedAt: new Date().toISOString(),
-      assignedBy: assignedBy,
-    };
-
-    // Save to localStorage
-    localStorage.setItem("patients_data", JSON.stringify(patients));
 
     // Create notification
     await createAssignmentNotification(
@@ -167,33 +72,16 @@ export async function assignPatientToReviewer(
   assignedBy: string
 ): Promise<boolean> {
   try {
-    const patients = await getCurrentPatients();
-    const patientIndex = patients.findIndex((p) => p.id === patientId);
+    // Use the API endpoint for consistency
+    const response = await fetch('/api/admin/assignments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId, reviewerId, type: 'reviewer' })
+    });
 
-    if (patientIndex === -1) {
-      throw new Error("Patient not found");
+    if (!response.ok) {
+      throw new Error(`Assignment API failed: ${response.status}`);
     }
-
-    // Get reviewer info
-    const staff = await getAvailableStaff();
-    const reviewer = [...staff.reviewers].find((r) => r.id === reviewerId);
-
-    if (!reviewer) {
-      throw new Error("Reviewer not available or at capacity");
-    }
-
-    // Update patient with assignment
-    patients[patientIndex].assignedReviewerId = reviewerId;
-    patients[patientIndex].assignedReviewer = {
-      id: reviewer.id,
-      name: `${reviewer.firstName} ${reviewer.lastName}`,
-      email: reviewer.email,
-      assignedAt: new Date().toISOString(),
-      assignedBy: assignedBy,
-    };
-
-    // Save to localStorage
-    localStorage.setItem("patients_data", JSON.stringify(patients));
 
     // Create notification
     await createAssignmentNotification(
@@ -216,23 +104,25 @@ export async function removeAssignment(
   type: "caregiver" | "reviewer"
 ): Promise<boolean> {
   try {
-    const patients = await getCurrentPatients();
-    const patientIndex = patients.findIndex((p) => p.id === patientId);
-
-    if (patientIndex === -1) {
-      return false;
-    }
-
     if (type === "caregiver") {
-      patients[patientIndex].assignedCaregiverId = undefined;
-      patients[patientIndex].assignedCaregiver = undefined;
-    } else {
-      patients[patientIndex].assignedReviewerId = undefined;
-      patients[patientIndex].assignedReviewer = undefined;
+      // Create API call to remove all caregiver assignments for this patient
+      const response = await fetch(`/api/admin/assignments/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId, type: 'caregiver' })
+      });
+      return response.ok;
+    } else if (type === "reviewer") {
+      // Create API call to remove reviewer assignments for this patient
+      const response = await fetch(`/api/admin/assignments/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId, type: 'reviewer' })
+      });
+      return response.ok;
     }
-
-    localStorage.setItem("patients_data", JSON.stringify(patients));
-    return true;
+    
+    return false; // Default case
   } catch (error) {
     console.error("Error removing assignment:", error);
     return false;
@@ -243,16 +133,38 @@ export async function removeAssignment(
 export async function getPatientsByCaregiver(
   caregiverId: string
 ): Promise<Patient[]> {
-  const patients = await getCurrentPatients();
-  return patients.filter((p) => p.assignedCaregiverId === caregiverId);
+  try {
+    const response = await fetch(`/api/patients/caregiver/${caregiverId}`);
+
+    if (!response.ok) {
+      throw new Error(`Caregiver patients API failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.patients || [];
+  } catch (error) {
+    console.error('Error fetching patients by caregiver:', error);
+    return [];
+  }
 }
 
 // Get patients assigned to a specific reviewer
 export async function getPatientsByReviewer(
   reviewerId: string
 ): Promise<Patient[]> {
-  const patients = await getCurrentPatients();
-  return patients.filter((p) => p.assignedReviewerId === reviewerId);
+  try {
+    const response = await fetch(`/api/patients/reviewer/${reviewerId}`);
+
+    if (!response.ok) {
+      throw new Error(`Reviewer patients API failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.patients || [];
+  } catch (error) {
+    console.error('Error fetching patients by reviewer:', error);
+    return [];
+  }
 }
 
 // Get workload statistics
@@ -261,20 +173,28 @@ export async function getWorkloadStats(): Promise<{
   reviewers: Array<{ user: User; patientCount: number }>;
 }> {
   const staff = await getAvailableStaff();
-  const patients = await getCurrentPatients();
 
-  // Count assignments
-  const caregiverStats = staff.caregivers.map((caregiver) => ({
-    user: caregiver,
-    patientCount: patients.filter((p) => p.assignedCaregiverId === caregiver.id)
-      .length,
-  }));
+  // Get patient counts for each caregiver
+  const caregiverStats = await Promise.all(
+    staff.caregivers.map(async (caregiver) => {
+      const patients = await getPatientsByCaregiver(caregiver.id);
+      return {
+        user: caregiver,
+        patientCount: patients.length,
+      };
+    })
+  );
 
-  const reviewerStats = staff.reviewers.map((reviewer) => ({
-    user: reviewer,
-    patientCount: patients.filter((p) => p.assignedReviewerId === reviewer.id)
-      .length,
-  }));
+  // Get patient counts for each reviewer
+  const reviewerStats = await Promise.all(
+    staff.reviewers.map(async (reviewer) => {
+      const patients = await getPatientsByReviewer(reviewer.id);
+      return {
+        user: reviewer,
+        patientCount: patients.length,
+      };
+    })
+  );
 
   return {
     caregivers: caregiverStats,
@@ -290,38 +210,8 @@ async function createAssignmentNotification(
   assignedBy: string
 ): Promise<void> {
   try {
-    const patients = await getCurrentPatients();
-    const patient = patients.find((p) => p.id === patientId);
-
-    if (!patient) return;
-
-    const notification = {
-      id: `assign_${Date.now()}`,
-      recipientId: staffId,
-      type: "assignment",
-      title: `New Patient Assignment`,
-      message: `You have been assigned to patient ${patient.firstName} ${patient.lastName}`,
-      data: {
-        patientId,
-        patientName: `${patient.firstName} ${patient.lastName}`,
-        assignedBy,
-        staffType,
-      },
-      createdAt: new Date().toISOString(),
-      read: false,
-    };
-
-    // Save notification to localStorage
-    const existingNotifications = JSON.parse(
-      localStorage.getItem("notifications") || "[]"
-    );
-    existingNotifications.push(notification);
-    localStorage.setItem(
-      "notifications",
-      JSON.stringify(existingNotifications)
-    );
-
-    // Assignment notification sent successfully
+    // TODO: Implement proper notification system with database
+    console.log(`Assignment notification: ${staffType} ${staffId} assigned to patient ${patientId} by ${assignedBy}`);
   } catch (error) {
     console.error("Error creating assignment notification:", error);
   }

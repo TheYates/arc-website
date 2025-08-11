@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getPatientById } from "@/lib/api/patients";
-import { getMedications } from "@/lib/api/medications";
+import { getPatientByIdClient } from "@/lib/api/client";
+import { getMedicationsClient } from "@/lib/api/client";
 import { Patient } from "@/lib/types/patients";
 import { Medication } from "@/lib/types/medications";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,8 +21,8 @@ export function ReviewerMedicationsMobile({
 
   useEffect(() => {
     (async () => {
-      const p = await getPatientById(patientId);
-      const meds = await getMedications(patientId);
+      const p = await getPatientByIdClient(patientId);
+      const meds = await getMedicationsClient(patientId);
       setPatient(p || null);
       setMedications(meds || []);
     })();

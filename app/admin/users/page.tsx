@@ -28,9 +28,31 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth, User, UserRole, hasPermission } from "@/lib/auth";
 import { getUserAccount } from "@/lib/api/users";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import {
   Loader2,
   Search,
@@ -44,13 +66,19 @@ import {
   Phone,
   Calendar,
   Crown,
+  Plus,
+  Trash2,
+  MoreHorizontal,
+  KeyRound,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AdminUsersMobile } from "@/components/mobile/admin-users";
-
-interface UserAccount {
-  user: User;
-  password: string;
-}
+import { PasswordResetDialog } from "@/components/admin/password-reset-dialog";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -59,8 +87,23 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("all");
   const [view, setView] = useState<"grid" | "table">("grid");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToResetPassword, setUserToResetPassword] = useState<User | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    username: "",
+    phone: "",
+    address: "",
+    role: "caregiver" as UserRole,
+  });
   const { user } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   // Persist view preference
   useEffect(() => {
@@ -82,76 +125,12 @@ export default function UsersPage() {
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        // Get demo users (hardcoded in auth system) - EXCLUDING patients as they have their own page
-        const demoUsers: User[] = [
-          {
-            id: "1",
-            email: "admin@alpharescue.com",
-            username: "admin",
-            firstName: "Admin",
-            lastName: "User",
-            phone: "+233 XX XXX XXXX",
-            address: "Accra, Ghana",
-            role: "admin",
-            isEmailVerified: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            profileComplete: true,
-            isActive: true,
-          },
-          {
-            id: "2",
-            email: "dr.mensah@alpharescue.com",
-            username: "drmensah",
-            firstName: "Dr. Kwame",
-            lastName: "Mensah",
-            phone: "+233 XX XXX XXXX",
-            address: "Kumasi, Ghana",
-            role: "reviewer",
-            isEmailVerified: false, // Demo unverified user
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            profileComplete: false, // Demo incomplete profile
-            isActive: true,
-          },
-          {
-            id: "3",
-            email: "ama.nurse@alpharescue.com",
-            username: "nurseama",
-            firstName: "Ama",
-            lastName: "Asante",
-            phone: "+233 XX XXX XXXX",
-            address: "Tema, Ghana",
-            role: "care_giver",
-            isEmailVerified: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            profileComplete: true,
-            isActive: true,
-          },
-        ];
-
-        // Get created users from localStorage - EXCLUDING patients
-        const createdUsersData = localStorage.getItem("auth_users");
-        let createdUsers: User[] = [];
-
-        if (createdUsersData) {
-          try {
-            const userAccounts: UserAccount[] = JSON.parse(createdUsersData);
-            createdUsers = userAccounts
-              .map((account) => account.user)
-              .filter((user) => user.role !== "patient"); // Exclude patients
-          } catch (error) {
-            console.error("Error loading created users:", error);
-          }
+        const response = await fetch('/api/admin/users');
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
         }
-
-        // Combine all users (excluding patients - they have their own page)
-        const allUsers = [...demoUsers, ...createdUsers];
-        setUsers(allUsers);
+        const data = await response.json();
+        setUsers(data.users || []);
       } catch (error) {
         console.error("Failed to fetch users:", error);
       } finally {
@@ -166,34 +145,34 @@ export default function UsersPage() {
     const roleConfig = {
       super_admin: {
         label: "Super Admin",
-        className: "bg-purple-100 text-purple-800",
+        variant: "default" as const,
         icon: <Crown className="h-3 w-3 mr-1" />,
       },
       admin: {
         label: "Admin",
-        className: "bg-red-100 text-red-800",
+        variant: "secondary" as const,
         icon: <Shield className="h-3 w-3 mr-1" />,
       },
       reviewer: {
         label: "Reviewer",
-        className: "bg-blue-100 text-blue-800",
+        variant: "outline" as const,
         icon: <Eye className="h-3 w-3 mr-1" />,
       },
-      care_giver: {
+      caregiver: {
         label: "Care Giver",
-        className: "bg-green-100 text-green-800",
+        variant: "outline" as const,
         icon: <UserCheck className="h-3 w-3 mr-1" />,
       },
       patient: {
         label: "Patient",
-        className: "bg-gray-100 text-gray-800",
+        variant: "secondary" as const,
         icon: <Users className="h-3 w-3 mr-1" />,
       },
     };
 
     const config = roleConfig[role];
     return (
-      <Badge className={config.className}>
+      <Badge variant={config.variant}>
         {config.icon}
         {config.label}
       </Badge>
@@ -202,19 +181,20 @@ export default function UsersPage() {
 
   const getStatusBadge = (user: User) => {
     if (!user.isEmailVerified) {
-      return <Badge variant="destructive">Unverified</Badge>;
+      return <Badge variant="secondary">Unverified</Badge>;
     }
     if (!user.profileComplete) {
-      return (
-        <Badge className="bg-amber-100 text-amber-800">
-          Incomplete Profile
-        </Badge>
-      );
+      return <Badge variant="outline">Incomplete</Badge>;
     }
-    return <Badge className="bg-green-100 text-green-800">Active</Badge>;
+    return <Badge variant="default">Active</Badge>;
   };
 
   const filteredUsers = users.filter((user) => {
+    // Filter out inactive users (soft deleted)
+    if (!user.isActive) {
+      return false;
+    }
+
     // Filter by role
     if (roleFilter !== "all" && user.role !== roleFilter) {
       return false;
@@ -229,7 +209,7 @@ export default function UsersPage() {
         return false;
       if (
         activeTab === "staff" &&
-        !["reviewer", "care_giver"].includes(user.role)
+        !["reviewer", "caregiver"].includes(user.role)
       )
         return false;
       if (activeTab === "unverified" && user.isEmailVerified) return false;
@@ -255,6 +235,138 @@ export default function UsersPage() {
     return formatDate(date);
   };
 
+  const resetForm = () => {
+    setFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      username: "",
+      phone: "",
+      address: "",
+      role: "caregiver",
+    });
+    setEditingUser(null);
+    setShowAddDialog(false);
+  };
+
+  const handleAddUser = async () => {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.username) {
+      return; // Basic validation
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create user');
+      }
+
+      const data = await response.json();
+      
+      // Update local state
+      setUsers(prevUsers => [...prevUsers, data.user]);
+      resetForm();
+
+      toast({
+        title: "User Created",
+        description: `${data.user.firstName} ${data.user.lastName} has been created successfully.`,
+      });
+    } catch (error) {
+      console.error("Failed to add user:", error);
+      toast({
+        title: "Error Creating User",
+        description: error instanceof Error ? error.message : "Failed to create user. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditUser = async () => {
+    if (!editingUser || !formData.firstName || !formData.lastName || !formData.email || !formData.username) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/admin/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update user');
+      }
+
+      const data = await response.json();
+      
+      // Update local state
+      setUsers(prevUsers =>
+        prevUsers.map(user => user.id === editingUser.id ? data.user : user)
+      );
+      resetForm();
+
+      toast({
+        title: "User Updated",
+        description: `${data.user.firstName} ${data.user.lastName} has been updated successfully.`,
+      });
+    } catch (error) {
+      console.error("Failed to edit user:", error);
+      toast({
+        title: "Error Updating User",
+        description: error instanceof Error ? error.message : "Failed to update user. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      const response = await fetch(`/api/admin/users/${userToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete user');
+      }
+
+      // Update local state (remove the user from the list)
+      setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete.id));
+
+      toast({
+        title: "User Deleted",
+        description: `${userToDelete.firstName} ${userToDelete.lastName} has been deleted successfully.`,
+      });
+
+      setUserToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      toast({
+        title: "Error Deleting User",
+        description: error instanceof Error ? error.message : "Failed to delete user. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!user || !hasPermission(user.role, "user_management")) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -269,68 +381,17 @@ export default function UsersPage() {
   }
 
   const loader = async () => {
-    // Reuse the code path used to build demo + created users
-    const demoUsers: User[] = [
-      {
-        id: "1",
-        email: "admin@alpharescue.com",
-        username: "admin",
-        firstName: "Admin",
-        lastName: "User",
-        phone: "+233 XX XXX XXXX",
-        address: "Accra, Ghana",
-        role: "admin",
-        isEmailVerified: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        profileComplete: true,
-        isActive: true,
-      },
-      {
-        id: "2",
-        email: "dr.mensah@alpharescue.com",
-        username: "drmensah",
-        firstName: "Dr. Kwame",
-        lastName: "Mensah",
-        phone: "+233 XX XXX XXXX",
-        address: "Kumasi, Ghana",
-        role: "reviewer",
-        isEmailVerified: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        profileComplete: false,
-        isActive: true,
-      },
-      {
-        id: "3",
-        email: "ama.nurse@alpharescue.com",
-        username: "nurseama",
-        firstName: "Ama",
-        lastName: "Asante",
-        phone: "+233 XX XXX XXXX",
-        address: "Tema, Ghana",
-        role: "care_giver",
-        isEmailVerified: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        profileComplete: true,
-        isActive: true,
-      },
-    ];
-    const createdUsersData = localStorage.getItem("auth_users");
-    let createdUsers: User[] = [];
-    if (createdUsersData) {
-      try {
-        const userAccounts: { user: User }[] = JSON.parse(createdUsersData);
-        createdUsers = userAccounts
-          .map((account) => account.user)
-          .filter((u) => u.role !== "patient");
-      } catch {}
+    try {
+      const response = await fetch('/api/admin/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const data = await response.json();
+      return data.users || [];
+    } catch (error) {
+      console.error("Failed to load users for mobile:", error);
+      return [];
     }
-    return [...demoUsers, ...createdUsers];
   };
 
   return (
@@ -354,6 +415,10 @@ export default function UsersPage() {
               Manage platform users and their roles
             </p>
           </div>
+          <Button onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add User
+          </Button>
         </div>
       </div>
 
@@ -414,7 +479,7 @@ export default function UsersPage() {
                     <SelectItem value="super_admin">Super Admin</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="reviewer">Reviewer</SelectItem>
-                    <SelectItem value="care_giver">Care Giver</SelectItem>
+                    <SelectItem value="caregiver">Caregiver</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -460,37 +525,32 @@ export default function UsersPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-1 flex-wrap">
                         {getRoleBadge(u.role)}
                         {getStatusBadge(u)}
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!u.id) return;
-                          router.push(`/admin/users/${u.id}`);
-                        }}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                      <div className="flex items-center">
-                        <Calendar className="mr-1 h-3 w-3" />
-                        Created: {formatUserDate(u.createdAt || "")}
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <div className="flex items-center truncate">
+                        <Mail className="mr-1 h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{u.email}</span>
                       </div>
-                      <div className="flex items-center">
-                        <Calendar className="mr-1 h-3 w-3" />
-                        <span className="whitespace-nowrap">
-                          Last Login: {formatUserDate(u.lastLogin || "")}
-                        </span>
-                      </div>
-                      <div className="col-span-2 flex items-center">
-                        <Mail className="mr-1 h-3 w-3" /> {u.email}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px]">Created {formatUserDate(u.createdAt || "")}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[10px]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!u.id) return;
+                            router.push(`/admin/users/${u.id}`);
+                          }}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -529,56 +589,86 @@ export default function UsersPage() {
                         }
                       }}
                     >
-                      <TableCell>
+                      <TableCell className="max-w-[200px]">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Users className="h-5 w-5 text-primary" />
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Users className="h-4 w-4 text-primary" />
                           </div>
-                          <div>
-                            <div className="font-medium">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">
                               {u.firstName} {u.lastName}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs text-muted-foreground truncate">
                               @{u.username}
                             </div>
-                            <div className="text-xs text-muted-foreground flex items-center">
-                              <Mail className="h-3 w-3 mr-1" />
-                              {u.email}
+                            <div className="text-xs text-muted-foreground flex items-center truncate">
+                              <Mail className="h-3 w-3 mr-1 flex-shrink-0" />
+                              <span className="truncate">{u.email}</span>
                             </div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>{getRoleBadge(u.role)}</TableCell>
                       <TableCell>{getStatusBadge(u)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <span>{formatUserDate(u.createdAt || "")}</span>
-                        </div>
+                      <TableCell className="text-sm">
+                        {formatUserDate(u.createdAt || "")}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <span className="whitespace-nowrap">
-                            {formatUserDate(u.lastLogin || "")}
-                          </span>
-                        </div>
+                      <TableCell className="text-sm">
+                        {formatUserDate(u.lastLogin || "")}
                       </TableCell>
                       <TableCell
                         className="text-right"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (!u.id) return;
-                            router.push(`/admin/users/${u.id}`);
-                          }}
-                        >
-                          <Edit className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (!u.id) return;
+                                router.push(`/admin/users/${u.id}`);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditingUser(u);
+                                setFormData({
+                                  firstName: u.firstName,
+                                  lastName: u.lastName,
+                                  email: u.email,
+                                  username: u.username,
+                                  phone: u.phone || "",
+                                  address: u.address || "",
+                                  role: u.role,
+                                });
+                              }}
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit User
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setUserToResetPassword(u)}
+                              className="text-orange-600"
+                            >
+                              <KeyRound className="h-4 w-4 mr-2" />
+                              Reset Password
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setUserToDelete(u)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete User
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -588,6 +678,164 @@ export default function UsersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add/Edit User Dialog */}
+      <Dialog open={showAddDialog || !!editingUser} onOpenChange={(open) => {
+        if (!open) resetForm();
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingUser ? "Edit User" : "Add New User"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingUser
+                ? "Update the user's information below."
+                : "Fill in the details to create a new user account."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, firstName: e.target.value })
+                  }
+                  placeholder="Enter first name"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, lastName: e.target.value })
+                  }
+                  placeholder="Enter last name"
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                placeholder="Enter email address"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                value={formData.username}
+                onChange={(e) =>
+                  setFormData({ ...formData, username: e.target.value })
+                }
+                placeholder="Enter username"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+                placeholder="Enter phone number"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="role">Role</Label>
+              <Select
+                value={formData.role}
+                onValueChange={(value: UserRole) =>
+                  setFormData({ ...formData, role: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="reviewer">Reviewer</SelectItem>
+                  <SelectItem value="caregiver">Care Giver</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="address">Address</Label>
+              <Textarea
+                id="address"
+                value={formData.address}
+                onChange={(e) =>
+                  setFormData({ ...formData, address: e.target.value })
+                }
+                placeholder="Enter address"
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={resetForm} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={editingUser ? handleEditUser : handleAddUser}
+              disabled={isSubmitting}
+            >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingUser ? "Update User" : "Create User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => {
+        if (!open) setUserToDelete(null);
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <strong>
+                {userToDelete?.firstName} {userToDelete?.lastName}
+              </strong>
+              ? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUserToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Password Reset Dialog */}
+      <PasswordResetDialog
+        open={!!userToResetPassword}
+        onOpenChange={(open) => {
+          if (!open) setUserToResetPassword(null);
+        }}
+        user={userToResetPassword}
+      />
     </div>
   );
 }

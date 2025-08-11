@@ -34,7 +34,7 @@ function initializeDatabase() {
       last_name TEXT NOT NULL,
       phone TEXT,
       address TEXT,
-      role TEXT NOT NULL CHECK (role IN ('super_admin', 'admin', 'reviewer', 'care_giver', 'patient')),
+      role TEXT NOT NULL CHECK (role IN ('super_admin', 'admin', 'reviewer', 'caregiver', 'patient')),
       is_email_verified BOOLEAN DEFAULT FALSE,
       is_active BOOLEAN DEFAULT TRUE,
       profile_complete BOOLEAN DEFAULT FALSE,
@@ -294,7 +294,7 @@ function insertDefaultData() {
       "hashed_password_here",
       "John",
       "Smith",
-      "care_giver",
+      "caregiver",
       true,
       true
     );

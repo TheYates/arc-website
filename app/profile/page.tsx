@@ -97,7 +97,7 @@ export default function ProfilePage() {
       super_admin: "Super Administrator",
       admin: "Administrator",
       reviewer: "Medical Reviewer",
-      care_giver: "Care Provider",
+      caregiver: "Care Provider",
       patient: "Patient",
     };
     return roleNames[role as keyof typeof roleNames] || role;
@@ -108,7 +108,7 @@ export default function ProfilePage() {
       super_admin: "bg-purple-100 text-purple-800",
       admin: "bg-blue-100 text-blue-800",
       reviewer: "bg-orange-100 text-orange-800",
-      care_giver: "bg-green-100 text-green-800",
+      caregiver: "bg-green-100 text-green-800",
       patient: "bg-slate-100 text-slate-800",
     };
     return colors[role as keyof typeof colors] || "bg-slate-100 text-slate-800";

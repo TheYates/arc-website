@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { getPatientById } from "@/lib/api/patients";
+import { getPatientByIdClient } from "@/lib/api/client";
 import {
-  getMedications,
-  getMedicationAdministrations,
-} from "@/lib/api/medications";
+  getMedicationsClient,
+  getMedicationAdministrationsClient,
+} from "@/lib/api/client";
 import { getVitalSigns } from "@/lib/api/vitals";
 import {
   getMedicalReviews,
   createMedicalReview,
-} from "@/lib/api/medical-reviews";
+} from "@/lib/api/medical-reviews-client";
 import { Patient } from "@/lib/types/patients";
 import { Medication, MedicationAdministration } from "@/lib/types/medications";
 import { VitalSigns } from "@/lib/types/vitals";
@@ -69,11 +69,12 @@ interface PageProps {
 
 export default function ReviewerPatientDetailPage({ params }: PageProps) {
   const resolvedParams = React.use(params);
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMedicalDataLoading, setIsMedicalDataLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
   // Medical data states
@@ -86,14 +87,15 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
 
   // UI states
   const [showPrescribeDialog, setShowPrescribeDialog] = useState(false);
-  const [showSymptomForm, setShowSymptomForm] = useState(false);
-  const [showCreateReviewDialog, setShowCreateReviewDialog] = useState(false);
+
+
 
   // Prescription states
   const [selectedMedication, setSelectedMedication] = useState("");
   const [prescriptionItems, setPrescriptionItems] = useState<any[]>([]);
   const [medicationSearchOpen, setMedicationSearchOpen] = useState(false);
   const [showAddPrescription, setShowAddPrescription] = useState(true);
+  const [showEnterReview, setShowEnterReview] = useState(true);
 
   // Common medications list
   const commonMedications = [
@@ -114,69 +116,169 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
     "Atorvastatin",
   ];
 
+  // Memoize the transform function to prevent recreation on every render
+  const transformMedicalReviews = useCallback((reviewsData: any[]) => {
+    return reviewsData.map(review => ({
+      id: review.id,
+      patientId: review.patientId,
+      reviewerId: review.reviewerId || review.createdById,
+      reviewerName: review.reviewer ? `${review.reviewer.firstName} ${review.reviewer.lastName}` : 'Unknown',
+      type: review.reviewType.toLowerCase() as any,
+      title: review.title,
+      findings: review.findings || '',
+      assessment: review.description,
+      recommendations: review.recommendations || '',
+      treatmentPlan: '',
+      followUpRequired: review.followUpRequired,
+      followUpDate: review.followUpDate,
+      priority: review.priority.toLowerCase() as any,
+      status: review.status.toLowerCase() as any,
+      createdAt: review.createdAt,
+      updatedAt: review.updatedAt,
+      reviewedDate: review.createdAt,
+      isConfidential: false
+    }));
+  }, []);
+
+  // Memoize the patient data fetching function
+  const fetchPatientData = useCallback(async () => {
+    const startTime = performance.now();
+    console.log('🚀 Starting reviewer patient data fetch for ID:', resolvedParams.id);
+
+    try {
+      // Fetch patient data first (needed for header) - this shows immediately
+      const patientStart = performance.now();
+      const patientData = await getPatientByIdClient(resolvedParams.id);
+      const patientEnd = performance.now();
+      console.log(`👤 Patient data fetched in ${(patientEnd - patientStart).toFixed(2)}ms`);
+
+      setPatient(patientData);
+      setIsLoading(false); // Show patient info immediately
+
+      if (patientData) {
+        // Fetch medical data in background
+        fetchMedicalData(resolvedParams.id, startTime);
+      }
+    } catch (error) {
+      console.error("Error fetching patient:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load patient data",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  }, [resolvedParams.id, toast]);
+
+  // Memoize the medical data fetching function
+  const fetchMedicalData = useCallback(async (patientId: string, startTime: number) => {
+    try {
+      // Fetch all medical data in parallel for better performance
+      const parallelStart = performance.now();
+      console.log('📊 Starting parallel reviewer medical data fetch...');
+
+      const [medicationsData, administrationsData, vitalsData, reviewsData] = await Promise.all([
+        getMedicationsClient(patientId),
+        getMedicationAdministrationsClient(patientId),
+        Promise.resolve(getVitalSigns(patientId)), // Wrap sync function
+        getMedicalReviews(patientId)
+      ]);
+
+      const parallelEnd = performance.now();
+      console.log(`📊 All parallel medical data fetched in ${(parallelEnd - parallelStart).toFixed(2)}ms`);
+
+      // Transform medical reviews data
+      const transformStart = performance.now();
+      const transformedReviews = transformMedicalReviews(reviewsData);
+      const transformEnd = performance.now();
+      console.log(`🔄 Data transformation took ${(transformEnd - transformStart).toFixed(2)}ms`);
+
+      // Set all data at once to minimize re-renders
+      setMedications(medicationsData);
+      setAdministrations(administrationsData);
+      setVitals(vitalsData);
+      setMedicalReviews(transformedReviews);
+
+      const totalEnd = performance.now();
+      console.log(`✅ Total reviewer page load time: ${(totalEnd - startTime).toFixed(2)}ms`);
+    } catch (error) {
+      console.error("Error fetching medical data:", error);
+      toast({
+        title: "Warning",
+        description: "Some medical data failed to load",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMedicalDataLoading(false);
+    }
+  }, [transformMedicalReviews, toast]);
+
   useEffect(() => {
+    // Wait for auth to finish loading before making redirect decisions
+    if (authLoading) return;
+
     if (!user || (user.role !== "reviewer" && user.role !== "super_admin")) {
       router.push("/login");
       return;
     }
 
-    const fetchData = async () => {
-      try {
-        const patientData = await getPatientById(resolvedParams.id);
-        setPatient(patientData);
+    fetchPatientData();
+  }, [user, router, fetchPatientData, authLoading]);
 
-        if (patientData) {
-          // Load medical data
-          const medicationsData = getMedications(resolvedParams.id);
-          setMedications(medicationsData);
+  // Memoized computed values for better performance
+  const activeMedications = useMemo(() => {
+    return medications.filter(med => med.isActive);
+  }, [medications]);
 
-          const administrationsData = getMedicationAdministrations(
-            resolvedParams.id
-          );
-          setAdministrations(administrationsData);
+  const recentVitals = useMemo(() => {
+    return vitals.slice(0, 5); // Show only recent 5 vitals
+  }, [vitals]);
 
-          const vitalsData = getVitalSigns(resolvedParams.id);
-          setVitals(vitalsData);
+  const recentReviews = useMemo(() => {
+    return medicalReviews.slice(0, 3); // Show only recent 3 reviews
+  }, [medicalReviews]);
 
-          const reviewsData = getMedicalReviews(resolvedParams.id);
-          setMedicalReviews(reviewsData);
-        }
-      } catch (error) {
-        console.error("Error fetching patient:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load patient data",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [resolvedParams.id, user, router, toast]);
-
-  const handleMedicationSaved = () => {
-    const updatedMedications = getMedications(resolvedParams.id);
+  const handleMedicationSaved = useCallback(async () => {
+    const updatedMedications = await getMedicationsClient(resolvedParams.id);
     setMedications(updatedMedications);
     toast({
       title: "Success",
       description: "Medication prescribed successfully",
     });
-  };
+  }, [resolvedParams.id, toast]);
 
-  const handleReviewSaved = () => {
-    const updatedReviews = getMedicalReviews(resolvedParams.id);
-    setMedicalReviews(updatedReviews);
-    setShowCreateReviewDialog(false);
+  const handleReviewSaved = async () => {
+    const updatedReviews = await getMedicalReviews(resolvedParams.id);
+    const transformedReviews = updatedReviews.map(review => ({
+      id: review.id,
+      patientId: review.patientId,
+      reviewerId: review.reviewerId || review.createdById,
+      reviewerName: review.reviewer ? `${review.reviewer.firstName} ${review.reviewer.lastName}` : 'Unknown',
+      type: review.reviewType.toLowerCase() as any,
+      title: review.title,
+      findings: review.findings || '',
+      assessment: review.description,
+      recommendations: review.recommendations || '',
+      treatmentPlan: '',
+      followUpRequired: review.followUpRequired,
+      followUpDate: review.followUpDate,
+      priority: review.priority.toLowerCase() as any,
+      status: review.status.toLowerCase() as any,
+      createdAt: review.createdAt,
+      updatedAt: review.updatedAt,
+      reviewedDate: review.createdAt,
+      isConfidential: false
+    }));
+    setMedicalReviews(transformedReviews);
+    setShowEnterReview(false); // Switch to history view after saving
     toast({
       title: "Success",
       description: "Medical review created successfully",
     });
   };
 
-  // Helper function to get the latest administration for a medication
-  const getLatestAdministration = (medicationId: string) => {
+  // Memoized helper function to get the latest administration for a medication
+  const getLatestAdministration = useCallback((medicationId: string) => {
     const medicationAdministrations = administrations.filter(
       (admin) => admin.medicationId === medicationId
     );
@@ -187,7 +289,7 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
         new Date(b.actualTime || b.scheduledTime).getTime() -
         new Date(a.actualTime || a.scheduledTime).getTime()
     )[0];
-  };
+  }, [administrations]);
 
   // Helper function to get administration status badge
   const getAdministrationStatusBadge = (status: string) => {
@@ -327,7 +429,8 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
     }
   };
 
-  if (isLoading) {
+  // Show loading while auth is loading or data is loading
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
@@ -412,27 +515,37 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div className="flex space-x-6 text-center">
-            <div>
-              <p className="text-2xl font-bold text-green-600">
-                {vitals.length}
+          {/* Quick Assessment Info */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div className="border border-gray-700 p-3 rounded-lg">
+              <p className="text-lg font-bold ">
+                {patient.dateOfBirth
+                  ? Math.floor((new Date().getTime() - new Date(patient.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
+                  : "N/A"
+                }
               </p>
-              <p className="text-sm text-muted-foreground">Vitals Recorded</p>
+              <p className="text-xs text-muted-foreground">Age (Years)</p>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-blue-600">
-                {(medications || []).filter((m) => m.isActive).length}
+            <div className="border border-gray-700 p-3 rounded-lg">
+              <p className="text-lg font-bold ">
+                {patient.bloodType || "N/A"}
               </p>
-              <p className="text-sm text-muted-foreground">
-                Active Medications
-              </p>
+              <p className="text-xs text-muted-foreground">Blood Type</p>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-orange-600">
-                {medicalReviews.length}
+            <div className="border border-gray-700 p-3 rounded-lg">
+              <p className="text-lg font-bold ">
+                {patient.gender || "N/A"}
               </p>
-              <p className="text-sm text-muted-foreground">Medical Reviews</p>
+              <p className="text-xs text-muted-foreground">Gender</p>
+            </div>
+            <div className="border border-gray-700 p-3 rounded-lg">
+              <p className="text-lg font-bold ">
+                {patient.heightCm && patient.weightKg
+                  ? `${patient.heightCm}cm / ${patient.weightKg}kg`
+                  : "N/A"
+                }
+              </p>
+              <p className="text-xs text-muted-foreground">Height / Weight</p>
             </div>
           </div>
         </div>
@@ -452,6 +565,78 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Vitals Recorded
+                  </CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{vitals.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {vitals.length > 0
+                      ? `Last recorded ${formatDate(vitals[0].recordedAt)}`
+                      : "No vitals recorded"}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Active Medications
+                  </CardTitle>
+                  <Pill className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  {isMedicalDataLoading ? (
+                    <div className="space-y-2">
+                      <div className="h-8 bg-gray-200 rounded animate-pulse w-16"></div>
+                      <div className="h-3 bg-gray-200 rounded animate-pulse w-32"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{(medications || []).filter((m) => m.isActive).length}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {(medications || []).filter((m) => m.isActive).length > 0
+                          ? "Currently prescribed"
+                          : "No active medications"}
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Medical Reviews
+                  </CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  {isMedicalDataLoading ? (
+                    <div className="space-y-2">
+                      <div className="h-8 bg-gray-200 rounded animate-pulse w-16"></div>
+                      <div className="h-3 bg-gray-200 rounded animate-pulse w-28"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{medicalReviews.length}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {medicalReviews.length > 0
+                          ? `Last review ${formatDate(medicalReviews[0].createdAt)}`
+                          : "No reviews yet"}
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Patient Information */}
               <Card>
@@ -527,54 +712,109 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                 </CardContent>
               </Card>
 
-              {/* Recent Activity */}
+              {/* Medical Information */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
-                    <Activity className="h-5 w-5 mr-2" />
-                    Recent Activity
+                    <Stethoscope className="h-5 w-5 mr-2" />
+                    Medical Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {vitals.slice(0, 3).map((vital, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between py-2 border-b last:border-0"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">Vitals Recorded</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(new Date(vital.recordedAt))}
-                          </p>
-                        </div>
-                        <Badge variant="outline" className="text-green-600">
-                          <Activity className="h-3 w-3 mr-1" />
-                          Complete
-                        </Badge>
-                      </div>
-                    ))}
-                    {medicalReviews.slice(0, 2).map((review, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between py-2 border-b last:border-0"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">Medical Review</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(new Date(review.createdAt))}
-                          </p>
-                        </div>
-                        <Badge variant="outline" className="text-purple-600">
-                          <FileText className="h-3 w-3 mr-1" />
-                          {review.status}
-                        </Badge>
-                      </div>
-                    ))}
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Blood Type</p>
+                    <p className="font-medium">{patient.bloodType || "Not specified"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Height / Weight</p>
+                    <p className="font-medium">
+                      {patient.heightCm && patient.weightKg
+                        ? `${patient.heightCm} cm / ${patient.weightKg} kg`
+                        : "Not recorded"
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Allergies</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(patient as any).allergies && (patient as any).allergies.length > 0 ? (
+                        (patient as any).allergies.map((allergy: string, index: number) => (
+                          <Badge key={index} variant="destructive" className="text-xs">
+                            {allergy}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-sm text-muted-foreground">No known allergies</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Emergency Contact</p>
+                    <p className="font-medium text-sm">
+                      {patient.emergencyContactName || "Not provided"}
+                      {patient.emergencyContactPhone && (
+                        <span className="block text-xs text-muted-foreground">
+                          {patient.emergencyContactPhone}
+                        </span>
+                      )}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Recent Activity Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Activity className="h-5 w-5 mr-2" />
+                  Recent Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {vitals.slice(0, 3).map((vital, index) => (
+                    <div
+                      key={`vital-${index}`}
+                      className="flex items-center justify-between py-2 border-b last:border-0"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">Vitals Recorded</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(new Date(vital.recordedAt))}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-green-600">
+                        <Activity className="h-3 w-3 mr-1" />
+                        Complete
+                      </Badge>
+                    </div>
+                  ))}
+                  {medicalReviews.slice(0, 2).map((review, index) => (
+                    <div
+                      key={`review-${index}`}
+                      className="flex items-center justify-between py-2 border-b last:border-0"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">Medical Review</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(new Date(review.createdAt))}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-purple-600">
+                        <FileText className="h-3 w-3 mr-1" />
+                        {review.status}
+                      </Badge>
+                    </div>
+                  ))}
+                  {vitals.length === 0 && medicalReviews.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No recent activity
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Vitals Tab */}
@@ -978,22 +1218,32 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                 ) : (
                   /* Current Medications View */
                   <div className="space-y-4">
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-2">Medication</th>
-                            <th className="text-left py-2">Dosage</th>
-                            <th className="text-left py-2">Route</th>
-                            <th className="text-left py-2">Frequency</th>
-                            <th className="text-left py-2">Start Date</th>
-                            <th className="text-left py-2">
-                              Last Administration
-                            </th>
-                            <th className="text-left py-2">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                    {isMedicalDataLoading ? (
+                      <div className="space-y-4">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-5/6"></div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left py-2">Medication</th>
+                                <th className="text-left py-2">Dosage</th>
+                                <th className="text-left py-2">Route</th>
+                                <th className="text-left py-2">Frequency</th>
+                                <th className="text-left py-2">Start Date</th>
+                                <th className="text-left py-2">
+                                  Last Administration
+                                </th>
+                                <th className="text-left py-2">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
                           {medications
                             .filter((m) => m.isActive)
                             .map((medication) => {
@@ -1068,155 +1318,153 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                                 </tr>
                               );
                             })}
-                        </tbody>
-                      </table>
-                    </div>
-                    {(medications || []).filter((m) => m.isActive).length ===
-                      0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        No active medications found
-                      </div>
+                            </tbody>
+                          </table>
+                        </div>
+                        {(medications || []).filter((m) => m.isActive).length ===
+                          0 && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            No active medications found
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
               </CardContent>
+
             </Card>
           </TabsContent>
 
           {/* Medical Notes Tab */}
           <TabsContent value="medical-notes" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Medical Notes & Reviews</h2>
-              <div className="flex space-x-2">
-                <Button
-                  onClick={() => setShowCreateReviewDialog(true)}
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Review
-                </Button>
-                <Button
-                  onClick={() => setShowSymptomForm(!showSymptomForm)}
-                  className="bg-orange-600 hover:bg-orange-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {showSymptomForm ? "Cancel" : "Report Symptoms"}
-                </Button>
-              </div>
-            </div>
-
-            {showSymptomForm && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Report Patient Symptoms</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PatientSymptomReportForm
+            {/* Enter Review / View History Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>
+                      {showEnterReview
+                        ? "Enter Medical Review"
+                        : "Medical Reviews History"}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {showEnterReview
+                        ? "Create a new medical review for this patient"
+                        : "View previous medical reviews and assessments"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEnterReview(!showEnterReview)}
+                  >
+                    {showEnterReview ? "View History" : "Enter Review"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {showEnterReview ? (
+                  <CreateMedicalReviewForm
                     patientId={resolvedParams.id}
-                    patientName={`${patient.firstName} ${patient.lastName}`}
-                    onSave={() => {
-                      setShowSymptomForm(false);
-                      toast({
-                        title: "Success",
-                        description: "Symptom report submitted successfully",
-                      });
-                    }}
-                    onCancel={() => setShowSymptomForm(false)}
+                    reviewerId={user?.id || ""}
+                    reviewerName={`${user?.firstName} ${user?.lastName}`}
+                    onSave={handleReviewSaved}
+                    onCancel={() => setShowEnterReview(false)}
                   />
-                </CardContent>
-              </Card>
-            )}
+                ) : (
 
-            {/* Medical Reviews List */}
-            <div className="space-y-4">
-              {medicalReviews.map((review) => (
-                <Card key={review.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">
-                          {review.title}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          by {review.reviewerName} •{" "}
-                          {formatDate(new Date(review.createdAt))}
-                        </p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Badge
-                          variant={
-                            review.status === "completed"
-                              ? "default"
-                              : "outline"
-                          }
-                          className={
-                            review.priority === "urgent"
-                              ? "bg-red-100 text-red-800"
-                              : review.priority === "high"
-                              ? "bg-orange-100 text-orange-800"
-                              : review.priority === "medium"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-gray-100 text-gray-800"
-                          }
-                        >
-                          {review.priority} priority
-                        </Badge>
-                        <Badge variant="outline" className="capitalize">
-                          {review.status.replace("_", " ")}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div>
-                        <h4 className="font-medium text-sm mb-1">Findings</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {review.findings}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-sm mb-1">Assessment</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {review.assessment}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-sm mb-1">
-                          Recommendations
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {review.recommendations}
-                        </p>
-                      </div>
-                      {review.followUpRequired && review.followUpDate && (
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Clock className="h-4 w-4 text-blue-600" />
-                          <span>
-                            Follow-up required by{" "}
-                            {formatDate(new Date(review.followUpDate))}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  /* Medical Reviews History View */
+                  <div className="space-y-4">
+                    {medicalReviews.map((review) => (
+                      <Card key={review.id}>
+                        <CardHeader>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <CardTitle className="text-lg">
+                                {review.title}
+                              </CardTitle>
+                              <p className="text-sm text-muted-foreground">
+                                by {review.reviewerName} •{" "}
+                                {formatDate(new Date(review.createdAt))}
+                              </p>
+                            </div>
+                            <div className="flex space-x-2">
+                              <Badge
+                                variant={
+                                  review.status === "completed"
+                                    ? "default"
+                                    : "outline"
+                                }
+                                className={
+                                  review.priority === "high"
+                                    ? "bg-red-100 text-red-800"
+                                    : review.priority === "medium"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }
+                              >
+                                {review.priority} priority
+                              </Badge>
+                              <Badge variant="outline" className="capitalize">
+                                {review.status.replace("_", " ")}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div>
+                              <h4 className="font-medium text-sm mb-1">Findings</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {review.findings}
+                              </p>
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-sm mb-1">Assessment</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {review.assessment}
+                              </p>
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-sm mb-1">
+                                Recommendations
+                              </h4>
+                              <p className="text-sm text-muted-foreground">
+                                {review.recommendations}
+                              </p>
+                            </div>
+                            {review.followUpRequired && review.followUpDate && (
+                              <div className="flex items-center space-x-2 text-sm">
+                                <Clock className="h-4 w-4 text-blue-600" />
+                                <span>
+                                  Follow-up required by{" "}
+                                  {formatDate(new Date(review.followUpDate))}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
 
-              {medicalReviews.length === 0 && (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">
-                      No medical reviews yet
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Create your first medical review to get started
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+                    {medicalReviews.length === 0 && (
+                      <Card>
+                        <CardContent className="text-center py-8">
+                          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-muted-foreground">
+                            No medical reviews yet
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Create your first medical review to get started
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
@@ -1232,24 +1480,7 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
         />
       )}
 
-      {/* Create Review Dialog */}
-      <Dialog
-        open={showCreateReviewDialog}
-        onOpenChange={setShowCreateReviewDialog}
-      >
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create Medical Review</DialogTitle>
-          </DialogHeader>
-          <CreateMedicalReviewForm
-            patientId={resolvedParams.id}
-            reviewerId={user?.id || ""}
-            reviewerName={`${user?.firstName} ${user?.lastName}`}
-            onSave={handleReviewSaved}
-            onCancel={() => setShowCreateReviewDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }
@@ -1269,7 +1500,7 @@ function CreateMedicalReviewForm({
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({
-    type: "routine_checkup" as any,
+    type: "routine" as any,
     title: "",
     findings: "",
     assessment: "",
@@ -1282,17 +1513,29 @@ function CreateMedicalReviewForm({
     notes: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    createMedicalReview({
-      ...formData,
-      patientId,
-      reviewerId,
-      reviewerName,
-    });
+    try {
+      await createMedicalReview({
+        patientId,
+        reviewerId,
+        createdById: reviewerId,
+        reviewType: formData.type.toUpperCase() as any,
+        priority: formData.priority.toUpperCase() as any,
+        title: formData.title,
+        description: formData.assessment || formData.findings || "Medical review",
+        findings: formData.findings,
+        recommendations: formData.recommendations,
+        followUpRequired: formData.followUpRequired,
+        followUpDate: formData.followUpDate || undefined,
+      });
 
-    onSave();
+      onSave();
+    } catch (error) {
+      console.error('Error creating medical review:', error);
+      // You might want to show an error toast here
+    }
   };
 
   return (
@@ -1308,13 +1551,10 @@ function CreateMedicalReviewForm({
             className="w-full p-2 border rounded-md"
             required
           >
-            <option value="routine_checkup">Routine Checkup</option>
+            <option value="routine">Routine</option>
+            <option value="urgent">Urgent</option>
             <option value="follow_up">Follow-up</option>
-            <option value="emergency_consultation">
-              Emergency Consultation
-            </option>
-            <option value="medication_review">Medication Review</option>
-            <option value="symptom_evaluation">Symptom Evaluation</option>
+            <option value="consultation">Consultation</option>
           </select>
         </div>
         <div>
@@ -1333,7 +1573,6 @@ function CreateMedicalReviewForm({
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
-            <option value="urgent">Urgent</option>
           </select>
         </div>
       </div>

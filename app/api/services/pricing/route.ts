@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { PricingItem } from "@/lib/types/packages";
-import { getAllServices, getServiceItems } from "@/lib/api/services-prisma";
+import { getAllServicesWithItems } from "@/lib/api/services-prisma";
 
 // Transform admin pricing data to public service format
 interface ServiceItem {
@@ -40,46 +40,40 @@ const transformPricingItemToServiceItem = (
   };
 };
 
-const transformToPublicServices = async (
-  services: any[]
-): Promise<PublicService[]> => {
-  const publicServices = await Promise.all(
-    services.map(async (service) => {
-      const serviceItems = await getServiceItems(service.id);
+const transformToPublicServices = (
+  servicesWithItems: any[]
+): PublicService[] => {
+  return servicesWithItems.map((service) => {
+    // Helper function to build hierarchical structure
+    const buildHierarchy = (
+      items: any[],
+      parentId: string | null = null
+    ): ServiceItem[] => {
+      return items
+        .filter((item) => item.parentId === parentId)
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          description: item.description || undefined,
+          level: item.level,
+          isOptional: !item.isRequired,
+          basePrice: Number(item.basePrice || 0),
+          children: buildHierarchy(items, item.id), // Recursively build children
+        }));
+    };
 
-      // Helper function to build hierarchical structure
-      const buildHierarchy = (
-        items: any[],
-        parentId: string | null = null
-      ): ServiceItem[] => {
-        return items
-          .filter((item) => item.parentId === parentId)
-          .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-          .map((item) => ({
-            id: item.id,
-            name: item.name,
-            description: item.description || undefined,
-            level: item.level,
-            isOptional: !item.isRequired,
-            basePrice: Number(item.basePrice || 0),
-            children: buildHierarchy(items, item.id), // Recursively build children
-          }));
-      };
+    // Build hierarchical structure starting with top-level items (parentId = null)
+    const items = buildHierarchy(service.serviceItems, null);
 
-      // Build hierarchical structure starting with top-level items (parentId = null)
-      const items = buildHierarchy(serviceItems, null);
-
-      return {
-        id: service.id,
-        name: service.name,
-        description: service.description || undefined,
-        basePrice: Number(service.basePrice || 0),
-        items,
-      };
-    })
-  );
-
-  return publicServices;
+    return {
+      id: service.id,
+      name: service.name,
+      description: service.description || undefined,
+      basePrice: Number(service.basePrice || 0),
+      items,
+    };
+  });
 };
 
 export async function GET(request: Request) {
@@ -88,9 +82,9 @@ export async function GET(request: Request) {
     const serviceId = searchParams.get("id");
     const serviceName = searchParams.get("name");
 
-    // Get active services from database
-    const allServices = await getAllServices(false); // Only active services for public
-    const publicServices = await transformToPublicServices(allServices);
+    // Get active services with items in a single optimized query
+    const allServicesWithItems = await getAllServicesWithItems(false); // Only active services for public
+    const publicServices = transformToPublicServices(allServicesWithItems);
 
     // If specific service requested
     if (serviceId || serviceName) {
@@ -114,11 +108,16 @@ export async function GET(request: Request) {
       });
     }
 
-    // Return all services
-    return NextResponse.json({
+    // Return all services with cache headers
+    const response = NextResponse.json({
       success: true,
       data: publicServices,
     });
+
+    // Cache for 5 minutes for public API
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+
+    return response;
   } catch (error) {
     console.error("Error fetching service data:", error);
     return NextResponse.json(

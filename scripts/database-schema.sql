@@ -14,7 +14,7 @@ CREATE TABLE users (
     last_name VARCHAR(100) NOT NULL,
     phone VARCHAR(20),
     address TEXT,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('super_admin', 'admin', 'reviewer', 'care_giver', 'patient')),
+    role VARCHAR(20) NOT NULL CHECK (role IN ('super_admin', 'admin', 'reviewer', 'caregiver', 'patient')),
     is_email_verified BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     profile_complete BOOLEAN DEFAULT FALSE,
@@ -495,7 +495,7 @@ INSERT INTO users (email, username, password_hash, first_name, last_name, phone,
 ('superadmin@arc.com', 'superadmin', '$2b$10$hash', 'Super', 'Admin', '+233 24 000 0001', 'ARC Headquarters, Accra', 'super_admin', true, true),
 ('admin@arc.com', 'admin', '$2b$10$hash', 'John', 'Administrator', '+233 24 000 0002', 'East Legon, Accra', 'admin', true, true),
 ('dr.mensah@arc.com', 'drmensah', '$2b$10$hash', 'Dr. Kwame', 'Mensah', '+233 24 000 0003', 'Airport Residential, Accra', 'reviewer', true, true),
-('nurse.ama@arc.com', 'nurseama', '$2b$10$hash', 'Ama', 'Osei', '+233 24 000 0004', 'Tema, Greater Accra', 'care_giver', true, true),
+('nurse.ama@arc.com', 'nurseama', '$2b$10$hash', 'Ama', 'Osei', '+233 24 000 0004', 'Tema, Greater Accra', 'caregiver', true, true),
 ('patient@example.com', 'patient1', '$2b$10$hash', 'Akosua', 'Asante', '+233 24 000 0005', 'Kumasi, Ashanti Region', 'patient', true, true);
 
 -- Insert sample medical conditions

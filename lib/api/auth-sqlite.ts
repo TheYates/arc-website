@@ -303,7 +303,7 @@ export function getUsersByRoleCount(role: string): number {
 
 // Get caregivers for assignment
 export function getCaregivers(): User[] {
-  return getUsersByRole("care_giver");
+  return getUsersByRole("caregiver");
 }
 
 // Get reviewers

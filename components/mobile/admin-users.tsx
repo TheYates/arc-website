@@ -61,7 +61,7 @@ export function AdminUsersMobile({
       super_admin: "bg-purple-100 text-purple-800",
       admin: "bg-red-100 text-red-800",
       reviewer: "bg-blue-100 text-blue-800",
-      care_giver: "bg-green-100 text-green-800",
+      caregiver: "bg-green-100 text-green-800",
       patient: "bg-gray-100 text-gray-800",
     };
     return <Badge className={map[role]}>{role.replace("_", " ")}</Badge>;
@@ -104,7 +104,7 @@ export function AdminUsersMobile({
             <SelectItem value="super_admin">Super Admin</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
             <SelectItem value="reviewer">Reviewer</SelectItem>
-            <SelectItem value="care_giver">Care Giver</SelectItem>
+            <SelectItem value="caregiver">Care Giver</SelectItem>
           </SelectContent>
         </Select>
       </div>

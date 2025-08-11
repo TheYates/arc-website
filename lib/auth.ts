@@ -7,7 +7,7 @@ export type UserRole =
   | "super_admin"
   | "admin"
   | "reviewer"
-  | "care_giver"
+  | "caregiver"
   | "patient";
 
 export interface User {
@@ -22,6 +22,8 @@ export interface User {
   isEmailVerified: boolean;
   isActive: boolean;
   profileComplete: boolean;
+  mustChangePassword?: boolean;
+  passwordChangedAt?: string;
   createdAt: string;
   updatedAt: string;
   lastLogin?: string;
@@ -34,6 +36,7 @@ interface AuthContextType {
     password: string
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -90,6 +93,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = "/login";
   };
 
+  const refreshUser = async () => {
+    console.log("🔄 Refreshing user data...");
+    if (!user) return;
+
+    try {
+      // Re-fetch user data to get updated mustChangePassword flag
+      const response = await fetch(`/api/auth/user/${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        const updatedUser = { ...user, ...data.user };
+        setUser(updatedUser);
+        localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+        console.log("✅ User data refreshed:", { mustChangePassword: updatedUser.mustChangePassword });
+      }
+    } catch (error) {
+      console.error("❌ Failed to refresh user data:", error);
+    }
+  };
+
   const loginUser = async (emailOrUsername: string, password: string) => {
     console.log("🔐 Auth context loginUser called:", { emailOrUsername });
     setIsLoading(true);
@@ -132,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         login: loginUser,
         logout,
+        refreshUser,
         isLoading,
       },
     },
@@ -179,7 +202,7 @@ export function hasPermission(
       "caregiver_management",
     ],
     reviewer: ["medical_review", "patient_management", "reports"],
-    care_giver: ["patient_management", "activity_logging", "care_plans"],
+    caregiver: ["patient_management", "activity_logging", "care_plans"],
     patient: ["view_care_plan", "view_activities"],
   };
 

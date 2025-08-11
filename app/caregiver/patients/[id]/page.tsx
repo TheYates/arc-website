@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import {
@@ -10,7 +10,7 @@ import {
   recordMedicationAdministrationClient,
 } from "@/lib/api/client";
 import { getVitalSigns, createVitalSigns } from "@/lib/api/vitals";
-import { getMedicalReviews } from "@/lib/api/medical-reviews";
+import { getMedicalReviews } from "@/lib/api/medical-reviews-client";
 import { Patient } from "@/lib/types/patients";
 import { Medication, MedicationAdministration } from "@/lib/types/medications";
 import { VitalSigns } from "@/lib/types/vitals";
@@ -75,11 +75,12 @@ interface PageProps {
 
 export default function CaregiverPatientDetailPage({ params }: PageProps) {
   const resolvedParams = React.use(params);
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMedicalDataLoading, setIsMedicalDataLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
   // Medical data states
@@ -104,35 +105,35 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
   });
 
   const isCaregiver =
-    user?.role === "care_giver" || user?.role === "super_admin";
+    user?.role === "caregiver" || user?.role === "super_admin";
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
   useEffect(() => {
-    if (!user || (user.role !== "care_giver" && user.role !== "super_admin")) {
+    // Wait for auth to finish loading before making redirect decisions
+    if (authLoading) return;
+
+    if (!user || (user.role !== "caregiver" && user.role !== "super_admin")) {
       router.push("/login");
       return;
     }
 
-    const fetchData = async () => {
+    const fetchPatientData = async () => {
+      const startTime = performance.now();
+      console.log('🚀 Starting caregiver patient data fetch for ID:', resolvedParams.id);
+
       try {
+        // Fetch patient data first (needed for header) - this shows immediately
+        const patientStart = performance.now();
         const patientData = await getPatientByIdClient(resolvedParams.id);
+        const patientEnd = performance.now();
+        console.log(`👤 Patient data fetched in ${(patientEnd - patientStart).toFixed(2)}ms`);
+
         setPatient(patientData);
+        setIsLoading(false); // Show patient info immediately
 
         if (patientData) {
-          // Load medical data
-          const medicationsData = await getMedicationsClient(resolvedParams.id);
-          setMedications(medicationsData);
-
-          const administrationsData = await getMedicationAdministrationsClient(
-            resolvedParams.id
-          );
-          setAdministrations(administrationsData);
-
-          const vitalsData = getVitalSigns(resolvedParams.id);
-          setVitals(vitalsData);
-
-          const reviewsData = getMedicalReviews(resolvedParams.id);
-          setMedicalReviews(reviewsData);
+          // Fetch medical data in background
+          fetchMedicalData(resolvedParams.id, startTime);
         }
       } catch (error) {
         console.error("Error fetching patient:", error);
@@ -141,15 +142,63 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
           description: "Failed to load patient data",
           variant: "destructive",
         });
-      } finally {
         setIsLoading(false);
       }
     };
 
-    fetchData();
+    const fetchMedicalData = async (patientId: string, startTime: number) => {
+      try {
+        // Fetch all medical data in parallel for better performance
+        const parallelStart = performance.now();
+        console.log('📊 Starting parallel medical data fetch...');
+
+        const [medicationsData, administrationsData, vitalsData, reviewsData] = await Promise.all([
+          getMedicationsClient(patientId),
+          getMedicationAdministrationsClient(patientId),
+          Promise.resolve(getVitalSigns(patientId)), // Wrap sync function
+          getMedicalReviews(patientId)
+        ]);
+
+        const parallelEnd = performance.now();
+        console.log(`📊 All parallel medical data fetched in ${(parallelEnd - parallelStart).toFixed(2)}ms`);
+
+        // Set all data at once to minimize re-renders
+        setMedications(medicationsData);
+        setAdministrations(administrationsData);
+        setVitals(vitalsData);
+        setMedicalReviews(reviewsData as unknown as MedicalReview[]);
+
+        const totalEnd = performance.now();
+        console.log(`✅ Total caregiver page load time: ${(totalEnd - startTime).toFixed(2)}ms`);
+      } catch (error) {
+        console.error("Error fetching medical data:", error);
+        toast({
+          title: "Warning",
+          description: "Some medical data failed to load",
+          variant: "destructive",
+        });
+      } finally {
+        setIsMedicalDataLoading(false);
+      }
+    };
+
+    fetchPatientData();
   }, [resolvedParams.id, user, router, toast]);
 
-  const handleVitalsSaved = () => {
+  // Memoized computed values for better performance
+  const activeMedications = useMemo(() => {
+    return medications.filter(med => med.isActive);
+  }, [medications]);
+
+  const recentVitals = useMemo(() => {
+    return vitals.slice(0, 5); // Show only recent 5 vitals
+  }, [vitals]);
+
+  const pendingAdministrations = useMemo(() => {
+    return administrations.filter(admin => admin.status === 'pending');
+  }, [administrations]);
+
+  const handleVitalsSaved = useCallback(() => {
     const updatedVitals = getVitalSigns(resolvedParams.id);
     setVitals(updatedVitals);
     setShowVitalsForm(false);
@@ -157,10 +206,10 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
       title: "Success",
       description: "Vital signs recorded successfully",
     });
-  };
+  }, [resolvedParams.id, toast]);
 
-  // Helper function to get the latest administration for a medication
-  const getLatestAdministration = (medicationId: string) => {
+  // Memoized helper function to get the latest administration for a medication
+  const getLatestAdministration = useCallback((medicationId: string) => {
     const medicationAdministrations = (administrations || []).filter(
       (admin) => admin.medicationId === medicationId
     );
@@ -171,7 +220,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
         new Date(b.actualTime || b.scheduledTime).getTime() -
         new Date(a.actualTime || a.scheduledTime).getTime()
     )[0];
-  };
+  }, [administrations]);
 
   // Helper function to get administration status badge
   const getAdministrationStatusBadge = (status: string) => {
@@ -276,7 +325,8 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
     }
   };
 
-  if (isLoading) {
+  // Show loading while auth is loading or data is loading
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <RoleHeader role="caregiver" />
@@ -335,7 +385,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
             <Avatar className="h-16 w-16">
-              <AvatarFallback className="bg-teal-100 text-teal-600 text-xl">
+              <AvatarFallback className="bg-purple-100 text-purple-600 text-xl">
                 {patient.firstName?.charAt(0)}
                 {patient.lastName?.charAt(0)}
               </AvatarFallback>
@@ -348,34 +398,44 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                 <Badge variant="outline" className="capitalize">
                   {patient.careLevel || "Standard"} Care
                 </Badge>
-                <Badge className="bg-teal-100 text-teal-800 capitalize">
+                <Badge className="bg-purple-100 text-purple-800 capitalize">
                   {patient.status || "Active"}
                 </Badge>
               </div>
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div className="flex space-x-6 text-center">
-            <div>
-              <p className="text-2xl font-bold text-green-600">
-                {(vitals || []).length}
+          {/* Quick Assessment Info */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div className="border border-gray-700 p-3 rounded-lg">
+              <p className="text-lg font-bold">
+                {patient.dateOfBirth
+                  ? Math.floor((new Date().getTime() - new Date(patient.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
+                  : "N/A"
+                }
               </p>
-              <p className="text-sm text-muted-foreground">Vitals Recorded</p>
+              <p className="text-xs text-muted-foreground">Age (Years)</p>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-blue-600">
-                {(medications || []).filter((m) => m.isActive).length}
+            <div className="border border-gray-700 p-3 rounded-lg">
+              <p className="text-lg font-bold">
+                {patient.bloodType || "N/A"}
               </p>
-              <p className="text-sm text-muted-foreground">
-                Active Medications
-              </p>
+              <p className="text-xs text-muted-foreground">Blood Type</p>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-orange-600">
-                {(medicalReviews || []).length}
+            <div className="border border-gray-700 p-3 rounded-lg">
+              <p className="text-lg font-bold">
+                {patient.gender || "N/A"}
               </p>
-              <p className="text-sm text-muted-foreground">Medical Reviews</p>
+              <p className="text-xs text-muted-foreground">Gender</p>
+            </div>
+            <div className="border border-gray-700 p-3 rounded-lg">
+              <p className="text-lg font-bold">
+                {patient.heightCm && patient.weightKg
+                  ? `${patient.heightCm}cm / ${patient.weightKg}kg`
+                  : "N/A"
+                }
+              </p>
+              <p className="text-xs text-muted-foreground">Height / Weight</p>
             </div>
           </div>
         </div>
@@ -395,6 +455,69 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Vitals Recorded
+                  </CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{vitals.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {vitals.length > 0
+                      ? `Last recorded ${formatDate(new Date(vitals[0].recordedAt))}`
+                      : "No vitals recorded"}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Active Medications
+                  </CardTitle>
+                  <Pill className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  {isMedicalDataLoading ? (
+                    <div className="space-y-2">
+                      <div className="h-8 bg-gray-200 rounded animate-pulse w-16"></div>
+                      <div className="h-3 bg-gray-200 rounded animate-pulse w-24"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">{(medications || []).filter((m) => m.isActive).length}</div>
+                      <p className="text-xs text-muted-foreground">
+                        {(medications || []).filter((m) => m.isActive).length > 0
+                          ? "Currently prescribed"
+                          : "No active medications"}
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Medical Reviews
+                  </CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{medicalReviews.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {medicalReviews.length > 0
+                      ? `Last review ${formatDate(new Date(medicalReviews[0].createdAt))}`
+                      : "No reviews yet"}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Patient Information */}
               <Card>
@@ -655,7 +778,14 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                 </p>
               </CardHeader>
               <CardContent>
-                {(medications || []).filter((m) => m.isActive).length > 0 ? (
+                {isMedicalDataLoading ? (
+                  <div className="space-y-4">
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3"></div>
+                    <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ) : (medications || []).filter((m) => m.isActive).length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
@@ -874,11 +1004,11 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                               : "outline"
                           }
                           className={
-                            review.priority === "urgent"
+                            review.priority === "high"
                               ? "bg-red-100 text-red-800"
-                              : review.priority === "high"
-                              ? "bg-orange-100 text-orange-800"
                               : review.priority === "medium"
+                              ? "bg-orange-100 text-orange-800"
+                              : review.priority === "low"
                               ? "bg-yellow-100 text-yellow-800"
                               : "bg-gray-100 text-gray-800"
                           }

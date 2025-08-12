@@ -69,6 +69,31 @@ export default function AhenefiePage() {
         if (result.success && result.data) {
           setAhenefieService(result.data);
           console.log("Using dynamic data from admin");
+          console.log("Service data:", result.data);
+
+          // Debug pricing for optional items
+          const flattenItems = (items: any[]): any[] => {
+            let result: any[] = [];
+            items.forEach((item: any) => {
+              result.push(item);
+              if (item.children) {
+                result = result.concat(flattenItems(item.children));
+              }
+            });
+            return result;
+          };
+
+          const allItems = flattenItems(result.data.items || []);
+          const optionalItems = allItems.filter((item) => item.isOptional);
+          console.log(
+            "Optional items with pricing:",
+            optionalItems.map((item) => ({
+              name: item.name,
+              basePrice: item.basePrice,
+              type: typeof item.basePrice,
+              condition: item.basePrice && item.basePrice > 0,
+            }))
+          );
         } else {
           setError("No service data found");
           console.log("No dynamic data found");
@@ -289,7 +314,7 @@ export default function AhenefiePage() {
         <div className="absolute inset-0">
           <img
             className="absolute inset-0 w-full h-full object-cover"
-            src="https://images.pexels.com/photos/339620/pexels-photo-339620.jpeg"
+            src="/ahenefie.webp"
             alt="Professional home healthcare nurse caring for elderly patient"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-teal-900/30 to-blue-900/50"></div>

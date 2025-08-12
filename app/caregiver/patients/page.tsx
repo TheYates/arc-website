@@ -552,10 +552,10 @@ export default function CaregiverPatientsPage() {
 
                   {/* Service */}
                   <div className="p-2 bg-purple-50 rounded">
-                    <p className="text-xs text-purple-600 font-medium">Service</p>
-                    <p className="text-sm text-purple-800">
-                      Care Service
+                    <p className="text-xs text-purple-600 font-medium">
+                      Service
                     </p>
+                    <p className="text-sm text-purple-800">Care Service</p>
                   </div>
 
                   {/* Action Buttons */}

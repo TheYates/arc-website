@@ -42,6 +42,7 @@ model User {
   symptomReportsCreated      SymptomReport[]       @relation("SymptomReportCreatedBy")
   symptomReportsReviewed     SymptomReport[]       @relation("SymptomReportReviewedBy")
   medicalSupplyRequestsApproved MedicalSupplyRequest[] @relation("MedicalSupplyRequestApprovedBy")
+  careNotesAuthored          CareNote[]            @relation("CareNoteAuthor")
 
   @@map("users")
 }
@@ -80,6 +81,7 @@ model Patient {
   medicalReviews            MedicalReview[]
   symptomReports            SymptomReport[]
   medicalSupplyRequests     MedicalSupplyRequest[]
+  careNotes                 CareNote[]
 
   @@map("patients")
 }
@@ -334,6 +336,37 @@ model MedicalSupplyRequest {
   @@map("medical_supply_requests")
 }
 
+model CareNote {
+  id                String        @id @default(uuid())
+  patientId         String        @map("patient_id")
+  authorId          String        @map("author_id")
+  noteType          CareNoteType  @default(GENERAL) @map("note_type")
+  title             String
+  content           String
+  priority          Priority      @default(MEDIUM)
+  status            CareNoteStatus @default(SUBMITTED)
+  tags              String[]
+  isPrivate         Boolean       @default(false) @map("is_private")
+  followUpRequired  Boolean       @default(false) @map("follow_up_required")
+  followUpDate      DateTime?     @map("follow_up_date") @db.Date
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  author  User    @relation("CareNoteAuthor", fields: [authorId], references: [id])
+
+  // Indexes for better query performance
+  @@index([patientId])
+  @@index([authorId])
+  @@index([noteType])
+  @@index([status])
+  @@index([createdAt])
+  @@index([patientId, noteType])
+  @@index([patientId, authorId])
+  @@map("care_notes")
+}
+
 model Service {
   id               String        @id @default(uuid())
   name             String
@@ -526,4 +559,21 @@ enum ServiceCategory {
   NANNY     @map("nanny")
   EMERGENCY @map("emergency")
   CUSTOM    @map("custom")
+}
+
+enum CareNoteType {
+  GENERAL       @map("general")
+  MEDICATION    @map("medication")
+  VITALS        @map("vitals")
+  BEHAVIOR      @map("behavior")
+  INCIDENT      @map("incident")
+  CARE_PLAN     @map("care_plan")
+  COMMUNICATION @map("communication")
+}
+
+enum CareNoteStatus {
+  DRAFT     @map("draft")
+  SUBMITTED @map("submitted")
+  REVIEWED  @map("reviewed")
+  ARCHIVED  @map("archived")
 }

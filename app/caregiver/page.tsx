@@ -274,6 +274,92 @@ export default function CaregiverPage() {
 
         {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* My Patients for Care */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Users className="h-5 w-5 mr-2 text-teal-600" />
+                  My Patients for Care
+                </div>
+                <Badge variant="outline">{assignedPatients.length}/8</Badge>
+              </CardTitle>
+              <CardDescription>Patients assigned to your care</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingPatients ? (
+                <div className="flex justify-center py-8">
+                  <div className="space-y-4 w-full max-w-md">
+                    <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+                  </div>
+                </div>
+              ) : assignedPatients.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">
+                    No patients assigned for care yet
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Your supervisor will assign patients to you
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {assignedPatients.slice(0, 3).map((patient) => (
+                    <div
+                      key={patient.id}
+                      className="flex items-center justify-between p-3 hover:bg-accent/50 rounded-lg border border-transparent hover:border-accent cursor-pointer transition-all duration-200"
+                      onClick={() =>
+                        router.push(`/caregiver/patients/${patient.id}`)
+                      }
+                    >
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 bg-teal-100 rounded-full flex items-center justify-center">
+                          <User className="h-5 w-5 text-teal-600" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="font-medium text-foreground">
+                            {patient.firstName} {patient.lastName}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {patient.serviceName || "General Care"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge
+                          variant="outline"
+                          className={
+                            patient.careLevel === "high"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : patient.careLevel === "medium"
+                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : "bg-green-50 text-green-700 border-green-200"
+                          }
+                        >
+                          {patient.careLevel || "standard"}
+                        </Badge>
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  ))}
+                  {assignedPatients.length > 3 && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      size="sm"
+                      onClick={() => router.push("/caregiver/patients")}
+                    >
+                      View All {assignedPatients.length} Patients
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Today's Schedule */}
           <Card className="lg:col-span-2">
             <CardHeader>

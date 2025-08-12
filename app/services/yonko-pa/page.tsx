@@ -303,7 +303,7 @@ export default function YonkoPaPage() {
         <div className="absolute inset-0">
           <img
             className="absolute inset-0 w-full h-full object-cover"
-            src="https://images.pexels.com/photos/69096/pexels-photo-69096.jpeg"
+            src="/yonko pa.webp"
             alt="Flexible childcare and visit-on-request services"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/30 to-cyan-900/30"></div>

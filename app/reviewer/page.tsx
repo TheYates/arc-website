@@ -271,42 +271,38 @@ export default function ReviewerPage() {
                   {assignedPatients.slice(0, 3).map((patient) => (
                     <div
                       key={patient.id}
-                      className="flex items-center justify-between p-3 hover:accent rounded-lg"
+                      className="flex items-center justify-between p-3 hover:bg-accent/50 rounded-lg border border-transparent hover:border-accent cursor-pointer transition-all duration-200"
+                      onClick={() =>
+                        router.push(`/reviewer/patients/${patient.id}`)
+                      }
                     >
                       <div className="flex items-center">
                         <div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
                           <User className="h-5 w-5 text-purple-600" />
                         </div>
                         <div className="ml-3">
-                          <p className="font-medium">
+                          <p className="font-medium text-foreground">
                             {patient.firstName} {patient.lastName}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {patient.serviceName}
+                            {patient.serviceName || "General Care"}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge
+                          variant="outline"
                           className={
                             patient.careLevel === "high"
-                              ? "bg-red-100 text-red-800"
+                              ? "bg-red-50 text-red-700 border-red-200"
                               : patient.careLevel === "medium"
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-green-100 text-green-800"
+                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : "bg-green-50 text-green-700 border-green-200"
                           }
                         >
-                          {patient.careLevel}
+                          {patient.careLevel || "standard"}
                         </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            router.push(`/reviewer/patients/${patient.id}`)
-                          }
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <Eye className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </div>
                   ))}

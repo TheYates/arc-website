@@ -327,7 +327,7 @@ export default function AdamfoPaPage() {
         <div className="absolute inset-0">
           <img
             className="absolute inset-0 w-full h-full object-cover"
-            src="https://images.pexels.com/photos/5721555/pexels-photo-5721555.jpeg"
+            src="/adamfo pa.webp"
             alt="Professional medical visit and daily care services"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 to-indigo-900/30"></div>

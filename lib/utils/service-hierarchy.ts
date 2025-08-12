@@ -32,9 +32,7 @@ export const buildServiceHierarchy = (
       description: item.description || "",
       level: item.level,
       isOptional: !item.isRequired,
-      basePrice: Number(
-        item.priceDaily || item.priceMonthly || item.priceHourly || 0
-      ),
+      basePrice: Number(item.basePrice || 0),
       children: buildServiceHierarchy(items, item.id), // Recursively build children
     }));
 };
@@ -49,12 +47,7 @@ export const transformServiceToHierarchical = (service: any) => {
     id: service.id,
     name: service.name,
     description: service.description || "",
-    basePrice: Number(
-      service.basePriceDaily ||
-        service.basePriceMonthly ||
-        service.basePriceHourly ||
-        0
-    ),
+    basePrice: Number(service.basePrice || 0),
     items: service.serviceItems
       ? buildServiceHierarchy(service.serviceItems, null)
       : [],

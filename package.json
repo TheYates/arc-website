@@ -34,6 +34,12 @@
     "test:assignments": "node scripts/test-assignment-api.js",
     "test:staff": "node scripts/test-staff-api.js",
     "test:reviewer-assignment": "node scripts/test-reviewer-assignment.js",
+    "reset:admin-password": "node scripts/reset-admin-password.js",
+    "update:service-pricing": "node scripts/update-service-pricing.js",
+    "check:service-pricing": "node scripts/check-service-pricing.js",
+    "test:api-response": "node scripts/test-api-response.js",
+    "test:frontend-api": "node scripts/test-frontend-api.js",
+    "test:hierarchy-fix": "node scripts/test-hierarchy-fix.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

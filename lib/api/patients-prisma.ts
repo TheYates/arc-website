@@ -1,31 +1,37 @@
-import { prisma } from '@/lib/database/postgresql'
-import { Patient, User, CareLevel, PatientStatus, Gender } from '@prisma/client'
+import { prisma } from "@/lib/database/postgresql";
+import {
+  Patient,
+  User,
+  CareLevel,
+  PatientStatus,
+  Gender,
+} from "@prisma/client";
 
 export interface CreatePatientData {
-  userId: string
-  dateOfBirth?: Date
-  gender?: Gender
-  bloodType?: string
-  heightCm?: number
-  weightKg?: number
-  careLevel?: CareLevel
-  status?: PatientStatus
-  emergencyContactName?: string
-  emergencyContactRelationship?: string
-  emergencyContactPhone?: string
-  medicalRecordNumber?: string
-  insuranceProvider?: string
-  insurancePolicyNumber?: string
-  primaryPhysician?: string
-  allergies?: string[]
-  chronicConditions?: string[]
-  currentMedications?: string[]
-  medicalHistory?: string
-  specialInstructions?: string
+  userId: string;
+  dateOfBirth?: Date;
+  gender?: Gender;
+  bloodType?: string;
+  heightCm?: number;
+  weightKg?: number;
+  careLevel?: CareLevel;
+  status?: PatientStatus;
+  emergencyContactName?: string;
+  emergencyContactRelationship?: string;
+  emergencyContactPhone?: string;
+  medicalRecordNumber?: string;
+  insuranceProvider?: string;
+  insurancePolicyNumber?: string;
+  primaryPhysician?: string;
+  allergies?: string[];
+  chronicConditions?: string[];
+  currentMedications?: string[];
+  medicalHistory?: string;
+  specialInstructions?: string;
 }
 
 export interface PatientWithUser extends Patient {
-  user: User
+  user: User;
 }
 
 // Get all patients
@@ -37,18 +43,20 @@ export async function getAllPatients(): Promise<PatientWithUser[]> {
       },
       orderBy: {
         user: {
-          lastName: 'asc',
+          lastName: "asc",
         },
       },
-    })
+    });
   } catch (error) {
-    console.error('Get all patients error:', error)
-    return []
+    console.error("Get all patients error:", error);
+    return [];
   }
 }
 
 // Get patient by ID - optimized for basic patient info only
-export async function getPatientById(id: string): Promise<PatientWithUser | null> {
+export async function getPatientById(
+  id: string
+): Promise<PatientWithUser | null> {
   try {
     return await prisma.patient.findUnique({
       where: { id },
@@ -61,7 +69,7 @@ export async function getPatientById(id: string): Promise<PatientWithUser | null
             email: true,
             phone: true,
             address: true,
-          }
+          },
         },
         caregiverAssignments: {
           where: { isActive: true },
@@ -73,8 +81,8 @@ export async function getPatientById(id: string): Promise<PatientWithUser | null
                 id: true,
                 firstName: true,
                 lastName: true,
-              }
-            }
+              },
+            },
           },
           take: 1, // Only get the active caregiver
         },
@@ -88,21 +96,23 @@ export async function getPatientById(id: string): Promise<PatientWithUser | null
                 id: true,
                 firstName: true,
                 lastName: true,
-              }
-            }
+              },
+            },
           },
           take: 1, // Only get the active reviewer
         },
       },
-    })
+    });
   } catch (error) {
-    console.error('Get patient by ID error:', error)
-    return null
+    console.error("Get patient by ID error:", error);
+    return null;
   }
 }
 
 // Get patient by ID with full details (for admin use)
-export async function getPatientByIdWithDetails(id: string): Promise<PatientWithUser | null> {
+export async function getPatientByIdWithDetails(
+  id: string
+): Promise<PatientWithUser | null> {
   try {
     return await prisma.patient.findUnique({
       where: { id },
@@ -118,41 +128,45 @@ export async function getPatientByIdWithDetails(id: string): Promise<PatientWith
             medication: true,
             prescribedBy: true,
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
         },
         vitalSigns: {
-          orderBy: { recordedDate: 'desc' },
+          orderBy: { recordedDate: "desc" },
           take: 10,
         },
         medicalReviews: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           take: 5,
         },
       },
-    })
+    });
   } catch (error) {
-    console.error('Get patient by ID with details error:', error)
-    return null
+    console.error("Get patient by ID with details error:", error);
+    return null;
   }
 }
 
 // Get patient by user ID
-export async function getPatientByUserId(userId: string): Promise<PatientWithUser | null> {
+export async function getPatientByUserId(
+  userId: string
+): Promise<PatientWithUser | null> {
   try {
     return await prisma.patient.findUnique({
       where: { userId },
       include: {
         user: true,
       },
-    })
+    });
   } catch (error) {
-    console.error('Get patient by user ID error:', error)
-    return null
+    console.error("Get patient by user ID error:", error);
+    return null;
   }
 }
 
 // Create patient
-export async function createPatient(data: CreatePatientData): Promise<Patient | null> {
+export async function createPatient(
+  data: CreatePatientData
+): Promise<Patient | null> {
   try {
     return await prisma.patient.create({
       data: {
@@ -162,8 +176,8 @@ export async function createPatient(data: CreatePatientData): Promise<Patient | 
         bloodType: data.bloodType,
         heightCm: data.heightCm,
         weightKg: data.weightKg,
-        careLevel: data.careLevel || 'MEDIUM',
-        status: data.status || 'STABLE',
+        careLevel: data.careLevel || "MEDIUM",
+        status: data.status || "STABLE",
         emergencyContactName: data.emergencyContactName,
         emergencyContactRelationship: data.emergencyContactRelationship,
         emergencyContactPhone: data.emergencyContactPhone,
@@ -177,23 +191,26 @@ export async function createPatient(data: CreatePatientData): Promise<Patient | 
         medicalHistory: data.medicalHistory,
         specialInstructions: data.specialInstructions,
       },
-    })
+    });
   } catch (error) {
-    console.error('Create patient error:', error)
-    return null
+    console.error("Create patient error:", error);
+    return null;
   }
 }
 
 // Update patient
-export async function updatePatient(id: string, data: Partial<CreatePatientData>): Promise<Patient | null> {
+export async function updatePatient(
+  id: string,
+  data: Partial<CreatePatientData>
+): Promise<Patient | null> {
   try {
     return await prisma.patient.update({
       where: { id },
       data,
-    })
+    });
   } catch (error) {
-    console.error('Update patient error:', error)
-    return null
+    console.error("Update patient error:", error);
+    return null;
   }
 }
 
@@ -202,16 +219,18 @@ export async function deletePatient(id: string): Promise<boolean> {
   try {
     await prisma.patient.delete({
       where: { id },
-    })
-    return true
+    });
+    return true;
   } catch (error) {
-    console.error('Delete patient error:', error)
-    return false
+    console.error("Delete patient error:", error);
+    return false;
   }
 }
 
 // Get patients by caregiver
-export async function getPatientsByCaregiver(caregiverId: string): Promise<PatientWithUser[]> {
+export async function getPatientsByCaregiver(
+  caregiverId: string
+): Promise<PatientWithUser[]> {
   try {
     return await prisma.patient.findMany({
       where: {
@@ -224,21 +243,35 @@ export async function getPatientsByCaregiver(caregiverId: string): Promise<Patie
       },
       include: {
         user: true,
+        caregiverAssignments: {
+          where: { isActive: true },
+          include: {
+            caregiver: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         user: {
-          lastName: 'asc',
+          lastName: "asc",
         },
       },
-    })
+    });
   } catch (error) {
-    console.error('Get patients by caregiver error:', error)
-    return []
+    console.error("Get patients by caregiver error:", error);
+    return [];
   }
 }
 
 // Get patients by reviewer
-export async function getPatientsByReviewer(reviewerId: string): Promise<PatientWithUser[]> {
+export async function getPatientsByReviewer(
+  reviewerId: string
+): Promise<PatientWithUser[]> {
   try {
     return await prisma.patient.findMany({
       where: {
@@ -251,21 +284,36 @@ export async function getPatientsByReviewer(reviewerId: string): Promise<Patient
       },
       include: {
         user: true,
+        reviewerAssignments: {
+          where: { isActive: true },
+          include: {
+            reviewer: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         user: {
-          lastName: 'asc',
+          lastName: "asc",
         },
       },
-    })
+    });
   } catch (error) {
-    console.error('Get patients by reviewer error:', error)
-    return []
+    console.error("Get patients by reviewer error:", error);
+    return [];
   }
 }
 
 // Assign caregiver to patient
-export async function assignCaregiverToPatient(caregiverId: string, patientId: string): Promise<boolean> {
+export async function assignCaregiverToPatient(
+  caregiverId: string,
+  patientId: string
+): Promise<boolean> {
   try {
     await prisma.caregiverAssignment.upsert({
       where: {
@@ -282,16 +330,19 @@ export async function assignCaregiverToPatient(caregiverId: string, patientId: s
         patientId,
         isActive: true,
       },
-    })
-    return true
+    });
+    return true;
   } catch (error) {
-    console.error('Assign caregiver error:', error)
-    return false
+    console.error("Assign caregiver error:", error);
+    return false;
   }
 }
 
 // Remove caregiver from patient
-export async function removeCaregiverFromPatient(caregiverId: string, patientId: string): Promise<boolean> {
+export async function removeCaregiverFromPatient(
+  caregiverId: string,
+  patientId: string
+): Promise<boolean> {
   try {
     await prisma.caregiverAssignment.updateMany({
       where: {
@@ -301,16 +352,18 @@ export async function removeCaregiverFromPatient(caregiverId: string, patientId:
       data: {
         isActive: false,
       },
-    })
-    return true
+    });
+    return true;
   } catch (error) {
-    console.error('Remove caregiver error:', error)
-    return false
+    console.error("Remove caregiver error:", error);
+    return false;
   }
 }
 
 // Search patients
-export async function searchPatients(query: string): Promise<PatientWithUser[]> {
+export async function searchPatients(
+  query: string
+): Promise<PatientWithUser[]> {
   try {
     return await prisma.patient.findMany({
       where: {
@@ -319,7 +372,7 @@ export async function searchPatients(query: string): Promise<PatientWithUser[]> 
             user: {
               firstName: {
                 contains: query,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
           },
@@ -327,7 +380,7 @@ export async function searchPatients(query: string): Promise<PatientWithUser[]> 
             user: {
               lastName: {
                 contains: query,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
           },
@@ -335,14 +388,14 @@ export async function searchPatients(query: string): Promise<PatientWithUser[]> 
             user: {
               email: {
                 contains: query,
-                mode: 'insensitive',
+                mode: "insensitive",
               },
             },
           },
           {
             medicalRecordNumber: {
               contains: query,
-              mode: 'insensitive',
+              mode: "insensitive",
             },
           },
         ],
@@ -352,12 +405,12 @@ export async function searchPatients(query: string): Promise<PatientWithUser[]> 
       },
       orderBy: {
         user: {
-          lastName: 'asc',
+          lastName: "asc",
         },
       },
-    })
+    });
   } catch (error) {
-    console.error('Search patients error:', error)
-    return []
+    console.error("Search patients error:", error);
+    return [];
   }
 }

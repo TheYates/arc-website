@@ -11,10 +11,12 @@ import {
 } from "@/lib/api/client";
 import { getVitalSigns, createVitalSigns } from "@/lib/api/vitals";
 import { getMedicalReviews } from "@/lib/api/medical-reviews-client";
+import { getCareNotes } from "@/lib/api/care-notes-client";
 import { Patient } from "@/lib/types/patients";
 import { Medication, MedicationAdministration } from "@/lib/types/medications";
 import { VitalSigns } from "@/lib/types/vitals";
 import { MedicalReview } from "@/lib/types/medical-reviews";
+import { CareNote } from "@/lib/types/care-notes";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,6 +70,10 @@ import { useToast } from "@/hooks/use-toast";
 
 import { PatientSymptomReportForm } from "@/components/medical/patient-symptom-report-form";
 import { CaregiverPatientMobile } from "@/components/mobile/caregiver-patient-detail";
+import {
+  CareNotesForm,
+  CareNotesHistory,
+} from "@/components/medical/care-notes-form";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -90,10 +96,14 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
   >([]);
   const [vitals, setVitals] = useState<VitalSigns[]>([]);
   const [medicalReviews, setMedicalReviews] = useState<MedicalReview[]>([]);
+  const [caregiverNotes, setCaregiverNotes] = useState<CareNote[]>([]);
+  const [reviewerNotes, setReviewerNotes] = useState<CareNote[]>([]);
 
   // UI states
   const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [showSymptomForm, setShowSymptomForm] = useState(false);
+  const [showCaregiverNoteForm, setShowCaregiverNoteForm] = useState(false);
+  const [showReviewerNoteHistory, setShowReviewerNoteHistory] = useState(false);
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [selectedMedication, setSelectedMedication] =
     useState<Medication | null>(null);
@@ -119,14 +129,21 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
 
     const fetchPatientData = async () => {
       const startTime = performance.now();
-      console.log('🚀 Starting caregiver patient data fetch for ID:', resolvedParams.id);
+      console.log(
+        "🚀 Starting caregiver patient data fetch for ID:",
+        resolvedParams.id
+      );
 
       try {
         // Fetch patient data first (needed for header) - this shows immediately
         const patientStart = performance.now();
         const patientData = await getPatientByIdClient(resolvedParams.id);
         const patientEnd = performance.now();
-        console.log(`👤 Patient data fetched in ${(patientEnd - patientStart).toFixed(2)}ms`);
+        console.log(
+          `👤 Patient data fetched in ${(patientEnd - patientStart).toFixed(
+            2
+          )}ms`
+        );
 
         setPatient(patientData);
         setIsLoading(false); // Show patient info immediately
@@ -150,26 +167,45 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
       try {
         // Fetch all medical data in parallel for better performance
         const parallelStart = performance.now();
-        console.log('📊 Starting parallel medical data fetch...');
+        console.log("📊 Starting parallel medical data fetch...");
 
-        const [medicationsData, administrationsData, vitalsData, reviewsData] = await Promise.all([
+        const [
+          medicationsData,
+          administrationsData,
+          vitalsData,
+          reviewsData,
+          caregiverNotesData,
+          reviewerNotesData,
+        ] = await Promise.all([
           getMedicationsClient(patientId),
           getMedicationAdministrationsClient(patientId),
           Promise.resolve(getVitalSigns(patientId)), // Wrap sync function
-          getMedicalReviews(patientId)
+          getMedicalReviews(patientId),
+          getCareNotes(patientId, "caregiver"),
+          getCareNotes(patientId, "reviewer"),
         ]);
 
         const parallelEnd = performance.now();
-        console.log(`📊 All parallel medical data fetched in ${(parallelEnd - parallelStart).toFixed(2)}ms`);
+        console.log(
+          `📊 All parallel medical data fetched in ${(
+            parallelEnd - parallelStart
+          ).toFixed(2)}ms`
+        );
 
         // Set all data at once to minimize re-renders
         setMedications(medicationsData);
         setAdministrations(administrationsData);
         setVitals(vitalsData);
         setMedicalReviews(reviewsData as unknown as MedicalReview[]);
+        setCaregiverNotes(caregiverNotesData);
+        setReviewerNotes(reviewerNotesData);
 
         const totalEnd = performance.now();
-        console.log(`✅ Total caregiver page load time: ${(totalEnd - startTime).toFixed(2)}ms`);
+        console.log(
+          `✅ Total caregiver page load time: ${(totalEnd - startTime).toFixed(
+            2
+          )}ms`
+        );
       } catch (error) {
         console.error("Error fetching medical data:", error);
         toast({
@@ -187,7 +223,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
 
   // Memoized computed values for better performance
   const activeMedications = useMemo(() => {
-    return medications.filter(med => med.isActive);
+    return medications.filter((med) => med.isActive);
   }, [medications]);
 
   const recentVitals = useMemo(() => {
@@ -195,7 +231,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
   }, [vitals]);
 
   const pendingAdministrations = useMemo(() => {
-    return administrations.filter(admin => admin.status === 'pending');
+    return administrations.filter((admin) => admin.status === "pending");
   }, [administrations]);
 
   const handleVitalsSaved = useCallback(() => {
@@ -208,19 +244,41 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
     });
   }, [resolvedParams.id, toast]);
 
-  // Memoized helper function to get the latest administration for a medication
-  const getLatestAdministration = useCallback((medicationId: string) => {
-    const medicationAdministrations = (administrations || []).filter(
-      (admin) => admin.medicationId === medicationId
-    );
-    if (medicationAdministrations.length === 0) return null;
+  const handleCaregiverNoteSaved = useCallback(async () => {
+    try {
+      const updatedNotes = await getCareNotes(resolvedParams.id, "caregiver");
+      setCaregiverNotes(updatedNotes);
+      setShowCaregiverNoteForm(false);
+    } catch (error) {
+      console.error("Error refreshing caregiver notes:", error);
+    }
+  }, [resolvedParams.id]);
 
-    return medicationAdministrations.sort(
-      (a, b) =>
-        new Date(b.actualTime || b.scheduledTime).getTime() -
-        new Date(a.actualTime || a.scheduledTime).getTime()
-    )[0];
-  }, [administrations]);
+  const handleReviewerNotesRefresh = useCallback(async () => {
+    try {
+      const updatedNotes = await getCareNotes(resolvedParams.id, "reviewer");
+      setReviewerNotes(updatedNotes);
+    } catch (error) {
+      console.error("Error refreshing reviewer notes:", error);
+    }
+  }, [resolvedParams.id]);
+
+  // Memoized helper function to get the latest administration for a medication
+  const getLatestAdministration = useCallback(
+    (medicationId: string) => {
+      const medicationAdministrations = (administrations || []).filter(
+        (admin) => admin.medicationId === medicationId
+      );
+      if (medicationAdministrations.length === 0) return null;
+
+      return medicationAdministrations.sort(
+        (a, b) =>
+          new Date(b.actualTime || b.scheduledTime).getTime() -
+          new Date(a.actualTime || a.scheduledTime).getTime()
+      )[0];
+    },
+    [administrations]
+  );
 
   // Helper function to get administration status badge
   const getAdministrationStatusBadge = (status: string) => {
@@ -329,7 +387,6 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <RoleHeader role="caregiver" />
         <div className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-96 w-full" />
@@ -407,33 +464,31 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
 
           {/* Quick Assessment Info */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div className="border border-gray-700 p-3 rounded-lg">
+            <div className=" p-3 rounded-lg">
               <p className="text-lg font-bold">
                 {patient.dateOfBirth
-                  ? Math.floor((new Date().getTime() - new Date(patient.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
-                  : "N/A"
-                }
+                  ? Math.floor(
+                      (new Date().getTime() -
+                        new Date(patient.dateOfBirth).getTime()) /
+                        (1000 * 60 * 60 * 24 * 365.25)
+                    )
+                  : "N/A"}
               </p>
               <p className="text-xs text-muted-foreground">Age (Years)</p>
             </div>
-            <div className="border border-gray-700 p-3 rounded-lg">
-              <p className="text-lg font-bold">
-                {patient.bloodType || "N/A"}
-              </p>
+            <div className=" p-3 rounded-lg">
+              <p className="text-lg font-bold">{patient.bloodType || "N/A"}</p>
               <p className="text-xs text-muted-foreground">Blood Type</p>
             </div>
-            <div className="border border-gray-700 p-3 rounded-lg">
-              <p className="text-lg font-bold">
-                {patient.gender || "N/A"}
-              </p>
+            <div className=" p-3 rounded-lg">
+              <p className="text-lg font-bold">{patient.gender || "N/A"}</p>
               <p className="text-xs text-muted-foreground">Gender</p>
             </div>
-            <div className="border border-gray-700 p-3 rounded-lg">
+            <div className=" p-3 rounded-lg">
               <p className="text-lg font-bold">
                 {patient.heightCm && patient.weightKg
                   ? `${patient.heightCm}cm / ${patient.weightKg}kg`
-                  : "N/A"
-                }
+                  : "N/A"}
               </p>
               <p className="text-xs text-muted-foreground">Height / Weight</p>
             </div>
@@ -446,11 +501,12 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
           onValueChange={setActiveTab}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="vitals">Vitals</TabsTrigger>
             <TabsTrigger value="medications">Medications</TabsTrigger>
-            <TabsTrigger value="medical-notes">Medical Notes</TabsTrigger>
+            <TabsTrigger value="caregiver-notes">Caregiver Notes</TabsTrigger>
+            <TabsTrigger value="reviewer-notes">Reviewer Notes</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -468,7 +524,9 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                   <div className="text-2xl font-bold">{vitals.length}</div>
                   <p className="text-xs text-muted-foreground">
                     {vitals.length > 0
-                      ? `Last recorded ${formatDate(new Date(vitals[0].recordedAt))}`
+                      ? `Last recorded ${formatDate(
+                          new Date(vitals[0].recordedAt)
+                        )}`
                       : "No vitals recorded"}
                   </p>
                 </CardContent>
@@ -489,9 +547,12 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                     </div>
                   ) : (
                     <>
-                      <div className="text-2xl font-bold">{(medications || []).filter((m) => m.isActive).length}</div>
+                      <div className="text-2xl font-bold">
+                        {(medications || []).filter((m) => m.isActive).length}
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        {(medications || []).filter((m) => m.isActive).length > 0
+                        {(medications || []).filter((m) => m.isActive).length >
+                        0
                           ? "Currently prescribed"
                           : "No active medications"}
                       </p>
@@ -508,10 +569,14 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{medicalReviews.length}</div>
+                  <div className="text-2xl font-bold">
+                    {medicalReviews.length}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {medicalReviews.length > 0
-                      ? `Last review ${formatDate(new Date(medicalReviews[0].createdAt))}`
+                      ? `Last review ${formatDate(
+                          new Date(medicalReviews[0].createdAt)
+                        )}`
                       : "No reviews yet"}
                   </p>
                 </CardContent>
@@ -946,131 +1011,82 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
             </Card>
           </TabsContent>
 
-          {/* Medical Notes Tab */}
-          <TabsContent value="medical-notes" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Medical Notes & Reviews</h2>
-              <Button
-                onClick={() => setShowSymptomForm(!showSymptomForm)}
-                className="bg-orange-600 hover:bg-orange-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {showSymptomForm ? "Cancel" : "Report Symptoms"}
-              </Button>
-            </div>
-
-            {showSymptomForm && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Report Patient Symptoms</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PatientSymptomReportForm
+          {/* Caregiver Notes Tab */}
+          <TabsContent value="caregiver-notes" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>
+                      {showCaregiverNoteForm
+                        ? "Create Caregiver Note"
+                        : "Caregiver Notes History"}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {showCaregiverNoteForm
+                        ? "Create a new note for this patient"
+                        : "View previous caregiver notes"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setShowCaregiverNoteForm(!showCaregiverNoteForm)
+                    }
+                  >
+                    {showCaregiverNoteForm ? "View History" : "Create Note"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {showCaregiverNoteForm ? (
+                  <CareNotesForm
                     patientId={resolvedParams.id}
                     patientName={`${patient.firstName} ${patient.lastName}`}
-                    onSave={() => {
-                      setShowSymptomForm(false);
-                      toast({
-                        title: "Success",
-                        description: "Symptom report submitted successfully",
-                      });
-                    }}
-                    onCancel={() => setShowSymptomForm(false)}
+                    authorId={user?.id || ""}
+                    authorName={`${user?.firstName} ${user?.lastName}`}
+                    authorRole="caregiver"
+                    onSave={handleCaregiverNoteSaved}
+                    onCancel={() => setShowCaregiverNoteForm(false)}
                   />
-                </CardContent>
-              </Card>
-            )}
+                ) : (
+                  <CareNotesHistory
+                    notes={caregiverNotes}
+                    currentUserRole="caregiver"
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            {/* Medical Reviews List (Read-only for Caregivers) */}
-            <div className="space-y-4">
-              {(medicalReviews || []).map((review) => (
-                <Card key={review.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">
-                          {review.title}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          by {review.reviewerName} •{" "}
-                          {formatDate(new Date(review.createdAt))}
-                        </p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Badge
-                          variant={
-                            review.status === "completed"
-                              ? "default"
-                              : "outline"
-                          }
-                          className={
-                            review.priority === "high"
-                              ? "bg-red-100 text-red-800"
-                              : review.priority === "medium"
-                              ? "bg-orange-100 text-orange-800"
-                              : review.priority === "low"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-gray-100 text-gray-800"
-                          }
-                        >
-                          {review.priority} priority
-                        </Badge>
-                        <Badge variant="outline" className="capitalize">
-                          {review.status.replace("_", " ")}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div>
-                        <h4 className="font-medium text-sm mb-1">Findings</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {review.findings}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-sm mb-1">Assessment</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {review.assessment}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-sm mb-1">
-                          Recommendations
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {review.recommendations}
-                        </p>
-                      </div>
-                      {review.followUpRequired && review.followUpDate && (
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Clock className="h-4 w-4 text-blue-600" />
-                          <span>
-                            Follow-up required by{" "}
-                            {formatDate(new Date(review.followUpDate))}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {(medicalReviews || []).length === 0 && (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">
-                      No medical reviews yet
+          {/* Reviewer Notes Tab (Read-only for Caregivers) */}
+          <TabsContent value="reviewer-notes" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Reviewer Notes</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      View notes created by medical reviewers (read-only)
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      Medical reviews will appear here when created by reviewers
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReviewerNotesRefresh}
+                  >
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CareNotesHistory
+                  notes={reviewerNotes}
+                  currentUserRole="caregiver"
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 

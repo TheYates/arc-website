@@ -10,13 +10,13 @@ export async function GET(
     const patientsData = await getPatientsByCaregiver(caregiverId);
 
     // Flatten the data structure to match the expected Patient interface
-    const patients = patientsData.map(patient => ({
+    const patients = patientsData.map((patient) => ({
       id: patient.id,
       userId: patient.userId,
       firstName: patient.user.firstName,
       lastName: patient.user.lastName,
       email: patient.user.email,
-      phone: patient.user.phone || '',
+      phone: patient.user.phone || "",
       address: patient.address,
       dateOfBirth: patient.dateOfBirth,
       gender: patient.gender,
@@ -40,6 +40,16 @@ export async function GET(
       assignedDate: patient.assignedDate,
       createdAt: patient.createdAt,
       updatedAt: patient.updatedAt,
+      // Add assignment information for the "Assigned" column
+      assignedCaregiver:
+        patient.caregiverAssignments && patient.caregiverAssignments.length > 0
+          ? {
+              id: patient.caregiverAssignments[0].caregiver.id,
+              name: `${patient.caregiverAssignments[0].caregiver.firstName} ${patient.caregiverAssignments[0].caregiver.lastName}`,
+              assignedAt:
+                patient.caregiverAssignments[0].assignedAt.toISOString(),
+            }
+          : undefined,
     }));
 
     return NextResponse.json({ patients });

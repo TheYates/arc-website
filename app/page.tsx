@@ -25,7 +25,7 @@ export default function HomePage() {
       background: (
         <img
           className="absolute inset-0 w-full h-full object-cover opacity-65 group-hover:opacity-100 transition-opacity duration-300"
-          src="https://images.pexels.com/photos/11187364/pexels-photo-11187364.jpeg"
+          src="https://i2.ppvise.site/gimg/9b8248394a.jpg"
           alt="Home care"
         />
       ),
@@ -41,7 +41,7 @@ export default function HomePage() {
       background: (
         <img
           className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
-          src="ahenefie.jpg"
+          src="/ahenefie.webp"
           alt="Medical visit"
         />
       ),
@@ -57,7 +57,7 @@ export default function HomePage() {
       background: (
         <img
           className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
-          src="https://images.pexels.com/photos/5721555/pexels-photo-5721555.jpeg"
+          src="/adamfo pa.webp"
           alt="Childcare"
         />
       ),
@@ -73,7 +73,7 @@ export default function HomePage() {
       background: (
         <img
           className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
-          src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=400&h=300&fit=crop&crop=center"
+          src="/fie ne fie.webp"
           alt="Flexible childcare"
         />
       ),
@@ -89,7 +89,7 @@ export default function HomePage() {
       background: (
         <img
           className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
-          src="https://images.pexels.com/photos/69096/pexels-photo-69096.jpeg"
+          src="/yonko pa.webp"
           alt="Event medical"
         />
       ),
@@ -105,7 +105,7 @@ export default function HomePage() {
       <section
         className="py-20 relative bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: "url('/hero image.jpg')",
+          backgroundImage: "url('hero (1).webp')",
         }}
       >
         {/* Overlay for better text readability */}
@@ -282,7 +282,7 @@ export default function HomePage() {
                     href="/services/ahenefie"
                     className="hover:text-teal-400"
                   >
-                    AHENEFIE
+                    Ahenefie
                   </Link>
                 </li>
                 <li>
@@ -290,7 +290,7 @@ export default function HomePage() {
                     href="/services/adamfo-pa"
                     className="hover:text-teal-400"
                   >
-                    ADAMFO PA
+                    Adamfo Pa
                   </Link>
                 </li>
                 <li>
@@ -298,7 +298,7 @@ export default function HomePage() {
                     href="/services/fie-ne-fie"
                     className="hover:text-teal-400"
                   >
-                    FIE NE FIE
+                    Fie Ne Fie
                   </Link>
                 </li>
                 <li>
@@ -306,7 +306,7 @@ export default function HomePage() {
                     href="/services/yonko-pa"
                     className="hover:text-teal-400"
                   >
-                    YONKO PA
+                    Yonko Pa
                   </Link>
                 </li>
                 <li>

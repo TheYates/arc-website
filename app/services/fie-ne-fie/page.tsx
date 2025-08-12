@@ -302,7 +302,7 @@ export default function FieNeFiePage() {
         <div className="absolute inset-0">
           <img
             className="absolute inset-0 w-full h-full object-cover"
-            src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9"
+            src="/fie ne fie.webp"
             alt="Professional childcare and nanny services"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-pink-900/30 to-purple-900/30"></div>

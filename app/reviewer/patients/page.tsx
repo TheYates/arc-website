@@ -278,13 +278,27 @@ export default function ReviewerPatientsPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b bg-muted/50">
-                      <th className="px-6 py-4 text-left font-medium">Patient</th>
-                      <th className="px-6 py-4 text-left font-medium">Contact</th>
-                      <th className="px-6 py-4 text-left font-medium">Care Level</th>
-                      <th className="px-6 py-4 text-left font-medium">Status</th>
-                      <th className="px-6 py-4 text-left font-medium">Service</th>
-                      <th className="px-6 py-4 text-left font-medium">Assigned</th>
-                      <th className="px-6 py-4 text-center font-medium">Actions</th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Patient
+                      </th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Contact
+                      </th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Care Level
+                      </th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Status
+                      </th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Service
+                      </th>
+                      <th className="px-6 py-4 text-left font-medium">
+                        Assigned
+                      </th>
+                      <th className="px-6 py-4 text-center font-medium">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

@@ -314,13 +314,9 @@ export function AdminServicesMobile({
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                              {item.basePrice !== undefined && (
-                                <span className="flex items-center">
-                                  <DollarSign className="h-3 w-3 mr-1" />$
-                                  {item.basePrice}
-                                  {item.type === "service" && "/day"}
-                                </span>
-                              )}
+                              <span className="flex items-center invisible">
+                                <DollarSign className="h-3 w-3 mr-1" />0
+                              </span>
                               {item.children && item.children.length > 0 && (
                                 <span className="flex items-center">
                                   <Package className="h-3 w-3 mr-1" />

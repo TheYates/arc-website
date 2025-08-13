@@ -47,7 +47,6 @@ export const transformServiceToHierarchical = (service: any) => {
     id: service.id,
     name: service.name,
     description: service.description || "",
-    basePrice: Number(service.basePrice || 0),
     items: service.serviceItems
       ? buildServiceHierarchy(service.serviceItems, null)
       : [],

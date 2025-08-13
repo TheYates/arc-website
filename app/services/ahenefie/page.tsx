@@ -31,7 +31,6 @@ interface ServiceItem {
   children?: ServiceItem[];
   level: number; // For indentation levels
   isOptional?: boolean; // For optional services
-  basePrice?: number; // For pricing information
 }
 
 interface AhenefieService {
@@ -86,12 +85,10 @@ export default function AhenefiePage() {
           const allItems = flattenItems(result.data.items || []);
           const optionalItems = allItems.filter((item) => item.isOptional);
           console.log(
-            "Optional items with pricing:",
+            "Optional items found:",
             optionalItems.map((item) => ({
               name: item.name,
-              basePrice: item.basePrice,
-              type: typeof item.basePrice,
-              condition: item.basePrice && item.basePrice > 0,
+              level: item.level,
             }))
           );
         } else {
@@ -166,11 +163,6 @@ export default function AhenefiePage() {
                             className="text-orange-600 border-orange-200 bg-orange-50"
                           >
                             Optional
-                            {item.basePrice && item.basePrice > 0 && (
-                              <span className="ml-2 text-green-600 font-medium">
-                                + {formatPrice(item.basePrice)}
-                              </span>
-                            )}
                           </Badge>
                         )}
                       </div>
@@ -212,11 +204,6 @@ export default function AhenefiePage() {
                     className="text-orange-600 border-orange-200 bg-orange-50"
                   >
                     Optional
-                    {item.basePrice && item.basePrice > 0 && (
-                      <span className="ml-2 text-green-600 font-medium">
-                        + {formatPrice(item.basePrice)}
-                      </span>
-                    )}
                   </Badge>
                 )}
               </div>

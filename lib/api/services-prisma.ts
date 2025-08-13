@@ -8,8 +8,6 @@ export interface CreateServiceData {
   description?: string;
   shortDescription?: string;
   category: ServiceCategory;
-  basePrice?: number;
-  priceDisplay?: string;
   isActive?: boolean;
   isPopular?: boolean;
   sortOrder?: number;
@@ -26,8 +24,6 @@ export interface CreateServiceItemData {
   sortOrder?: number;
   level?: number;
   parentId?: string;
-  basePrice?: number;
-  priceDisplay?: string;
 }
 
 export interface ServiceWithItems extends Service {
@@ -65,11 +61,7 @@ export async function getAllServicesWithItems(
           orderBy: [{ level: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
         },
       },
-      orderBy: [
-        { createdAt: "asc" },
-        { sortOrder: "asc" },
-        { name: "asc" },
-      ],
+      orderBy: [{ createdAt: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
     });
   } catch (error) {
     console.error("Get all services with items error:", error);
@@ -152,8 +144,6 @@ export async function createService(
         description: data.description,
         shortDescription: data.shortDescription,
         category: data.category,
-        basePrice: data.basePrice,
-        priceDisplay: data.priceDisplay,
         isActive: data.isActive ?? true,
         isPopular: data.isPopular ?? false,
         sortOrder: data.sortOrder ?? 0,
@@ -228,8 +218,6 @@ export async function createServiceItem(
         sortOrder: data.sortOrder ?? 0,
         level: data.level ?? 1,
         parentId: data.parentId,
-        basePrice: data.basePrice,
-        priceDisplay: data.priceDisplay,
       },
     });
   } catch (error) {

@@ -280,14 +280,7 @@ export function PricingCardView({
                         className={`text-lg ${colors.text} flex items-center gap-2`}
                       >
                         {item.name}
-                        {/* Display base price as text only */}
-                        {item.basePrice && item.basePrice > 0 && (
-                          <span
-                            className={`text-sm font-normal ${colors.text}/70`}
-                          >
-                            Base: {formatPrice(item.basePrice)}
-                          </span>
-                        )}
+                        {/* Removed base price display */}
                       </CardTitle>
                       {item.description && (
                         <p className="text-slate-600 mt-1 text-sm">
@@ -421,16 +414,7 @@ export function PricingCardView({
                         {!item.isRequired && (
                           <span className="text-orange-600 text-xs">
                             Optional
-                            {item.basePrice && item.basePrice > 0 && (
-                              <span className="ml-1 text-green-600">
-                                +{formatPrice(item.basePrice)}
-                              </span>
-                            )}
-                            {(!item.basePrice || item.basePrice === 0) && (
-                              <span className="ml-1 text-gray-500">
-                                +{formatPrice(0)}
-                              </span>
-                            )}
+                            {/* Removed optional price display */}
                           </span>
                         )}
                       </h4>
@@ -534,16 +518,7 @@ export function PricingCardView({
                     {!item.isRequired && (
                       <span className="text-orange-600 text-xs">
                         Optional
-                        {item.basePrice && item.basePrice > 0 && (
-                          <span className="ml-1 text-green-600">
-                            +{formatPrice(item.basePrice)}
-                          </span>
-                        )}
-                        {(!item.basePrice || item.basePrice === 0) && (
-                          <span className="ml-1 text-gray-500">
-                            +{formatPrice(0)}
-                          </span>
-                        )}
+                        {/* Removed optional price display */}
                       </span>
                     )}
                   </h4>

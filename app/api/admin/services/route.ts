@@ -12,11 +12,6 @@ export async function GET() {
       name: service.name,
       description: service.description,
       type: "service",
-      basePrice:
-        service.basePriceDaily ||
-        service.basePriceMonthly ||
-        service.basePriceHourly ||
-        0,
       isRequired: true,
       isRecurring: true,
       parentId: null,

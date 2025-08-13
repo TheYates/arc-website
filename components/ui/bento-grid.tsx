@@ -81,20 +81,6 @@ const BentoCard = ({
           <ArrowRightIcon className="ml-2 h-4 w-4" />
         </a>
       </Button>
-
-      <Button
-        asChild
-        size="sm"
-        className="pointer-events-auto bg-teal-600 hover:bg-teal-700 text-white"
-      >
-        <Link
-          href={`/get-started?service=${name
-            .toLowerCase()
-            .replace(/\s+/g, "-")}`}
-        >
-          Get Started
-        </Link>
-      </Button>
     </div>
     <div className="pointer-events-none absolute inset-0 transform-gpu transition-all duration-300 group-hover:bg-black/[.03] group-hover:dark:bg-neutral-800/10" />
   </div>

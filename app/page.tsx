@@ -24,8 +24,8 @@ export default function HomePage() {
       cta: "Learn more",
       background: (
         <img
-          className="absolute inset-0 w-full h-full object-cover opacity-65 group-hover:opacity-100 transition-opacity duration-300"
-          src="https://i2.ppvise.site/gimg/9b8248394a.jpg"
+          className="absolute inset-0 w-full h-full object-cover  group-hover:opacity-100 transition-opacity duration-300"
+          src="hero image.webp"
           alt="Home care"
         />
       ),
@@ -40,7 +40,7 @@ export default function HomePage() {
       cta: "Learn more",
       background: (
         <img
-          className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
+          className="absolute inset-0 w-full h-full object-cover  group-hover:opacity-100 transition-opacity duration-300"
           src="/ahenefie.webp"
           alt="Medical visit"
         />
@@ -56,7 +56,7 @@ export default function HomePage() {
       cta: "Learn more",
       background: (
         <img
-          className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
+          className="absolute inset-0 w-full h-full object-cover  group-hover:opacity-100 transition-opacity duration-300"
           src="/adamfo pa.webp"
           alt="Childcare"
         />
@@ -72,7 +72,7 @@ export default function HomePage() {
       cta: "Learn more",
       background: (
         <img
-          className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
+          className="absolute inset-0 w-full h-full object-cover  group-hover:opacity-100 transition-opacity duration-300"
           src="/fie ne fie.webp"
           alt="Flexible childcare"
         />
@@ -88,7 +88,7 @@ export default function HomePage() {
       cta: "Learn more",
       background: (
         <img
-          className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity duration-300"
+          className="absolute inset-0 w-full h-full object-cover  group-hover:opacity-100 transition-opacity duration-300"
           src="/yonko pa.webp"
           alt="Event medical"
         />
@@ -109,15 +109,15 @@ export default function HomePage() {
         }}
       >
         {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-black/40"></div>
+        <div className="absolute inset-0"></div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl">
             <div className="text-center lg:text-left">
-              <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
+              <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg">
                 Professional Home <br /> Care & Nanny <br /> Services in Ghana
               </h1>
-              <p className="text-xl mb-8 leading-relaxed text-white/90">
+              <p className="text-xl mb-8 leading-relaxed text-white/95 drop-shadow-md">
                 We provide compassionate, professional care services tailored{" "}
                 <br /> to your family's unique needs across Ghana.
               </p>

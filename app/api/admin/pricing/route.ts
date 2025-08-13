@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { PricingItem } from "@/lib/types/packages";
-import { getAllServicesWithItems, getServiceItems } from "@/lib/api/services-prisma";
+import {
+  getAllServicesWithItems,
+  getServiceItems,
+} from "@/lib/api/services-prisma";
 
 // Ultra-optimized transform function (works with pre-loaded service items)
 const transformServiceToPricingItemUltraOptimized = (
@@ -19,7 +22,6 @@ const transformServiceToPricingItemUltraOptimized = (
         name: item.name,
         description: item.description || "",
         type: item.level === 1 ? "feature" : ("addon" as "feature" | "addon"),
-        basePrice: Number(item.basePrice || 0),
         isRequired: item.isRequired,
         isRecurring: true,
         parentId: item.parentId || serviceWithItems.id,
@@ -38,7 +40,6 @@ const transformServiceToPricingItemUltraOptimized = (
     name: serviceWithItems.name,
     description: serviceWithItems.description || "",
     type: "service",
-    basePrice: Number(serviceWithItems.basePrice || 0),
     isRequired: true,
     isRecurring: true,
     parentId: null,
@@ -69,7 +70,10 @@ export async function GET() {
     });
 
     // Cache for 30 seconds to reduce database load
-    response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=30, stale-while-revalidate=60"
+    );
 
     return response;
   } catch (error) {
@@ -169,7 +173,6 @@ export async function POST(request: Request) {
             sortOrder: index, // Use array index to preserve order
             level: level,
             parentId: parentId || undefined, // Convert null to undefined
-            basePrice: item.basePrice,
           };
 
           let savedItem = null;
@@ -264,7 +267,6 @@ export async function POST(request: Request) {
             name: item.name,
             displayName: item.name,
             description: item.description,
-            basePrice: item.basePrice,
             sortOrder: serviceIndex, // Use array index to preserve service order
             colorTheme: item.colorTheme || "teal",
           };

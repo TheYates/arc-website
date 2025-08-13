@@ -8,7 +8,6 @@ export interface CustomerService {
   name: string;
   slug: string;
   description?: string;
-  basePrice?: number;
   plans: CustomerPlan[];
   category: string;
   isPopular: boolean;
@@ -16,7 +15,6 @@ export interface CustomerService {
     totalPlans: number;
     totalFeatures: number;
     totalAddons: number;
-    startingPrice: number;
   };
 }
 
@@ -24,23 +22,16 @@ export interface CustomerPlan {
   id: string;
   name: string;
   description?: string;
-  basePrice: number;
   isRequired: boolean;
   isRecurring: boolean;
   features: CustomerFeature[];
   sortOrder: number;
-  pricing: {
-    hourly?: number;
-    daily?: number;
-    monthly?: number;
-  };
 }
 
 export interface CustomerFeature {
   id: string;
   name: string;
   description?: string;
-  basePrice: number;
   isRequired: boolean;
   isRecurring: boolean;
   addons: CustomerAddon[];
@@ -51,7 +42,6 @@ export interface CustomerAddon {
   id: string;
   name: string;
   description?: string;
-  price: number;
   isRequired: boolean;
   isRecurring: boolean;
   sortOrder: number;
@@ -96,7 +86,6 @@ const transformToCustomerService = (
   const features: CustomerFeature[] = [];
   let totalFeatures = 0;
   let totalAddons = 0;
-  const serviceBasePrice = adminService.basePrice || 0;
 
   // Process features directly under service
   if (adminService.children) {
@@ -112,7 +101,6 @@ const transformToCustomerService = (
                 id: addonItem.id,
                 name: addonItem.name,
                 description: addonItem.description,
-                price: addonItem.basePrice || 0,
                 isRequired: addonItem.isRequired,
                 isRecurring: addonItem.isRecurring || true,
                 sortOrder: addonItem.sortOrder,
@@ -126,7 +114,6 @@ const transformToCustomerService = (
           id: featureItem.id,
           name: featureItem.name,
           description: featureItem.description,
-          basePrice: featureItem.basePrice || 0,
           isRequired: featureItem.isRequired,
           isRecurring: featureItem.isRecurring || true,
           addons,
@@ -145,16 +132,10 @@ const transformToCustomerService = (
     id: adminService.id + "_plan",
     name: adminService.name + " Service",
     description: adminService.description,
-    basePrice: serviceBasePrice,
     isRequired: true,
     isRecurring: adminService.isRecurring || true,
     features,
     sortOrder: 1,
-    pricing: {
-      daily: serviceBasePrice,
-      monthly: serviceBasePrice * 30,
-      hourly: serviceBasePrice / 24,
-    },
   };
 
   return {
@@ -162,7 +143,6 @@ const transformToCustomerService = (
     name: adminService.name,
     slug: adminService.name.toLowerCase().replace(/\s+/g, "-"),
     description: adminService.description,
-    basePrice: serviceBasePrice,
     plans: [servicePlan], // Single plan representing the service
     category: "home_care", // Default category, could be inferred from service name
     isPopular: false, // Could be determined by admin flags
@@ -170,7 +150,6 @@ const transformToCustomerService = (
       totalPlans: 1, // Always 1 since we create one plan per service
       totalFeatures,
       totalAddons,
-      startingPrice: serviceBasePrice,
     },
   };
 };
@@ -195,32 +174,25 @@ export async function GET(
       name: service.name,
       slug: service.slug,
       description: service.description || undefined,
-      basePrice: Number(
-        service.basePriceDaily ||
-          service.basePriceMonthly ||
-          service.basePriceHourly ||
-          0
-      ),
       plans: [
         {
           id: `${service.id}-plan`,
           name: `${service.name} Plan`,
           description:
             service.description || `Complete ${service.name} package`,
-          basePrice: Number(
-            service.basePriceDaily ||
-              service.basePriceMonthly ||
-              service.basePriceHourly ||
-              0
-          ),
           features:
-            service.serviceItems?.map((item) => ({
+            service.serviceItems?.map((item, index) => ({
               id: item.id,
               name: item.name,
               description: item.description || "",
-              isIncluded: item.isRequired,
+              isRequired: item.isRequired,
+              isRecurring: true,
               addons: [],
+              sortOrder: item.sortOrder ?? index,
             })) || [],
+          sortOrder: 1,
+          isRequired: true,
+          isRecurring: true,
         },
       ],
       category: service.category.toLowerCase(),
@@ -229,12 +201,6 @@ export async function GET(
         totalPlans: 1,
         totalFeatures: service.serviceItems?.length || 0,
         totalAddons: 0,
-        startingPrice: Number(
-          service.basePriceDaily ||
-            service.basePriceMonthly ||
-            service.basePriceHourly ||
-            0
-        ),
       },
     };
 

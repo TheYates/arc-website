@@ -152,25 +152,9 @@ export default function PricingItemFormModal({
     setLoading(true);
 
     try {
-      // Validation: Services must have a base price > 0
-      if (
-        formData.type === "service" &&
-        (!formData.basePrice || formData.basePrice <= 0)
-      ) {
-        alert("Services must have a base price greater than 0");
-        setLoading(false);
-        return;
-      }
-
+      // Ignore pricing; keep layout but do not submit any price values
       const finalFormData = {
         ...formData,
-        // Set basePrice based on item type
-        basePrice:
-          formData.type === "service"
-            ? formData.basePrice // Services have base price
-            : isOptional
-            ? optionalPrice
-            : 0, // Features/Add-ons use optional pricing
         // Set isRequired based on optional status (for features/add-ons)
         isRequired:
           formData.type === "service"
@@ -314,36 +298,7 @@ export default function PricingItemFormModal({
           {/* Base Price - For Services Only */}
           {formData.type === "service" && (
             <div className="space-y-2">
-              <Label htmlFor="basePrice">
-                Base Price (GHS) *
-                {formData.type === "service" && (
-                  <span className="text-xs text-slate-500 ml-1">
-                    (Starting price for this service)
-                  </span>
-                )}
-              </Label>
-              <Input
-                id="basePrice"
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={formData.basePrice || 0}
-                onChange={(e) =>
-                  handleInputChange(
-                    "basePrice",
-                    parseFloat(e.target.value) || 0
-                  )
-                }
-                placeholder="0.00"
-                required
-              />
-              {formData.type === "service" && (
-                <p className="text-xs text-slate-600">
-                  This is the base price customers will pay for this service.
-                  Optional features and add-ons will be added to this base
-                  price.
-                </p>
-              )}
+              {/* Base price section hidden to remove pricing without affecting layout */}
             </div>
           )}
 
@@ -425,21 +380,7 @@ export default function PricingItemFormModal({
               {/* Optional Price - Only shown when optional is enabled */}
               {isOptional && (
                 <div className="space-y-2">
-                  <Label htmlFor="optionalPrice">
-                    Additional Price (GHS) *
-                  </Label>
-                  <Input
-                    id="optionalPrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={optionalPrice}
-                    onChange={(e) =>
-                      setOptionalPrice(parseFloat(e.target.value) || 0)
-                    }
-                    placeholder="0.00"
-                    required
-                  />
+                  {/* Optional price input hidden to remove pricing without affecting layout */}
                 </div>
               )}
             </div>

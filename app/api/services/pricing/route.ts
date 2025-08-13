@@ -10,14 +10,12 @@ interface ServiceItem {
   children?: ServiceItem[];
   level: number;
   isOptional?: boolean;
-  basePrice?: number;
 }
 
 interface PublicService {
   id: string;
   name: string;
   description?: string;
-  basePrice?: number;
   items: ServiceItem[];
 }
 
@@ -31,7 +29,6 @@ const transformPricingItemToServiceItem = (
     description: item.description,
     level,
     isOptional: !item.isRequired,
-    basePrice: item.basePrice,
     children: item.children
       ? item.children.map((child) =>
           transformPricingItemToServiceItem(child, level + 1)
@@ -58,7 +55,6 @@ const transformToPublicServices = (
           description: item.description || undefined,
           level: item.level,
           isOptional: !item.isRequired,
-          basePrice: Number(item.basePrice || 0),
           children: buildHierarchy(items, item.id), // Recursively build children
         }));
     };
@@ -70,7 +66,6 @@ const transformToPublicServices = (
       id: service.id,
       name: service.name,
       description: service.description || undefined,
-      basePrice: Number(service.basePrice || 0),
       items,
     };
   });
@@ -115,7 +110,10 @@ export async function GET(request: Request) {
     });
 
     // Cache for 5 minutes for public API
-    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=300, stale-while-revalidate=600"
+    );
 
     return response;
   } catch (error) {

@@ -375,8 +375,6 @@ model Service {
   description      String?
   shortDescription String?       @map("short_description")
   category         ServiceCategory
-  basePrice        Decimal?      @map("base_price") @db.Decimal(10, 2)
-  priceDisplay     String?       @map("price_display")
   isActive         Boolean       @default(true) @map("is_active")
   isPopular        Boolean       @default(false) @map("is_popular")
   sortOrder        Int           @default(0) @map("sort_order")
@@ -401,8 +399,6 @@ model ServiceItem {
   sortOrder         Int         @default(0) @map("sort_order")
   level             Int         @default(1)
   parentId          String?     @map("parent_id")
-  basePrice         Decimal?    @map("base_price") @db.Decimal(10, 2)
-  priceDisplay      String?     @map("price_display")
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @default(now()) @updatedAt @map("updated_at")
 

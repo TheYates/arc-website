@@ -462,7 +462,6 @@ export default function AdminPackagesPage() {
               displayName: itemData.name || "",
               description: itemData.description,
               category: "HOME_CARE", // Default category
-              basePrice: itemData.basePrice || 0,
               isActive: true,
               isPopular: false,
               sortOrder: itemData.sortOrder || 0,
@@ -492,7 +491,6 @@ export default function AdminPackagesPage() {
               name: itemData.name || "",
               description: itemData.description,
               type: itemData.type || "feature",
-              basePrice: itemData.basePrice || 0,
               isRequired:
                 itemData.isRequired !== undefined ? itemData.isRequired : true,
               isRecurring:
@@ -646,9 +644,7 @@ export default function AdminPackagesPage() {
             </p>
             <div className="flex items-center gap-2 mt-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-green-600">
-                Database Connected
-              </span>
+              <span className="text-sm text-green-600">Database Connected</span>
             </div>
           </div>
         </div>
@@ -802,9 +798,7 @@ export default function AdminPackagesPage() {
               <div className="flex items-center justify-center py-12">
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 border-2 border-gray-300 border-t-teal-600 rounded-full animate-spin"></div>
-                  <span className="text-gray-600">
-                    Loading services...
-                  </span>
+                  <span className="text-gray-600">Loading services...</span>
                 </div>
               </div>
             ) : (

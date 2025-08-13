@@ -38,7 +38,6 @@ interface ServiceItem {
   description?: string;
   level: number;
   children?: ServiceItem[];
-  basePrice?: number;
   isOptional?: boolean;
   isRecurring?: boolean;
 }
@@ -47,7 +46,6 @@ interface AdamfoPaService {
   id: string;
   name: string;
   description: string;
-  basePrice?: number;
   items: ServiceItem[];
 }
 
@@ -150,11 +148,6 @@ export default function AdamfoPaPage() {
                             className="text-orange-600 border-orange-200 bg-orange-50"
                           >
                             Optional
-                            {item.basePrice && item.basePrice > 0 && (
-                              <span className="ml-2 text-green-600 font-medium">
-                                + {formatPrice(item.basePrice)}
-                              </span>
-                            )}
                           </Badge>
                         )}
                       </div>
@@ -197,11 +190,6 @@ export default function AdamfoPaPage() {
                         className="text-orange-600 border-orange-200 bg-orange-50"
                       >
                         Optional
-                        {item.basePrice && item.basePrice > 0 && (
-                          <span className="ml-2 text-green-600 font-medium">
-                            + {formatPrice(item.basePrice)}
-                          </span>
-                        )}
                       </Badge>
                     )}
                   </div>
@@ -247,16 +235,14 @@ export default function AdamfoPaPage() {
                       <span className="text-slate-700 font-medium">
                         {child.name}
                       </span>
-                      {child.isOptional &&
-                        child.basePrice &&
-                        child.basePrice > 0 && (
-                          <Badge
-                            variant="outline"
-                            className="text-orange-600 border-orange-200 bg-orange-50 text-xs"
-                          >
-                            Optional +{formatPrice(child.basePrice)}
-                          </Badge>
-                        )}
+                      {child.isOptional && (
+                        <Badge
+                          variant="outline"
+                          className="text-orange-600 border-orange-200 bg-orange-50 text-xs"
+                        >
+                          Optional
+                        </Badge>
+                      )}
                     </div>
                     {child.description && (
                       <p className="text-slate-500 text-sm mt-1 leading-relaxed">
@@ -352,7 +338,7 @@ export default function AdamfoPaPage() {
               <div className="flex items-center gap-4 mb-8">
                 <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
                   <span className="text-white font-semibold">
-                    Starting from {formatPrice(adamfoPaService?.basePrice || 0)}
+                    Contact us for pricing
                   </span>
                 </div>
               </div>

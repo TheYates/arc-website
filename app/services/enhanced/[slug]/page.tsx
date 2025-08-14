@@ -234,7 +234,7 @@ export default function EnhancedServicePage() {
                     <div>
                       <div className="flex items-center gap-3 mb-4">
                         <div className="p-3 bg-teal-100 rounded-xl">
-                          <Shield className="h-8 w-8 text-teal-600" />
+                          {/* <Shield className="h-8 w-8 text-teal-600" /> */}
                         </div>
                         <div>
                           <h1 className="text-4xl font-bold text-slate-900">

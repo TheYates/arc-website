@@ -300,11 +300,14 @@ export default function AhenefiePage() {
         {/* Background Image */}
         <div className="absolute inset-0">
           <img
-            className="absolute inset-0 w-full h-full object-cover"
-            src="/ahenefie.webp"
+            className="absolute inset-0 w-full h-full object-contain"
+            style={{
+              transform: "scale(1.5) translateX(0px) translateY(0px)",
+            }}
+            src="/ahenefie wide.webp"
             alt="Professional home healthcare nurse caring for elderly patient"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-teal-900/30 to-blue-900/50"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-teal-900/10 to-cyan-900/30"></div>
         </div>
 
         {/* Content */}
@@ -312,9 +315,8 @@ export default function AhenefiePage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="flex items-center justify-center lg:justify-start space-x-3 mb-6">
-                <Shield className="h-12 w-12 text-teal-300" />
-                <h1 className="text-4xl md:text-5xl font-bold text-white">
-                  {ahenefieService?.name.toUpperCase()}
+                <h1 className="text-4xl md:text-5xl font-bold text-white font-ahenefie">
+                  {ahenefieService?.name}
                 </h1>
               </div>
               <Badge className="bg-white/20 text-white border border-white/30 mb-4">

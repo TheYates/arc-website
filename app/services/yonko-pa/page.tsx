@@ -148,11 +148,6 @@ export default function YonkoPaPage() {
                             className="text-orange-600 border-orange-200 bg-orange-50"
                           >
                             Optional
-                            {item.basePrice && item.basePrice > 0 && (
-                              <span className="ml-2 text-green-600 font-medium">
-                                + {formatPrice(item.basePrice)}
-                              </span>
-                            )}
                           </Badge>
                         )}
                       </div>
@@ -195,11 +190,6 @@ export default function YonkoPaPage() {
                         className="text-orange-600 border-orange-200 bg-orange-50"
                       >
                         Optional
-                        {item.basePrice && item.basePrice > 0 && (
-                          <span className="ml-2 text-green-600 font-medium">
-                            + {formatPrice(item.basePrice)}
-                          </span>
-                        )}
                       </Badge>
                     )}
                   </div>
@@ -245,16 +235,14 @@ export default function YonkoPaPage() {
                       <span className="text-slate-700 font-medium">
                         {child.name}
                       </span>
-                      {child.isOptional &&
-                        child.basePrice &&
-                        child.basePrice > 0 && (
-                          <Badge
-                            variant="outline"
-                            className="text-orange-600 border-orange-200 bg-orange-50 text-xs"
-                          >
-                            Optional +{formatPrice(child.basePrice)}
-                          </Badge>
-                        )}
+                      {child.isOptional && (
+                        <Badge
+                          variant="outline"
+                          className="text-orange-600 border-orange-200 bg-orange-50 text-xs"
+                        >
+                          Optional
+                        </Badge>
+                      )}
                     </div>
                     {child.description && (
                       <p className="text-slate-500 text-sm mt-1 leading-relaxed">
@@ -302,11 +290,12 @@ export default function YonkoPaPage() {
         {/* Background Image */}
         <div className="absolute inset-0">
           <img
-            className="absolute inset-0 w-full h-full object-cover"
-            src="/yonko pa.webp"
+            className="absolute inset-0 w-full h-full object-contain"
+            style={{ transform: "scale(1.7) translateX(0px) translateY(0px)" }}
+            src="/yonko pa 1.png"
             alt="Flexible childcare and visit-on-request services"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/30 to-cyan-900/30"></div>
+          <div className="absolute inset-0 "></div>
         </div>
 
         {/* Content */}
@@ -314,9 +303,9 @@ export default function YonkoPaPage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="flex items-center justify-center lg:justify-start space-x-3 mb-6">
-                <Calendar className="h-12 w-12 text-indigo-300" />
-                <h1 className="text-4xl md:text-5xl font-bold text-white">
-                  {yonkoPaService?.name || "YONKO PA"}
+                {/* <Calendar className="h-12 w-12 text-indigo-300" /> */}
+                <h1 className="text-4xl md:text-5xl font-bold text-white font-yonko-pa">
+                  {yonkoPaService?.name}
                 </h1>
               </div>
               <Badge className="bg-white/20 text-white border border-white/30 mb-4">
@@ -459,7 +448,7 @@ export default function YonkoPaPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-slate-900 mb-4">
-              Complete Service Breakdown
+              What's Included
             </h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               Comprehensive childcare services available with your YONKO PA
@@ -621,7 +610,7 @@ export default function YonkoPaPage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white text-white hover:bg-white/10"
+                className="border-white  hover:bg-white/10"
               >
                 <Phone className="h-5 w-5 mr-2" />
                 Call Us Today

@@ -17,42 +17,31 @@ import {
 } from "@/components/ui/collapsible";
 import {
   Check,
-  Zap,
   Shield,
-  Phone,
-  Car,
-  Heart,
-  Users,
   Clock,
-  Flag,
+  Heart,
+  Phone,
   ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
 import { useState, useEffect } from "react";
-
-// Utility function to format price
-const formatPrice = (price: number): string => {
-  return `GHS ${price.toFixed(2)}`;
-};
 
 // Service structure types
 interface ServiceItem {
   id: string;
   name: string;
   description?: string;
-  level: number;
   children?: ServiceItem[];
-  basePrice?: number;
+  level: number;
   isOptional?: boolean;
-  isRecurring?: boolean;
 }
 
 interface RallyPackService {
   id: string;
   name: string;
-  description: string;
-  basePrice?: number;
+  description?: string;
   items: ServiceItem[];
 }
 
@@ -116,105 +105,159 @@ export default function RallyPackPage() {
     // Only render top-level items as cards for the main style
     if (item.level === 1) {
       return (
-        <Card key={item.id} className="overflow-hidden">
+        <Card
+          key={item.id}
+          className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-200"
+        >
           {hasChildren ? (
             <Collapsible
               open={isExpanded}
               onOpenChange={() => toggleItemExpansion(item.id)}
             >
               <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-slate-50 transition-colors py-3 px-4">
+                <CardHeader
+                  className="cursor-pointer hover:bg-slate-50 transition-colors duration-200 py-4 px-6"
+                  role="button"
+                  aria-expanded={isExpanded}
+                  aria-controls={`service-content-${item.id}`}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-base text-green-600 flex items-center gap-2">
-                          <Check className="h-4 w-4 text-green-500" />
+                        <CardTitle className="text-lg font-semibold text-green-700 flex items-center gap-3">
+                          <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                           {item.name}
                         </CardTitle>
                         {item.isOptional && (
-                          <span className="text-orange-600 text-xs">
+                          <Badge
+                            variant="outline"
+                            className="text-orange-600 border-orange-200 bg-orange-50"
+                          >
                             Optional
-                            {item.basePrice && item.basePrice > 0 && (
-                              <span className="ml-1 text-green-600">
-                                + {formatPrice(item.basePrice)}
-                              </span>
-                            )}
-                          </span>
+                          </Badge>
                         )}
                       </div>
                       {item.description && (
-                        <CardDescription className="text-xs text-slate-600 mt-1">
+                        <p className="text-slate-600 mt-2 text-sm leading-relaxed">
                           {item.description}
-                        </CardDescription>
+                        </p>
                       )}
                     </div>
-                    <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200 data-[state=open]:rotate-180" />
+                    {isExpanded ? (
+                      <ChevronDown className="h-5 w-5 text-slate-400 ml-4 flex-shrink-0 transition-transform" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-slate-400 ml-4 flex-shrink-0 transition-transform" />
+                    )}
                   </div>
                 </CardHeader>
               </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="pt-0 px-4 pb-4">
-                  <div className="space-y-2">
-                    {item.children?.map((child) => renderServiceItem(child))}
+
+              <CollapsibleContent id={`service-content-${item.id}`}>
+                <CardContent className="pt-0 pb-4 px-6">
+                  <div className="border-t border-slate-100 pt-4">
+                    <div className="space-y-3">
+                      {item.children?.map((child) => renderNestedItem(child))}
+                    </div>
                   </div>
                 </CardContent>
               </CollapsibleContent>
             </Collapsible>
           ) : (
-            <CardHeader className="py-3 px-4">
+            <CardHeader className="py-4 px-6">
               <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base text-green-600 flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-500" />
-                      {item.name}
-                    </CardTitle>
-                    {item.isOptional && (
-                      <span className="text-orange-600 text-xs">
-                        Optional
-                        {item.basePrice && item.basePrice > 0 && (
-                          <span className="ml-1 text-green-600">
-                            + {formatPrice(item.basePrice)}
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                  {item.description && (
-                    <CardDescription className="text-xs text-slate-600 mt-1">
-                      {item.description}
-                    </CardDescription>
-                  )}
-                </div>
+                <CardTitle className="text-lg font-semibold text-green-700 flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  {item.name}
+                </CardTitle>
+                {item.isOptional && (
+                  <Badge
+                    variant="outline"
+                    className="text-orange-600 border-orange-200 bg-orange-50"
+                  >
+                    Optional
+                  </Badge>
+                )}
               </div>
+              {item.description && (
+                <p className="text-slate-600 mt-2 text-sm leading-relaxed">
+                  {item.description}
+                </p>
+              )}
             </CardHeader>
           )}
         </Card>
       );
     }
 
-    // Render nested items (level > 1) as simple list items
+    return null; // Level 1 items are handled above
+  };
+
+  const renderNestedItem = (item: ServiceItem): React.ReactNode => {
+    const hasChildren = item.children && item.children.length > 0;
+
     return (
-      <div key={item.id} className="flex items-start gap-2 py-1">
-        <Check className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-700">{item.name}</span>
-            {item.isOptional && item.basePrice && item.basePrice > 0 && (
-              <span className="text-orange-600 text-xs ml-2">
-                Optional +{formatPrice(item.basePrice)}
-              </span>
-            )}
-          </div>
-          {item.description && (
-            <p className="text-xs text-slate-500 mt-0.5">{item.description}</p>
-          )}
-          {item.children && item.children.length > 0 && (
-            <div className="ml-4 mt-1 space-y-1">
-              {item.children.map((child) => renderServiceItem(child))}
+      <div key={item.id} className="border-l-4 border-green-200 pl-4 py-2">
+        <h4 className="font-semibold text-slate-900 flex items-center gap-2 mb-2">
+          <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+          {item.name}
+        </h4>
+        {item.description && (
+          <p className="text-sm text-slate-600 mb-3 ml-6 leading-relaxed">
+            {item.description}
+          </p>
+        )}
+
+        {/* Nested children as "Includes" */}
+        {hasChildren && (
+          <div className="ml-6 space-y-2">
+            <div className="text-sm font-medium text-slate-700 mb-2">
+              Includes:
             </div>
-          )}
-        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+              {item.children?.map((child) => (
+                <div
+                  key={child.id}
+                  className="flex items-start gap-3 text-sm py-1"
+                >
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                  <div className="flex-1">
+                    <span className="text-slate-700 font-medium">
+                      {child.name}
+                    </span>
+                    {child.description && (
+                      <p className="text-slate-500 text-sm mt-1 leading-relaxed">
+                        {child.description}
+                      </p>
+                    )}
+                    {/* Handle deeper nesting */}
+                    {child.children && child.children.length > 0 && (
+                      <div className="ml-4 mt-2 space-y-1">
+                        {child.children.map((grandchild) => (
+                          <div
+                            key={grandchild.id}
+                            className="flex items-start gap-2 text-sm"
+                          >
+                            <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1">
+                              <span className="text-slate-600 font-medium">
+                                {grandchild.name}
+                              </span>
+                              {grandchild.description && (
+                                <p className="text-slate-500 text-xs mt-1">
+                                  {grandchild.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -240,7 +283,7 @@ export default function RallyPackPage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="flex items-center justify-center lg:justify-start space-x-3 mb-6">
-                <Flag className="h-12 w-12 text-green-300" />
+                {/* <Flag className="h-12 w-12 text-green-300" /> */}
                 <h1 className="text-4xl md:text-5xl font-bold text-white">
                   {rallyPackService?.name || "Rally Pack"}
                 </h1>
@@ -254,16 +297,6 @@ export default function RallyPackPage() {
               <p className="text-xl font-medium text-white/90 leading-relaxed mb-8">
                 {rallyPackService?.description}
               </p>
-              {rallyPackService?.basePrice && (
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
-                    <span className="text-white font-semibold">
-                      Starting from{" "}
-                      {formatPrice(rallyPackService.basePrice || 0)}
-                    </span>
-                  </div>
-                </div>
-              )}
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link href="/get-started">
                   <Button
@@ -308,18 +341,6 @@ export default function RallyPackPage() {
                 gatherings, outdoor festivals, and any high-energy event where
                 crowd safety is essential.
               </p>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <div className="flex items-center space-x-3 mb-2">
-                  <Heart className="h-6 w-6 text-green-600" />
-                  <h3 className="text-xl font-semibold text-slate-900">
-                    Starting from GHS 600 per event
-                  </h3>
-                </div>
-                <p className="text-slate-600">
-                  Pricing varies based on event size, duration, and crowd
-                  density.
-                </p>
-              </div>
             </div>
 
             <div className="space-y-6">
@@ -344,7 +365,7 @@ export default function RallyPackPage() {
               <div className="grid grid-cols-2 gap-6">
                 <Card className="text-center">
                   <CardContent className="p-6">
-                    <Zap className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                    <Shield className="h-12 w-12 text-green-600 mx-auto mb-4" />
                     <h3 className="font-semibold text-slate-900 mb-2">
                       Rapid Response
                     </h3>
@@ -356,7 +377,7 @@ export default function RallyPackPage() {
 
                 <Card className="text-center">
                   <CardContent className="p-6">
-                    <Users className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                    <Shield className="h-12 w-12 text-blue-600 mx-auto mb-4" />
                     <h3 className="font-semibold text-slate-900 mb-2">
                       Crowd Ready
                     </h3>
@@ -380,7 +401,7 @@ export default function RallyPackPage() {
 
                 <Card className="text-center">
                   <CardContent className="p-6">
-                    <Car className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+                    <Shield className="h-12 w-12 text-purple-600 mx-auto mb-4" />
                     <h3 className="font-semibold text-slate-900 mb-2">
                       Mobile Ready
                     </h3>
@@ -400,7 +421,7 @@ export default function RallyPackPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-slate-900 mb-4">
-              Complete Service Breakdown
+              What's Included
             </h2>
             <p className="text-xl text-slate-600">
               Comprehensive medical services included in your Rally Pack
@@ -492,7 +513,7 @@ export default function RallyPackPage() {
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="h-8 w-8 text-green-600" />
+                <Shield className="h-8 w-8 text-green-600" />
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-2">
                 Rapid Deployment
@@ -505,7 +526,7 @@ export default function RallyPackPage() {
 
             <div className="text-center">
               <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-blue-600" />
+                <Shield className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-2">
                 Crowd Expertise
@@ -558,7 +579,7 @@ export default function RallyPackPage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white text-white hover:bg-white/10"
+                className="border-white hover:bg-white/10"
               >
                 <Phone className="h-5 w-5 mr-2" />
                 Call Us Today

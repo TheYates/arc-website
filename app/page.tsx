@@ -1,22 +1,12 @@
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
-import {
-  Shield,
-  Clock,
-  Baby,
-  Calendar,
-  AlertTriangle,
-  Phone,
-  Home,
-  UserCheck,
-} from "lucide-react";
+import { Phone, Home, UserCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function HomePage() {
   const services = [
     {
-      Icon: Shield,
       name: "Event Medical Coverage",
       description:
         "24/7 live-in home care with dedicated nursing support, emergency response, and comprehensive medical assistance.",
@@ -24,15 +14,17 @@ export default function HomePage() {
       cta: "Learn more",
       background: (
         <img
-          className="absolute inset-0 w-full h-full object-cover  group-hover:opacity-100 transition-opacity duration-300"
-          src="hero image.webp"
+          className="absolute inset-0 w-full h-full object-contain group-hover:opacity-100 transition-opacity duration-300"
+          style={{
+            transform: "scale(2.3) translateX(-35px) translateY(0px)",
+          }}
+          src="/eventmedical.webp"
           alt="Home care"
         />
       ),
       className: "lg:row-start-1 lg:row-end-4 lg:col-start-2 lg:col-end-3",
     },
     {
-      Icon: Clock,
       name: "Ahenefie",
       description:
         "24/7 live-in home care with dedicated nursing support, emergency response, and comprehensive medical assistance.",
@@ -40,7 +32,8 @@ export default function HomePage() {
       cta: "Learn more",
       background: (
         <img
-          className="absolute inset-0 w-full h-full object-cover  group-hover:opacity-100 transition-opacity duration-300"
+          className="absolute inset-0 w-full h-full object-contain group-hover:opacity-100 transition-opacity duration-300"
+          style={{ transform: "scale(1.5) translateX(-50px) translateY(0px)" }}
           src="/ahenefie.webp"
           alt="Medical visit"
         />
@@ -48,7 +41,6 @@ export default function HomePage() {
       className: "lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3",
     },
     {
-      Icon: Baby,
       name: "Adamfo Pa",
       description:
         "Professional daily home visits with comprehensive nursing care, facility reviews, and emergency response support for your loved ones.",
@@ -56,7 +48,8 @@ export default function HomePage() {
       cta: "Learn more",
       background: (
         <img
-          className="absolute inset-0 w-full h-full object-cover  group-hover:opacity-100 transition-opacity duration-300"
+          className="absolute inset-0 w-full h-full object-contain group-hover:opacity-100 transition-opacity duration-300"
+          style={{ transform: "scale(1.5) translateX(0px) translateY(0px)" }}
           src="/adamfo pa.webp"
           alt="Childcare"
         />
@@ -64,7 +57,6 @@ export default function HomePage() {
       className: "lg:col-start-1 lg:col-end-2 lg:row-start-3 lg:row-end-4",
     },
     {
-      Icon: Calendar,
       name: "Fie Ne Fie",
       description:
         "Comprehensive live-in childcare with professional nanny support, basic nursing care, and emergency response capabilities for your precious little ones.",
@@ -72,7 +64,8 @@ export default function HomePage() {
       cta: "Learn more",
       background: (
         <img
-          className="absolute inset-0 w-full h-full object-cover  group-hover:opacity-100 transition-opacity duration-300"
+          className="absolute inset-0 w-full h-full object-contain group-hover:opacity-100 transition-opacity duration-300"
+          style={{ transform: "scale(1.5) translateX(0px) translateY(25px)" }}
           src="/fie ne fie.webp"
           alt="Flexible childcare"
         />
@@ -80,7 +73,6 @@ export default function HomePage() {
       className: "lg:col-start-3 lg:col-end-3 lg:row-start-1 lg:row-end-2",
     },
     {
-      Icon: AlertTriangle,
       name: "Yonko Pa",
       description:
         "Flexible childcare support with professional nanny visits scheduled when you need them most. Perfect for busy families who need reliable, on-demand childcare assistance.",
@@ -88,7 +80,8 @@ export default function HomePage() {
       cta: "Learn more",
       background: (
         <img
-          className="absolute inset-0 w-full h-full object-cover  group-hover:opacity-100 transition-opacity duration-300"
+          className="absolute inset-0 w-full h-full object-contain group-hover:opacity-100 transition-opacity duration-300"
+          style={{ transform: "scale(1.2) translateX(0px) translateY(0px)" }}
           src="/yonko pa.webp"
           alt="Event medical"
         />
@@ -105,7 +98,7 @@ export default function HomePage() {
       <section
         className="py-20 relative bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: "url('hero (1).webp')",
+          backgroundImage: "url('hero.webp')",
         }}
       >
         {/* Overlay for better text readability */}
@@ -114,16 +107,24 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl">
             <div className="text-center lg:text-left">
-              <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg" style={{
-                textShadow: '2px 2px 4px rgba(0,0,0,0.5), -1px -1px 0px rgba(0,0,0,0.3), 1px -1px 0px rgba(0,0,0,0.3), -1px 1px 0px rgba(0,0,0,0.3), 1px 1px 0px rgba(0,0,0,0.3)',
-                WebkitTextStroke: '0.1px rgba(0,0,0,0.2)'
-              }}>
+              <h1
+                className="text-4xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg"
+                // style={{
+                //   textShadow:
+                //     "1px 1px 1px rgba(0,0,0,0.5), -1px -1px 0px rgba(0,0,0,0.3), 1px -1px 0px rgba(0,0,0,0.3), -1px 1px 0px rgba(0,0,0,0.3), 1px 1px 0px rgba(0,0,0,0.2)",
+                //   WebkitTextStroke: "0.1px rgba(0,0,0,0.1)",
+                // }}
+              >
                 Professional Home <br /> Care & Nanny <br /> Services in Ghana
               </h1>
-              <p className="text-xl mb-8 leading-relaxed text-white/95 drop-shadow-md" style={{
-                textShadow: '1px 1px 3px rgba(0,0,0,0.4), -0.5px -0.5px 0px rgba(0,0,0,0.2), 0.5px -0.5px 0px rgba(0,0,0,0.2), -0.5px 0.5px 0px rgba(0,0,0,0.2), 0.5px 0.5px 0px rgba(0,0,0,0.2)',
-                WebkitTextStroke: '0.1px rgba(0,0,0,0.10)'
-              }}>
+              <p
+                className="text-xl mb-8 leading-relaxed text-white/95 drop-shadow-md"
+                style={{
+                  textShadow:
+                    "1px 1px 3px rgba(0,0,0,0.4), -0.5px -0.5px 0px rgba(0,0,0,0.2), 0.5px -0.5px 0px rgba(0,0,0,0.2), -0.5px 0.5px 0px rgba(0,0,0,0.2), 0.5px 0.5px 0px rgba(0,0,0,0.2)",
+                  WebkitTextStroke: "0.1px rgba(0,0,0,0.2)",
+                }}
+              >
                 We provide compassionate, professional care services tailored{" "}
                 <br /> to your family's unique needs across Ghana.
               </p>
@@ -244,15 +245,22 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="bg-teal-600 py-16">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4" style={{
-            textShadow: '1px 1px 3px rgba(0,0,0,0.3), -0.5px -0.5px 0px rgba(0,0,0,0.2), 0.5px -0.5px 0px rgba(0,0,0,0.2), -0.5px 0.5px 0px rgba(0,0,0,0.2), 0.5px 0.5px 0px rgba(0,0,0,0.2)',
-            WebkitTextStroke: '0.5px rgba(0,0,0,0.1)'
-          }}>
+          <h2
+            className="text-3xl md:text-4xl font-bold text-white mb-4"
+            style={{
+              textShadow:
+                "1px 1px 3px rgba(0,0,0,0.3), -0.5px -0.5px 0px rgba(0,0,0,0.2), 0.5px -0.5px 0px rgba(0,0,0,0.2), -0.5px 0.5px 0px rgba(0,0,0,0.2), 0.5px 0.5px 0px rgba(0,0,0,0.2)",
+              WebkitTextStroke: "0.5px rgba(0,0,0,0.1)",
+            }}
+          >
             Ready to Get Started?
           </h2>
-          <p className="text-xl text-teal-100 mb-8" style={{
-            textShadow: '1px 1px 2px rgba(0,0,0,0.2)'
-          }}>
+          <p
+            className="text-xl text-teal-100 mb-8"
+            style={{
+              textShadow: "1px 1px 2px rgba(0,0,0,0.2)",
+            }}
+          >
             Experience professional care services designed for your family's
             needs.
           </p>

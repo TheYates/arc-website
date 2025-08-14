@@ -14,7 +14,11 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useSearchParams } from "next/navigation";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
@@ -33,8 +37,71 @@ interface DynamicService {
   id: string;
   name: string;
   description?: string;
+  colorTheme?: string; // Add colorTheme property
   items: ServiceItem[];
 }
+
+// Color theme mapping for services (same as admin section)
+const getServiceColorClasses = (colorTheme: string = "teal") => {
+  const colorMap = {
+    teal: {
+      border: "border-teal-500",
+      bg: "from-teal-50 to-teal-100",
+      hover: "hover:from-teal-100 hover:to-teal-200",
+      badge: "text-teal-600 border-teal-300 bg-teal-50",
+      text: "text-teal-700",
+      ring: "peer-checked:ring-teal-500",
+      borderChecked: "peer-checked:border-teal-500",
+    },
+    blue: {
+      border: "border-blue-500",
+      bg: "from-blue-50 to-blue-100",
+      hover: "hover:from-blue-100 hover:to-blue-200",
+      badge: "text-blue-600 border-blue-300 bg-blue-50",
+      text: "text-blue-700",
+      ring: "peer-checked:ring-blue-500",
+      borderChecked: "peer-checked:border-blue-500",
+    },
+    purple: {
+      border: "border-purple-500",
+      bg: "from-purple-50 to-purple-100",
+      hover: "hover:from-purple-100 hover:to-purple-200",
+      badge: "text-purple-600 border-purple-300 bg-purple-50",
+      text: "text-purple-700",
+      ring: "peer-checked:ring-purple-500",
+      borderChecked: "peer-checked:border-purple-500",
+    },
+    indigo: {
+      border: "border-indigo-500",
+      bg: "from-indigo-50 to-indigo-100",
+      hover: "hover:from-indigo-100 hover:to-indigo-200",
+      badge: "text-indigo-600 border-indigo-300 bg-indigo-50",
+      text: "text-indigo-700",
+      ring: "peer-checked:ring-indigo-500",
+      borderChecked: "peer-checked:border-indigo-500",
+    },
+    red: {
+      border: "border-red-500",
+      bg: "from-red-50 to-red-100",
+      hover: "hover:from-red-100 hover:to-red-200",
+      badge: "text-red-600 border-red-300 bg-red-50",
+      text: "text-red-700",
+      ring: "peer-checked:ring-red-500",
+      borderChecked: "peer-checked:border-red-500",
+    },
+    green: {
+      border: "border-green-500",
+      bg: "from-green-50 to-green-100",
+      hover: "hover:from-green-100 hover:to-green-200",
+      badge: "text-green-600 border-green-300 bg-green-50",
+      text: "text-green-700",
+      ring: "peer-checked:ring-green-500",
+      borderChecked: "peer-checked:border-green-500",
+    },
+  };
+
+  return colorMap[colorTheme as keyof typeof colorMap] || colorMap.teal;
+};
 
 function GetStartedContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -126,10 +193,10 @@ function GetStartedContent() {
   // Sync selected date with form data
   useEffect(() => {
     if (selectedDate) {
-      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      setFormData(prev => ({
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+      setFormData((prev) => ({
         ...prev,
-        startDate: formattedDate
+        startDate: formattedDate,
       }));
     }
   }, [selectedDate]);
@@ -401,119 +468,150 @@ function GetStartedContent() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {dynamicServices.map((service) => (
-                          <div key={service.id}>
-                            <label className="cursor-pointer block">
-                              <input
-                                type="radio"
-                                name="service"
-                                value={service.id}
-                                checked={formData.serviceId === service.id}
-                                onChange={() => handleServiceChange(service.id)}
-                                className="sr-only peer"
-                              />
-                              <Card
-                                className={`peer-checked:ring-2 peer-checked:ring-primary peer-checked:border-primary hover:shadow-md transition-all ${
-                                  formData.serviceId &&
-                                  formData.serviceId !== service.id
-                                    ? "opacity-50"
-                                    : ""
-                                }`}
-                              >
-                                <CardContent className="p-4">
-                                  <div className="flex justify-between items-start mb-2">
-                                    <h4 className="font-semibold">
-                                      {service.name}
-                                    </h4>
-                                    {service.name === "AHENEFIE" && (
-                                      <Badge>Most Popular</Badge>
-                                    )}
-                                  </div>
-                                  <p className="text-muted-foreground text-sm">
-                                    {service.description ||
-                                      "Professional care service"}
-                                  </p>
-                                </CardContent>
-                              </Card>
-                            </label>
+                        {dynamicServices.map((service) => {
+                          // Get color theme for this service
+                          const colors = getServiceColorClasses(
+                            service.colorTheme
+                          );
 
-                            {/* Service Customization - appears right under selected service */}
-                            {formData.serviceId === service.id && (
-                              <div className="mt-4 ml-4 border-l-2 border-primary/20 pl-4">
-                                <h4 className="text-base font-medium mb-3 text-primary">
-                                  Customize Your {service.name} Service
-                                </h4>
-                                <div className="space-y-2">
-                                  {service.items.map((feature) => (
-                                    <div key={feature.id} className="space-y-1">
-                                      <div className="flex items-start gap-2">
-                                        <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                        <div className="flex-1">
-                                          <span className="text-sm font-medium">
-                                            {feature.name}
-                                            {feature.isOptional === false && (
-                                              <Badge
-                                                variant="secondary"
-                                                className="ml-2 text-xs"
-                                              >
-                                                Included
-                                              </Badge>
-                                            )}
-                                          </span>
-                                          {feature.description && (
-                                            <p className="text-xs text-muted-foreground mt-0.5">
-                                              {feature.description}
-                                            </p>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      {/* Show sub-features for this feature */}
-                                      {feature.children &&
-                                        feature.children.length > 0 && (
-                                          <div className="ml-6 space-y-1">
-                                            {feature.children.map((subFeature) => (
-                                              <div key={subFeature.id} className="flex items-start gap-2 py-1 px-2">
-                                                <Check className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
-                                                <div className="flex-1">
-                                                  <span className="text-xs font-medium">
-                                                    {subFeature.name}
-                                                    {!subFeature.isOptional && (
-                                                      <Badge
-                                                        variant="secondary"
-                                                        className="ml-2 text-xs"
-                                                      >
-                                                        Included
-                                                      </Badge>
-                                                    )}
-                                                    {subFeature.isOptional && (
-                                                      <Badge
-                                                        variant="outline"
-                                                        className="ml-2 text-xs"
-                                                      >
-                                                        Optional
-                                                      </Badge>
-                                                    )}
-                                                  </span>
-                                                  {subFeature.description && (
-                                                    <p className="text-xs text-muted-foreground">
-                                                      {subFeature.description}
-                                                    </p>
-                                                  )}
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
+                          return (
+                            <div key={service.id}>
+                              <label className="cursor-pointer block">
+                                <input
+                                  type="radio"
+                                  name="service"
+                                  value={service.id}
+                                  checked={formData.serviceId === service.id}
+                                  onChange={() =>
+                                    handleServiceChange(service.id)
+                                  }
+                                  className="sr-only peer"
+                                />
+                                <Card
+                                  className={`${colors.ring} ${
+                                    colors.borderChecked
+                                  } peer-checked:ring-2 hover:shadow-md transition-all bg-gradient-to-br ${
+                                    colors.bg
+                                  } ${colors.hover} ${
+                                    formData.serviceId &&
+                                    formData.serviceId !== service.id
+                                      ? "opacity-50"
+                                      : ""
+                                  }`}
+                                >
+                                  <CardContent className="p-4">
+                                    <div className="flex justify-between items-start mb-2">
+                                      <h4
+                                        className={`font-semibold ${colors.text}`}
+                                      >
+                                        {service.name}
+                                      </h4>
+                                      {service.name === "AHENEFIE" && (
+                                        <Badge className={colors.badge}>
+                                          Most Popular
+                                        </Badge>
+                                      )}
                                     </div>
-                                  ))}
+                                    <p className="text-muted-foreground text-sm">
+                                      {service.description ||
+                                        "Professional care service"}
+                                    </p>
+                                  </CardContent>
+                                </Card>
+                              </label>
 
+                              {/* Service Customization - appears right under selected service */}
+                              {formData.serviceId === service.id && (
+                                <div
+                                  className={`mt-4 ml-4 border-l-2 border-l-${
+                                    service.colorTheme || "teal"
+                                  }-500/20 pl-4`}
+                                >
+                                  <h4
+                                    className={`text-base font-medium mb-3 ${colors.text}`}
+                                  >
+                                    Customize Your {service.name} Service
+                                  </h4>
+                                  <div className="space-y-2">
+                                    {service.items.map((feature) => (
+                                      <div
+                                        key={feature.id}
+                                        className="space-y-1"
+                                      >
+                                        <div className="flex items-start gap-2">
+                                          <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                          <div className="flex-1">
+                                            <span className="text-sm font-medium">
+                                              {feature.name}
+                                              {feature.isOptional === false && (
+                                                <Badge
+                                                  variant="secondary"
+                                                  className="ml-2 text-xs"
+                                                >
+                                                  Included
+                                                </Badge>
+                                              )}
+                                            </span>
+                                            {feature.description && (
+                                              <p className="text-xs text-muted-foreground mt-0.5">
+                                                {feature.description}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
 
+                                        {/* Show sub-features for this feature */}
+                                        {feature.children &&
+                                          feature.children.length > 0 && (
+                                            <div className="ml-6 space-y-1">
+                                              {feature.children.map(
+                                                (subFeature) => (
+                                                  <div
+                                                    key={subFeature.id}
+                                                    className="flex items-start gap-2 py-1 px-2"
+                                                  >
+                                                    <Check className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
+                                                    <div className="flex-1">
+                                                      <span className="text-xs font-medium">
+                                                        {subFeature.name}
+                                                        {!subFeature.isOptional && (
+                                                          <Badge
+                                                            variant="secondary"
+                                                            className="ml-2 text-xs"
+                                                          >
+                                                            Included
+                                                          </Badge>
+                                                        )}
+                                                        {subFeature.isOptional && (
+                                                          <Badge
+                                                            variant="outline"
+                                                            className="ml-2 text-xs"
+                                                          >
+                                                            Optional
+                                                          </Badge>
+                                                        )}
+                                                      </span>
+                                                      {subFeature.description && (
+                                                        <p className="text-xs text-muted-foreground">
+                                                          {
+                                                            subFeature.description
+                                                          }
+                                                        </p>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                )
+                                              )}
+                                            </div>
+                                          )}
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -683,7 +781,7 @@ function GetStartedContent() {
 
             <div className="text-center">
               <div className="bg-primary/10 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Calendar className="h-8 w-8 text-primary" />
+                <CalendarIcon className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-2">2. Admin Review</h3>
               <p className="text-muted-foreground">
@@ -713,19 +811,21 @@ function GetStartedContent() {
 
 export default function GetStartedPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-slate-50">
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-              <p className="text-slate-600">Loading...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50">
+          <Header />
+          <div className="container mx-auto px-4 py-8">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+                <p className="text-slate-600">Loading...</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <GetStartedContent />
     </Suspense>
   );

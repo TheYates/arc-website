@@ -16,6 +16,7 @@ interface PublicService {
   id: string;
   name: string;
   description?: string;
+  colorTheme?: string; // Add colorTheme to public interface
   items: ServiceItem[];
 }
 
@@ -66,6 +67,7 @@ const transformToPublicServices = (
       id: service.id,
       name: service.name,
       description: service.description || undefined,
+      colorTheme: service.colorTheme || "teal", // Include colorTheme with fallback
       items,
     };
   });

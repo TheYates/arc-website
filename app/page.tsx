@@ -114,10 +114,16 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl">
             <div className="text-center lg:text-left">
-              <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg">
+              <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg" style={{
+                textShadow: '2px 2px 4px rgba(0,0,0,0.5), -1px -1px 0px rgba(0,0,0,0.3), 1px -1px 0px rgba(0,0,0,0.3), -1px 1px 0px rgba(0,0,0,0.3), 1px 1px 0px rgba(0,0,0,0.3)',
+                WebkitTextStroke: '0.1px rgba(0,0,0,0.2)'
+              }}>
                 Professional Home <br /> Care & Nanny <br /> Services in Ghana
               </h1>
-              <p className="text-xl mb-8 leading-relaxed text-white/95 drop-shadow-md">
+              <p className="text-xl mb-8 leading-relaxed text-white/95 drop-shadow-md" style={{
+                textShadow: '1px 1px 3px rgba(0,0,0,0.4), -0.5px -0.5px 0px rgba(0,0,0,0.2), 0.5px -0.5px 0px rgba(0,0,0,0.2), -0.5px 0.5px 0px rgba(0,0,0,0.2), 0.5px 0.5px 0px rgba(0,0,0,0.2)',
+                WebkitTextStroke: '0.1px rgba(0,0,0,0.10)'
+              }}>
                 We provide compassionate, professional care services tailored{" "}
                 <br /> to your family's unique needs across Ghana.
               </p>
@@ -238,10 +244,15 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="bg-teal-600 py-16">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4" style={{
+            textShadow: '1px 1px 3px rgba(0,0,0,0.3), -0.5px -0.5px 0px rgba(0,0,0,0.2), 0.5px -0.5px 0px rgba(0,0,0,0.2), -0.5px 0.5px 0px rgba(0,0,0,0.2), 0.5px 0.5px 0px rgba(0,0,0,0.2)',
+            WebkitTextStroke: '0.5px rgba(0,0,0,0.1)'
+          }}>
             Ready to Get Started?
           </h2>
-          <p className="text-xl text-teal-100 mb-8">
+          <p className="text-xl text-teal-100 mb-8" style={{
+            textShadow: '1px 1px 2px rgba(0,0,0,0.2)'
+          }}>
             Experience professional care services designed for your family's
             needs.
           </p>

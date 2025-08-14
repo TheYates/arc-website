@@ -8,9 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
-import { Users, Phone, Check, Plus, Minus } from "lucide-react";
+import { Users, Phone, Check } from "lucide-react";
 import { createApplication } from "@/lib/api/applications";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -28,7 +26,6 @@ interface ServiceItem {
   description?: string;
   level: number;
   isOptional?: boolean;
-  basePrice?: number;
   children?: ServiceItem[];
 }
 
@@ -36,15 +33,7 @@ interface DynamicService {
   id: string;
   name: string;
   description?: string;
-  basePrice?: number;
   items: ServiceItem[];
-}
-
-interface SelectedAddon {
-  id: string;
-  name: string;
-  price: number;
-  parentFeatureId: string;
 }
 
 function GetStartedContent() {
@@ -52,7 +41,7 @@ function GetStartedContent() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [dynamicServices, setDynamicServices] = useState<DynamicService[]>([]);
-  const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
+
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -145,60 +134,12 @@ function GetStartedContent() {
     }
   }, [selectedDate]);
 
-  // Helper functions for pricing and selections
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat("en-GH", {
-      style: "currency",
-      currency: "GHS",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
-
+  // Helper functions for service selection
   const getSelectedService = (): DynamicService | null => {
     return (
       dynamicServices.find((service) => service.id === formData.serviceId) ||
       null
     );
-  };
-
-  const calculateTotalPrice = (): number => {
-    const selectedService = getSelectedService();
-    if (!selectedService) return 0;
-
-    let total = selectedService.basePrice || 0;
-
-    // Add prices for selected addons
-    selectedAddons.forEach((addon) => {
-      total += addon.price;
-    });
-
-    return total;
-  };
-
-  const handleAddonToggle = (addon: ServiceItem, parentFeatureId: string) => {
-    const addonId = addon.id;
-    const existingIndex = selectedAddons.findIndex((a) => a.id === addonId);
-
-    if (existingIndex >= 0) {
-      // Remove addon
-      setSelectedAddons((prev) => prev.filter((a) => a.id !== addonId));
-    } else {
-      // Add addon
-      setSelectedAddons((prev) => [
-        ...prev,
-        {
-          id: addonId,
-          name: addon.name,
-          price: addon.basePrice || 0,
-          parentFeatureId,
-        },
-      ]);
-    }
-  };
-
-  const isAddonSelected = (addonId: string): boolean => {
-    return selectedAddons.some((addon) => addon.id === addonId);
   };
 
   const handleInputChange = (
@@ -212,8 +153,6 @@ function GetStartedContent() {
 
   const handleServiceChange = (serviceId: string) => {
     setFormData((prev) => ({ ...prev, serviceId }));
-    // Clear addon selections when service changes
-    setSelectedAddons([]);
   };
 
   const handleContactMethodChange = (
@@ -248,20 +187,10 @@ function GetStartedContent() {
       // Get selected service
       const selectedService = getSelectedService();
 
-      // Prepare application data with selections
+      // Prepare application data
       const applicationData = {
         ...formData,
         serviceName: selectedService?.name || "",
-        basePrice: selectedService?.basePrice || 0,
-        selectedAddons: selectedAddons,
-        totalPrice: calculateTotalPrice(),
-        packageDetails: {
-          serviceId: formData.serviceId,
-          serviceName: selectedService?.name || "",
-          basePrice: selectedService?.basePrice || 0,
-          addons: selectedAddons,
-          totalPrice: calculateTotalPrice(),
-        },
       };
 
       // Submit application to API
@@ -500,13 +429,9 @@ function GetStartedContent() {
                                       <Badge>Most Popular</Badge>
                                     )}
                                   </div>
-                                  <p className="text-muted-foreground text-sm mb-2">
+                                  <p className="text-muted-foreground text-sm">
                                     {service.description ||
                                       "Professional care service"}
-                                  </p>
-                                  <p className="text-green-600 font-medium text-sm">
-                                    Starting from{" "}
-                                    {formatPrice(service.basePrice || 0)}
                                   </p>
                                 </CardContent>
                               </Card>
@@ -543,71 +468,39 @@ function GetStartedContent() {
                                         </div>
                                       </div>
 
-                                      {/* Show addons for this feature */}
+                                      {/* Show sub-features for this feature */}
                                       {feature.children &&
                                         feature.children.length > 0 && (
                                           <div className="ml-6 space-y-1">
-                                            {feature.children.map((addon) => (
-                                              <div key={addon.id}>
-                                                {addon.isOptional ? (
-                                                  // Optional addon with checkbox
-                                                  <div className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50 transition-colors">
-                                                    <div className="flex items-center gap-2">
-                                                      <Checkbox
-                                                        id={addon.id}
-                                                        checked={isAddonSelected(
-                                                          addon.id
-                                                        )}
-                                                        onCheckedChange={() =>
-                                                          handleAddonToggle(
-                                                            addon,
-                                                            feature.id
-                                                          )
-                                                        }
-                                                      />
-                                                      <div>
-                                                        <label
-                                                          htmlFor={addon.id}
-                                                          className="text-xs font-medium cursor-pointer"
-                                                        >
-                                                          {addon.name}
-                                                        </label>
-                                                        {addon.description && (
-                                                          <p className="text-xs text-muted-foreground">
-                                                            {addon.description}
-                                                          </p>
-                                                        )}
-                                                      </div>
-                                                    </div>
-                                                    <div className="text-xs font-medium text-green-600">
-                                                      +
-                                                      {formatPrice(
-                                                        addon.basePrice || 0
-                                                      )}
-                                                    </div>
-                                                  </div>
-                                                ) : (
-                                                  // Required addon without checkbox
-                                                  <div className="flex items-start gap-2 py-1 px-2">
-                                                    <Check className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
-                                                    <div className="flex-1">
-                                                      <span className="text-xs font-medium">
-                                                        {addon.name}
-                                                        <Badge
-                                                          variant="secondary"
-                                                          className="ml-2 text-xs"
-                                                        >
-                                                          Included
-                                                        </Badge>
-                                                      </span>
-                                                      {addon.description && (
-                                                        <p className="text-xs text-muted-foreground">
-                                                          {addon.description}
-                                                        </p>
-                                                      )}
-                                                    </div>
-                                                  </div>
-                                                )}
+                                            {feature.children.map((subFeature) => (
+                                              <div key={subFeature.id} className="flex items-start gap-2 py-1 px-2">
+                                                <Check className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
+                                                <div className="flex-1">
+                                                  <span className="text-xs font-medium">
+                                                    {subFeature.name}
+                                                    {!subFeature.isOptional && (
+                                                      <Badge
+                                                        variant="secondary"
+                                                        className="ml-2 text-xs"
+                                                      >
+                                                        Included
+                                                      </Badge>
+                                                    )}
+                                                    {subFeature.isOptional && (
+                                                      <Badge
+                                                        variant="outline"
+                                                        className="ml-2 text-xs"
+                                                      >
+                                                        Optional
+                                                      </Badge>
+                                                    )}
+                                                  </span>
+                                                  {subFeature.description && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                      {subFeature.description}
+                                                    </p>
+                                                  )}
+                                                </div>
                                               </div>
                                             ))}
                                           </div>
@@ -615,45 +508,7 @@ function GetStartedContent() {
                                     </div>
                                   ))}
 
-                                  {/* Price Summary */}
-                                  {selectedAddons.length > 0 && (
-                                    <div className="mt-3 p-3 bg-muted/30 rounded-lg">
-                                      <h5 className="text-sm font-medium mb-2">
-                                        Price Summary
-                                      </h5>
-                                      <div className="space-y-1 text-xs">
-                                        <div className="flex justify-between">
-                                          <span>Base Service</span>
-                                          <span className="text-green-600">
-                                            {formatPrice(
-                                              service.basePrice || 0
-                                            )}
-                                          </span>
-                                        </div>
-                                        {selectedAddons.map((addon) => (
-                                          <div
-                                            key={addon.id}
-                                            className="flex justify-between text-muted-foreground"
-                                          >
-                                            <span>+ {addon.name}</span>
-                                            <span className="text-green-600">
-                                              +{formatPrice(addon.price)}
-                                            </span>
-                                          </div>
-                                        ))}
-                                        <div className="border-t pt-1 mt-1">
-                                          <div className="flex justify-between font-medium text-sm">
-                                            <span>Total Price</span>
-                                            <span className="text-green-600 font-semibold">
-                                              {formatPrice(
-                                                calculateTotalPrice()
-                                              )}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
+
                                 </div>
                               </div>
                             )}
@@ -791,10 +646,6 @@ function GetStartedContent() {
                           <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                           Submitting...
                         </>
-                      ) : formData.serviceId && getSelectedService() ? (
-                        `Book Free Consultation - ${formatPrice(
-                          calculateTotalPrice()
-                        )}`
                       ) : (
                         "Book Free Consultation"
                       )}

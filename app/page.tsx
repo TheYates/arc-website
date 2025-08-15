@@ -3,24 +3,25 @@ import { Button } from "@/components/ui/button";
 import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
 import { Phone, Home, UserCheck } from "lucide-react";
 import Link from "next/link";
+import { HeroImage, ServiceCardImage } from "@/components/ui/optimized-image";
+import { IMAGES, ALT_TEXTS } from "@/lib/constants/images";
 
 export default function HomePage() {
   const services = [
     {
       name: "Event Medical Coverage",
       description:
-        "24/7 live-in home care with dedicated nursing support, emergency response, and comprehensive medical assistance.",
-      href: "/services/ahenefie",
+        "Professional medical coverage for events of all sizes with emergency response capabilities and comprehensive safety protocols.",
+      href: "/services/event-medical-coverage",
       cta: "Learn more",
       background: (
-        <img
-          className="absolute inset-0 w-full h-full object-contain group-hover:opacity-100 transition-opacity duration-300"
-          style={{
-            transform: "scale(2.3) translateX(-35px) translateY(0px)",
-          }}
-          src="/eventmedical.webp"
-          alt="Home care"
-        />
+        <div className="absolute inset-0 w-full h-full overflow-hidden">
+          <ServiceCardImage
+            src={IMAGES.services.eventMedical.card}
+            alt={ALT_TEXTS.services.eventMedical.card}
+            className="group-hover:scale-110 transition-transform duration-300"
+          />
+        </div>
       ),
       className: "lg:row-start-1 lg:row-end-4 lg:col-start-2 lg:col-end-3",
     },
@@ -31,12 +32,13 @@ export default function HomePage() {
       href: "/services/ahenefie",
       cta: "Learn more",
       background: (
-        <img
-          className="absolute inset-0 w-full h-full object-contain group-hover:opacity-100 transition-opacity duration-300"
-          style={{ transform: "scale(1.5) translateX(-50px) translateY(0px)" }}
-          src="/ahenefie.webp"
-          alt="Medical visit"
-        />
+        <div className="absolute inset-0 w-full h-full overflow-hidden">
+          <ServiceCardImage
+            src={IMAGES.services.ahenefie.card}
+            alt={ALT_TEXTS.services.ahenefie.card}
+            className="group-hover:scale-110 transition-transform duration-300"
+          />
+        </div>
       ),
       className: "lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3",
     },
@@ -44,15 +46,16 @@ export default function HomePage() {
       name: "Adamfo Pa",
       description:
         "Professional daily home visits with comprehensive nursing care, facility reviews, and emergency response support for your loved ones.",
-      href: "/services/fie-ne-fie",
+      href: "/services/adamfo-pa",
       cta: "Learn more",
       background: (
-        <img
-          className="absolute inset-0 w-full h-full object-contain group-hover:opacity-100 transition-opacity duration-300"
-          style={{ transform: "scale(1.5) translateX(0px) translateY(0px)" }}
-          src="/adamfo pa.webp"
-          alt="Childcare"
-        />
+        <div className="absolute inset-0 w-full h-full overflow-hidden">
+          <ServiceCardImage
+            src={IMAGES.services.adamfoPa.card}
+            alt={ALT_TEXTS.services.adamfoPa.card}
+            className="group-hover:scale-110 transition-transform duration-300"
+          />
+        </div>
       ),
       className: "lg:col-start-1 lg:col-end-2 lg:row-start-3 lg:row-end-4",
     },
@@ -63,12 +66,13 @@ export default function HomePage() {
       href: "/services/fie-ne-fie",
       cta: "Learn more",
       background: (
-        <img
-          className="absolute inset-0 w-full h-full object-contain group-hover:opacity-100 transition-opacity duration-300"
-          style={{ transform: "scale(1.5) translateX(0px) translateY(25px)" }}
-          src="/fie ne fie.webp"
-          alt="Flexible childcare"
-        />
+        <div className="absolute inset-0 w-full h-full overflow-hidden">
+          <ServiceCardImage
+            src={IMAGES.services.fieNeFie.card}
+            alt={ALT_TEXTS.services.fieNeFie.card}
+            className="group-hover:scale-110 transition-transform duration-300"
+          />
+        </div>
       ),
       className: "lg:col-start-3 lg:col-end-3 lg:row-start-1 lg:row-end-2",
     },
@@ -79,12 +83,13 @@ export default function HomePage() {
       href: "/services/yonko-pa",
       cta: "Learn more",
       background: (
-        <img
-          className="absolute inset-0 w-full h-full object-contain group-hover:opacity-100 transition-opacity duration-300"
-          style={{ transform: "scale(1.2) translateX(0px) translateY(0px)" }}
-          src="/yonko pa.webp"
-          alt="Event medical"
-        />
+        <div className="absolute inset-0 w-full h-full overflow-hidden">
+          <ServiceCardImage
+            src={IMAGES.services.yonkoPa.card}
+            alt={ALT_TEXTS.services.yonkoPa.card}
+            className="group-hover:scale-110 transition-transform duration-300"
+          />
+        </div>
       ),
       className: "lg:col-start-3 lg:col-end-3 lg:row-start-2 lg:row-end-4",
     },
@@ -95,14 +100,16 @@ export default function HomePage() {
       <Header />
 
       {/* Hero Section */}
-      <section
-        className="py-20 relative bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url('hero.webp')",
-        }}
-      >
-        {/* Overlay for better text readability */}
-        <div className="absolute inset-0"></div>
+      <section className="py-20 relative overflow-hidden">
+        <div className="absolute inset-0">
+          <HeroImage
+            src={IMAGES.hero.main}
+            alt={ALT_TEXTS.hero.main}
+            fallbackSrc={IMAGES.hero.fallback}
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-black/5"></div>
+        </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl">

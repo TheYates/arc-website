@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -97,6 +98,150 @@ const getServiceColorClasses = (colorTheme: string = "teal") => {
       text: "text-green-700",
       ring: "peer-checked:ring-green-500",
       borderChecked: "peer-checked:border-green-500",
+    },
+    orange: {
+      border: "border-orange-500",
+      bg: "from-orange-50 to-orange-100",
+      hover: "hover:from-orange-100 hover:to-orange-200",
+      badge: "text-orange-600 border-orange-300 bg-orange-50",
+      text: "text-orange-700",
+      ring: "peer-checked:ring-orange-500",
+      borderChecked: "peer-checked:border-orange-500",
+    },
+    amber: {
+      border: "border-amber-500",
+      bg: "from-amber-50 to-amber-100",
+      hover: "hover:from-amber-100 hover:to-amber-200",
+      badge: "text-amber-600 border-amber-300 bg-amber-50",
+      text: "text-amber-700",
+      ring: "peer-checked:ring-amber-500",
+      borderChecked: "peer-checked:border-amber-500",
+    },
+    yellow: {
+      border: "border-yellow-500",
+      bg: "from-yellow-50 to-yellow-100",
+      hover: "hover:from-yellow-100 hover:to-yellow-200",
+      badge: "text-yellow-600 border-yellow-300 bg-yellow-50",
+      text: "text-yellow-700",
+      ring: "peer-checked:ring-yellow-500",
+      borderChecked: "peer-checked:border-yellow-500",
+    },
+    lime: {
+      border: "border-lime-500",
+      bg: "from-lime-50 to-lime-100",
+      hover: "hover:from-lime-100 hover:to-lime-200",
+      badge: "text-lime-600 border-lime-300 bg-lime-50",
+      text: "text-lime-700",
+      ring: "peer-checked:ring-lime-500",
+      borderChecked: "peer-checked:border-lime-500",
+    },
+    emerald: {
+      border: "border-emerald-500",
+      bg: "from-emerald-50 to-emerald-100",
+      hover: "hover:from-emerald-100 hover:to-emerald-200",
+      badge: "text-emerald-600 border-emerald-300 bg-emerald-50",
+      text: "text-emerald-700",
+      ring: "peer-checked:ring-emerald-500",
+      borderChecked: "peer-checked:border-emerald-500",
+    },
+    cyan: {
+      border: "border-cyan-500",
+      bg: "from-cyan-50 to-cyan-100",
+      hover: "hover:from-cyan-100 hover:to-cyan-200",
+      badge: "text-cyan-600 border-cyan-300 bg-cyan-50",
+      text: "text-cyan-700",
+      ring: "peer-checked:ring-cyan-500",
+      borderChecked: "peer-checked:border-cyan-500",
+    },
+    sky: {
+      border: "border-sky-500",
+      bg: "from-sky-50 to-sky-100",
+      hover: "hover:from-sky-100 hover:to-sky-200",
+      badge: "text-sky-600 border-sky-300 bg-sky-50",
+      text: "text-sky-700",
+      ring: "peer-checked:ring-sky-500",
+      borderChecked: "peer-checked:border-sky-500",
+    },
+    violet: {
+      border: "border-violet-500",
+      bg: "from-violet-50 to-violet-100",
+      hover: "hover:from-violet-100 hover:to-violet-200",
+      badge: "text-violet-600 border-violet-300 bg-violet-50",
+      text: "text-violet-700",
+      ring: "peer-checked:ring-violet-500",
+      borderChecked: "peer-checked:border-violet-500",
+    },
+    fuchsia: {
+      border: "border-fuchsia-500",
+      bg: "from-fuchsia-50 to-fuchsia-100",
+      hover: "hover:from-fuchsia-100 hover:to-fuchsia-200",
+      badge: "text-fuchsia-600 border-fuchsia-300 bg-fuchsia-50",
+      text: "text-fuchsia-700",
+      ring: "peer-checked:ring-fuchsia-500",
+      borderChecked: "peer-checked:border-fuchsia-500",
+    },
+    pink: {
+      border: "border-pink-500",
+      bg: "from-pink-50 to-pink-100",
+      hover: "hover:from-pink-100 hover:to-pink-200",
+      badge: "text-pink-600 border-pink-300 bg-pink-50",
+      text: "text-pink-700",
+      ring: "peer-checked:ring-pink-500",
+      borderChecked: "peer-checked:border-pink-500",
+    },
+    rose: {
+      border: "border-rose-500",
+      bg: "from-rose-50 to-rose-100",
+      hover: "hover:from-rose-100 hover:to-rose-200",
+      badge: "text-rose-600 border-rose-300 bg-rose-50",
+      text: "text-rose-700",
+      ring: "peer-checked:ring-rose-500",
+      borderChecked: "peer-checked:border-rose-500",
+    },
+    slate: {
+      border: "border-slate-500",
+      bg: "from-slate-50 to-slate-100",
+      hover: "hover:from-slate-100 hover:to-slate-200",
+      badge: "text-slate-600 border-slate-300 bg-slate-50",
+      text: "text-slate-700",
+      ring: "peer-checked:ring-slate-500",
+      borderChecked: "peer-checked:border-slate-500",
+    },
+    gray: {
+      border: "border-gray-500",
+      bg: "from-gray-50 to-gray-100",
+      hover: "hover:from-gray-100 hover:to-gray-200",
+      badge: "text-gray-600 border-gray-300 bg-gray-50",
+      text: "text-gray-700",
+      ring: "peer-checked:ring-gray-500",
+      borderChecked: "peer-checked:border-gray-500",
+    },
+    zinc: {
+      border: "border-zinc-500",
+      bg: "from-zinc-50 to-zinc-100",
+      hover: "hover:from-zinc-100 hover:to-zinc-200",
+      badge: "text-zinc-600 border-zinc-300 bg-zinc-50",
+      text: "text-zinc-700",
+      ring: "peer-checked:ring-zinc-500",
+      borderChecked: "peer-checked:border-zinc-500",
+    },
+    neutral: {
+      border: "border-neutral-500",
+      bg: "from-neutral-50 to-neutral-100",
+      hover: "hover:from-neutral-100 hover:to-neutral-200",
+      badge: "text-neutral-600 border-neutral-300 bg-neutral-50",
+      text: "text-neutral-700",
+      ring: "peer-checked:ring-neutral-500",
+      borderChecked: "peer-checked:border-neutral-500",
+    },
+    stone: {
+      border: "border-stone-500",
+      bg: "from-stone-50 to-stone-100",
+      hover: "hover:from-stone-100 hover:to-stone-200",
+      badge: "text-stone-600 border-stone-300 bg-stone-50",
+      text: "text-stone-700",
+      ring: "peer-checked:ring-stone-500",
+      borderChecked: "peer-checked:border-stone-500",
     },
   };
 
@@ -817,9 +962,13 @@ export default function GetStartedPage() {
           <Header />
           <div className="container mx-auto px-4 py-8">
             <div className="max-w-4xl mx-auto">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-                <p className="text-slate-600">Loading...</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
               </div>
             </div>
           </div>

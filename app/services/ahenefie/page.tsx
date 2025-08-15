@@ -5,7 +5,7 @@ import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Check,
   Shield,
@@ -22,6 +22,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { HeroImage } from "@/components/ui/optimized-image";
+import { IMAGES, ALT_TEXTS } from "@/lib/constants/images";
 
 // Service structure types
 interface ServiceItem {
@@ -299,15 +301,12 @@ export default function AhenefiePage() {
       <section className="relative py-20 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
-          <img
-            className="absolute inset-0 w-full h-full object-contain"
-            style={{
-              transform: "scale(1.5) translateX(0px) translateY(0px)",
-            }}
-            src="/ahenefie wide.webp"
-            alt="Professional home healthcare nurse caring for elderly patient"
+          <HeroImage
+            src={IMAGES.services.ahenefie.hero}
+            alt={ALT_TEXTS.services.ahenefie.hero}
+            className="object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-teal-900/10 to-cyan-900/30"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-teal-900/10 to-cyan-900/10"></div>
         </div>
 
         {/* Content */}
@@ -441,11 +440,11 @@ export default function AhenefiePage() {
           {/* Hierarchical service structure display */}
           <div className="space-y-4">
             {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
-                <p className="text-slate-600 mt-4 text-base">
-                  Loading service details...
-                </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
               </div>
             ) : error ? (
               <div className="text-center py-12">

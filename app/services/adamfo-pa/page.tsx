@@ -30,6 +30,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { HeroImage } from "@/components/ui/optimized-image";
+import { IMAGES, ALT_TEXTS } from "@/lib/constants/images";
 
 // Service structure types
 interface ServiceItem {
@@ -285,7 +288,7 @@ export default function AdamfoPaPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <Skeleton className="h-12 w-12 mb-4" />
           <p className="text-slate-600">Loading ADAMFO-PA service details...</p>
         </div>
       </div>
@@ -311,15 +314,12 @@ export default function AdamfoPaPage() {
       <section className="relative py-20 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
-          <img
-            className="absolute inset-0 w-full h-full object-contain"
-            style={{
-              transform: "scale(1.4) translateX(0px) translateY(00px)",
-            }}
-            src="/adamfopa wide.webp"
-            alt="Professional medical visit and daily care services"
+          <HeroImage
+            src={IMAGES.services.adamfoPa.hero}
+            alt={ALT_TEXTS.services.adamfoPa.hero}
+            className="object-cover"
           />
-          <div className="absolute inset-0 "></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/10 to-indigo-900/10"></div>
         </div>
 
         {/* Content */}
@@ -455,11 +455,11 @@ export default function AdamfoPaPage() {
           {/* Hierarchical service structure display */}
           <div className="space-y-4">
             {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="text-slate-600 mt-4 text-base">
-                  Loading service details...
-                </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
               </div>
             ) : error ? (
               <div className="text-center py-12">

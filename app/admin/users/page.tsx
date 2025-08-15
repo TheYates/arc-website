@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -90,7 +91,9 @@ export default function UsersPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [userToResetPassword, setUserToResetPassword] = useState<User | null>(null);
+  const [userToResetPassword, setUserToResetPassword] = useState<User | null>(
+    null
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -125,9 +128,9 @@ export default function UsersPage() {
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/admin/users');
+        const response = await fetch("/api/admin/users");
         if (!response.ok) {
-          throw new Error('Failed to fetch users');
+          throw new Error("Failed to fetch users");
         }
         const data = await response.json();
         setUsers(data.users || []);
@@ -250,29 +253,34 @@ export default function UsersPage() {
   };
 
   const handleAddUser = async () => {
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.username) {
+    if (
+      !formData.firstName ||
+      !formData.lastName ||
+      !formData.email ||
+      !formData.username
+    ) {
       return; // Basic validation
     }
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/admin/users', {
-        method: 'POST',
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create user');
+        throw new Error(errorData.error || "Failed to create user");
       }
 
       const data = await response.json();
-      
+
       // Update local state
-      setUsers(prevUsers => [...prevUsers, data.user]);
+      setUsers((prevUsers) => [...prevUsers, data.user]);
       resetForm();
 
       toast({
@@ -283,7 +291,10 @@ export default function UsersPage() {
       console.error("Failed to add user:", error);
       toast({
         title: "Error Creating User",
-        description: error instanceof Error ? error.message : "Failed to create user. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to create user. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -292,30 +303,36 @@ export default function UsersPage() {
   };
 
   const handleEditUser = async () => {
-    if (!editingUser || !formData.firstName || !formData.lastName || !formData.email || !formData.username) {
+    if (
+      !editingUser ||
+      !formData.firstName ||
+      !formData.lastName ||
+      !formData.email ||
+      !formData.username
+    ) {
       return;
     }
 
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/admin/users/${editingUser.id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update user');
+        throw new Error(errorData.error || "Failed to update user");
       }
 
       const data = await response.json();
-      
+
       // Update local state
-      setUsers(prevUsers =>
-        prevUsers.map(user => user.id === editingUser.id ? data.user : user)
+      setUsers((prevUsers) =>
+        prevUsers.map((user) => (user.id === editingUser.id ? data.user : user))
       );
       resetForm();
 
@@ -327,7 +344,10 @@ export default function UsersPage() {
       console.error("Failed to edit user:", error);
       toast({
         title: "Error Updating User",
-        description: error instanceof Error ? error.message : "Failed to update user. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update user. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -340,16 +360,18 @@ export default function UsersPage() {
 
     try {
       const response = await fetch(`/api/admin/users/${userToDelete.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to delete user');
+        throw new Error(errorData.error || "Failed to delete user");
       }
 
       // Update local state (remove the user from the list)
-      setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete.id));
+      setUsers((prevUsers) =>
+        prevUsers.filter((user) => user.id !== userToDelete.id)
+      );
 
       toast({
         title: "User Deleted",
@@ -361,7 +383,10 @@ export default function UsersPage() {
       console.error("Failed to delete user:", error);
       toast({
         title: "Error Deleting User",
-        description: error instanceof Error ? error.message : "Failed to delete user. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete user. Please try again.",
         variant: "destructive",
       });
     }
@@ -382,9 +407,9 @@ export default function UsersPage() {
 
   const loader = async () => {
     try {
-      const response = await fetch('/api/admin/users');
+      const response = await fetch("/api/admin/users");
       if (!response.ok) {
-        throw new Error('Failed to fetch users');
+        throw new Error("Failed to fetch users");
       }
       const data = await response.json();
       return data.users || [];
@@ -488,8 +513,15 @@ export default function UsersPage() {
         </CardContent>
         <CardContent>
           {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
+                <Skeleton className="h-32 w-full rounded-lg" />
+              </div>
             </div>
           ) : view === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -537,7 +569,9 @@ export default function UsersPage() {
                         <span className="truncate">{u.email}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px]">Created {formatUserDate(u.createdAt || "")}</span>
+                        <span className="text-[10px]">
+                          Created {formatUserDate(u.createdAt || "")}
+                        </span>
                         <Button
                           variant="outline"
                           size="sm"
@@ -680,9 +714,12 @@ export default function UsersPage() {
       </Card>
 
       {/* Add/Edit User Dialog */}
-      <Dialog open={showAddDialog || !!editingUser} onOpenChange={(open) => {
-        if (!open) resetForm();
-      }}>
+      <Dialog
+        open={showAddDialog || !!editingUser}
+        onOpenChange={(open) => {
+          if (!open) resetForm();
+        }}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
@@ -785,14 +822,20 @@ export default function UsersPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={resetForm} disabled={isSubmitting}>
+            <Button
+              variant="outline"
+              onClick={resetForm}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
             <Button
               onClick={editingUser ? handleEditUser : handleAddUser}
               disabled={isSubmitting}
             >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               {editingUser ? "Update User" : "Create User"}
             </Button>
           </DialogFooter>
@@ -800,9 +843,12 @@ export default function UsersPage() {
       </Dialog>
 
       {/* Delete User Confirmation Dialog */}
-      <AlertDialog open={!!userToDelete} onOpenChange={(open) => {
-        if (!open) setUserToDelete(null);
-      }}>
+      <AlertDialog
+        open={!!userToDelete}
+        onOpenChange={(open) => {
+          if (!open) setUserToDelete(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete User</AlertDialogTitle>

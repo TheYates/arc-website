@@ -352,6 +352,102 @@ export default function PricingItemFormModal({
                       Red
                     </div>
                   </SelectItem>
+                  <SelectItem value="orange">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                      Orange
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="amber">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                      Amber
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="yellow">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                      Yellow
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="lime">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-lime-500"></div>
+                      Lime
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="emerald">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                      Emerald
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="cyan">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-cyan-500"></div>
+                      Cyan
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="sky">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-sky-500"></div>
+                      Sky
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="violet">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-violet-500"></div>
+                      Violet
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="fuchsia">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-fuchsia-500"></div>
+                      Fuchsia
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="pink">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-pink-500"></div>
+                      Pink
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="rose">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-rose-500"></div>
+                      Rose
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="slate">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-slate-500"></div>
+                      Slate
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="gray">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-gray-500"></div>
+                      Gray
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="zinc">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-zinc-500"></div>
+                      Zinc
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="neutral">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-neutral-500"></div>
+                      Neutral
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="stone">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-stone-500"></div>
+                      Stone
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-slate-600">

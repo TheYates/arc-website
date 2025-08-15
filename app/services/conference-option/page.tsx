@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Collapsible,
   CollapsibleContent,
@@ -26,7 +28,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
-import { useState, useEffect } from "react";
+import { HeroImage } from "@/components/ui/optimized-image";
+import { IMAGES, ALT_TEXTS } from "@/lib/constants/images";
 
 // Service structure types
 interface ServiceItem {
@@ -270,10 +273,10 @@ export default function ConferenceOptionPage() {
       <section className="relative py-20 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
-          <img
-            className="absolute inset-0 w-full h-full object-cover"
-            src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=1200&h=800&fit=crop&crop=center"
-            alt="Professional conference and business event medical services"
+          <HeroImage
+            src={IMAGES.services.conferenceOption.hero}
+            alt={ALT_TEXTS.services.conferenceOption.hero}
+            className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900/80 to-purple-900/70"></div>
         </div>
@@ -356,22 +359,6 @@ export default function ConferenceOptionPage() {
 
             <div className="space-y-6">
               {/* Service Overview Image */}
-              <div className="bg-purple-100 rounded-2xl p-6 text-center">
-                <div className="bg-white rounded-xl p-4 shadow-lg">
-                  <div className="text-purple-600 text-sm font-medium mb-2">
-                    IMAGE PLACEHOLDER
-                  </div>
-                  <div className="text-slate-700 text-xs leading-relaxed">
-                    "Professional conference hall with medical team monitoring
-                    attendees"
-                    <br />
-                    <br />
-                    Search terms: conference medical monitoring, business event
-                    safety, professional healthcare, conference attendees,
-                    medical supervision
-                  </div>
-                </div>
-              </div>
 
               <div className="grid grid-cols-2 gap-6">
                 <Card className="text-center">
@@ -443,11 +430,11 @@ export default function ConferenceOptionPage() {
           {/* Hierarchical service structure display */}
           <div className="space-y-4">
             {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-                <p className="text-slate-600 mt-4 text-base">
-                  Loading service details...
-                </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
               </div>
             ) : error ? (
               <div className="text-center py-12">

@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Collapsible,
   CollapsibleContent,
@@ -31,7 +33,8 @@ import {
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { HeroImage } from "@/components/ui/optimized-image";
+import { IMAGES, ALT_TEXTS } from "@/lib/constants/images";
 
 // Utility function to format price
 const formatPrice = (price: number): string => {
@@ -289,13 +292,12 @@ export default function YonkoPaPage() {
       <section className="relative py-20 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
-          <img
-            className="absolute inset-0 w-full h-full object-contain"
-            style={{ transform: "scale(1.7) translateX(0px) translateY(0px)" }}
-            src="/yonko pa 1.png"
-            alt="Flexible childcare and visit-on-request services"
+          <HeroImage
+            src={IMAGES.services.yonkoPa.hero}
+            alt={ALT_TEXTS.services.yonkoPa.hero}
+            className="object-cover"
           />
-          <div className="absolute inset-0 "></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 to-cyan-900/10"></div>
         </div>
 
         {/* Content */}
@@ -458,11 +460,11 @@ export default function YonkoPaPage() {
 
           <div className="space-y-4">
             {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-                <p className="text-slate-600 mt-4 text-base">
-                  Loading service details...
-                </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
               </div>
             ) : error ? (
               <div className="text-center py-12">

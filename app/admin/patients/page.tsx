@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -310,8 +311,14 @@ export default function PatientsPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  <Skeleton className="h-20 w-full rounded-lg" />
+                  <Skeleton className="h-20 w-full rounded-lg" />
+                  <Skeleton className="h-20 w-full rounded-lg" />
+                  <Skeleton className="h-20 w-full rounded-lg" />
+                  <Skeleton className="h-20 w-full rounded-lg" />
+                </div>
               </div>
             ) : filteredPatients.length === 0 ? (
               <div className="text-center py-10">
@@ -416,14 +423,18 @@ export default function PatientsPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleOpenAssignmentDialog(patient)}
+                              onClick={() =>
+                                handleOpenAssignmentDialog(patient)
+                              }
                             >
                               <UserPlus className="h-4 w-4 mr-2" />
-                              {patient.assignedCaregiver || patient.assignedReviewer 
-                                ? "Manage" 
+                              {patient.assignedCaregiver ||
+                              patient.assignedReviewer
+                                ? "Manage"
                                 : "Assign"}
                             </Button>
-                            {(patient.assignedCaregiver || patient.assignedReviewer) && (
+                            {(patient.assignedCaregiver ||
+                              patient.assignedReviewer) && (
                               <Button
                                 variant="outline"
                                 size="sm"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback, memo, Suspense, lazy } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -30,198 +30,167 @@ import {
   Plus,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { AdminMobileDashboard } from "@/components/mobile/admin-dashboard";
+import {
+  DashboardSkeleton,
+  MobileDashboardSkeleton,
+} from "@/components/admin/dashboard-skeleton";
+import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useOptimizedAuth } from "@/hooks/use-optimized-auth";
+
+// Lazy load mobile dashboard for better performance
+const AdminMobileDashboard = lazy(() =>
+  import("@/components/mobile/admin-dashboard").then((module) => ({
+    default: module.AdminMobileDashboard,
+  }))
+);
+
+// Memoized components for better performance
+const StatCard = memo(({ stat }: { stat: any }) => (
+  <Card>
+    <CardContent className="p-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">
+            {stat.title}
+          </p>
+          <div className="flex items-baseline">
+            <h3 className="text-3xl font-bold">{stat.value}</h3>
+            {stat.change && (
+              <span
+                className={`ml-2 text-xs font-medium ${
+                  stat.positive ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {stat.change}
+              </span>
+            )}
+          </div>
+          {stat.changeLabel && (
+            <p className="text-xs text-muted-foreground">{stat.changeLabel}</p>
+          )}
+        </div>
+        <div className="p-2 bg-primary/10 rounded-full">{stat.icon}</div>
+      </div>
+    </CardContent>
+  </Card>
+));
+
+StatCard.displayName = "StatCard";
+
+// Memoized Application Item Component
+const ApplicationItem = memo(
+  ({
+    application,
+    getStatusBadge,
+  }: {
+    application: any;
+    getStatusBadge: (status: string) => JSX.Element;
+  }) => (
+    <div className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-10 w-10">
+          <AvatarImage src={application.avatar} alt={application.name} />
+          <AvatarFallback>{application.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div>
+          <p className="font-medium">{application.name}</p>
+          <p className="text-sm text-muted-foreground">{application.service}</p>
+        </div>
+      </div>
+      <div className="flex flex-col items-end">
+        {getStatusBadge(application.status)}
+        <span className="text-xs text-muted-foreground mt-1">
+          {application.date}
+        </span>
+      </div>
+    </div>
+  )
+);
+
+ApplicationItem.displayName = "ApplicationItem";
+
+// Memoized Activity Item Component
+const ActivityItem = memo(
+  ({
+    activity,
+    getActivityIcon,
+  }: {
+    activity: any;
+    getActivityIcon: (type: string) => JSX.Element;
+  }) => (
+    <div className="flex gap-3 p-2 rounded-lg hover:bg-accent transition-colors">
+      <div className="mt-1">{getActivityIcon(activity.type)}</div>
+      <div className="flex-grow">
+        <div className="flex items-center justify-between">
+          <p className="font-medium">{activity.action}</p>
+          <span className="text-xs text-muted-foreground">{activity.time}</span>
+        </div>
+        <p className="text-sm text-muted-foreground">{activity.description}</p>
+        <div className="flex items-center mt-1">
+          <Avatar className="h-5 w-5 mr-1">
+            <AvatarImage src={activity.avatar} alt={activity.user} />
+            <AvatarFallback>{activity.user.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <span className="text-xs text-muted-foreground">{activity.user}</span>
+        </div>
+      </div>
+    </div>
+  )
+);
+
+ActivityItem.displayName = "ActivityItem";
 
 export default function AdminDashboardPage() {
-  const { user } = useAuth();
+  const { userProfile, isLoading: authLoading } = useOptimizedAuth();
+  const {
+    data: dashboardData,
+    isLoading: dataLoading,
+    error,
+  } = useDashboardData();
   // Removed selectedTab state - no longer using tabs
 
-  // Demo data - in a real app, this would come from an API call
-  const stats = [
-    {
-      title: "Total Patients",
-      value: 37,
-      icon: <Users className="h-5 w-5 text-primary" />,
-      change: "+5%",
-      changeValue: 5,
-      changeLabel: "from last month",
-      positive: true,
-    },
-    {
-      title: "New Applications",
-      value: 12,
-      icon: <ClipboardList className="h-5 w-5 text-primary" />,
-      change: "+2",
-      changeValue: 2,
-      changeLabel: "since yesterday",
-      positive: true,
-    },
-    {
-      title: "Pending Approvals",
-      value: 7,
-      icon: <Clock className="h-5 w-5 text-primary" />,
-      change: "",
-      changeValue: 0,
-      changeLabel: "",
-      positive: true,
-    },
-    {
-      title: "Scheduled Consultations",
-      value: 24,
-      icon: <CalendarClock className="h-5 w-5 text-primary" />,
-      change: "+3",
-      changeValue: 3,
-      changeLabel: "this week",
-      positive: true,
-    },
-  ];
+  // Memoized data with icons added
+  const stats = useMemo(() => {
+    if (!dashboardData?.stats) return [];
 
-  const recentApplications = [
-    {
-      id: "app-001",
-      name: "Sarah Johnson",
-      email: "sarah.johnson@example.com",
-      service: "AHENEFIE",
-      date: "2023-09-15",
-      status: "pending",
-      avatar: "/placeholder-user.jpg",
-    },
-    {
-      id: "app-002",
-      name: "Michael Smith",
-      email: "m.smith@example.com",
-      service: "ADAMFO PA",
-      date: "2023-09-14",
-      status: "approved",
-      avatar: "/placeholder-user.jpg",
-    },
-    {
-      id: "app-003",
-      name: "Emma Thompson",
-      email: "emma.t@example.com",
-      service: "YONKO PA",
-      date: "2023-09-14",
-      status: "pending",
-      avatar: "/placeholder-user.jpg",
-    },
-    {
-      id: "app-004",
-      name: "Daniel Brown",
-      email: "d.brown@example.com",
-      service: "FIE NE FIE",
-      date: "2023-09-13",
-      status: "rejected",
-      avatar: "/placeholder-user.jpg",
-    },
-    {
-      id: "app-005",
-      name: "Jessica Wilson",
-      email: "j.wilson@example.com",
-      service: "AHENEFIE",
-      date: "2023-09-12",
-      status: "approved",
-      avatar: "/placeholder-user.jpg",
-    },
-  ];
+    const iconMap = {
+      "Total Patients": <Users className="h-5 w-5 text-primary" />,
+      "New Applications": <ClipboardList className="h-5 w-5 text-primary" />,
+      "Pending Approvals": <Clock className="h-5 w-5 text-primary" />,
+      "Scheduled Consultations": (
+        <CalendarClock className="h-5 w-5 text-primary" />
+      ),
+    };
 
-  const recentActivities = [
-    {
-      id: "act-001",
-      action: "Patient approved",
-      user: "Admin User",
-      userId: "admin1",
-      time: "Just now",
-      description: "Approved application for Sarah Johnson",
-      avatar: "/placeholder-user.jpg",
-      type: "approval",
-    },
-    {
-      id: "act-002",
-      action: "Patient onboarded",
-      user: "Admin User",
-      userId: "admin1",
-      time: "1 hour ago",
-      description: "Completed onboarding for Michael Smith",
-      avatar: "/placeholder-user.jpg",
-      type: "onboarding",
-    },
-    {
-      id: "act-003",
-      action: "Application rejected",
-      user: "Admin User",
-      userId: "admin1",
-      time: "2 hours ago",
-      description: "Rejected application for Daniel Brown",
-      avatar: "/placeholder-user.jpg",
-      type: "rejection",
-    },
-    {
-      id: "act-004",
-      action: "Caregiver assigned",
-      user: "Admin User",
-      userId: "admin1",
-      time: "5 hours ago",
-      description: "Assigned Nurse Ama to Jessica Wilson",
-      avatar: "/placeholder-user.jpg",
-      type: "assignment",
-    },
-  ];
+    return dashboardData.stats.map((stat) => ({
+      ...stat,
+      icon: iconMap[stat.title as keyof typeof iconMap] || (
+        <Users className="h-5 w-5 text-primary" />
+      ),
+    }));
+  }, [dashboardData?.stats]);
 
-  const upcomingConsultations = [
-    {
-      id: "cons-001",
-      patientName: "Sarah Johnson",
-      patientId: "pat-001",
-      type: "Initial Assessment",
-      date: "Today",
-      time: "2:30 PM",
-      duration: "45 minutes",
-      careGiver: "Dr. Kofi Mensah",
-    },
-    {
-      id: "cons-002",
-      patientName: "Michael Smith",
-      patientId: "pat-002",
-      type: "Follow-up",
-      date: "Tomorrow",
-      time: "10:00 AM",
-      duration: "30 minutes",
-      careGiver: "Nurse Ama Owusu",
-    },
-    {
-      id: "cons-003",
-      patientName: "Emma Thompson",
-      patientId: "pat-003",
-      type: "Medical Review",
-      date: "Sep 20, 2023",
-      time: "1:15 PM",
-      duration: "60 minutes",
-      careGiver: "Dr. Kofi Mensah",
-    },
-  ];
+  const recentApplications = useMemo(
+    () => dashboardData?.recentApplications || [],
+    [dashboardData?.recentApplications]
+  );
 
-  const taskCompletion = [
-    {
-      title: "Application Reviews",
-      completed: 5,
-      total: 12,
-      percentage: 42,
-    },
-    {
-      title: "Patient Onboarding",
-      completed: 3,
-      total: 7,
-      percentage: 43,
-    },
-    {
-      title: "Schedule Setup",
-      completed: 18,
-      total: 24,
-      percentage: 75,
-    },
-  ];
+  const recentActivities = useMemo(
+    () => dashboardData?.recentActivities || [],
+    [dashboardData?.recentActivities]
+  );
 
-  function getStatusBadge(status: string) {
+  const upcomingConsultations = useMemo(
+    () => dashboardData?.upcomingConsultations || [],
+    [dashboardData?.upcomingConsultations]
+  );
+
+  const taskCompletion = useMemo(
+    () => dashboardData?.taskCompletion || [],
+    [dashboardData?.taskCompletion]
+  );
+
+  const getStatusBadge = useCallback((status: string) => {
     switch (status) {
       case "pending":
         return <Badge className="bg-amber-100 text-amber-800">Pending</Badge>;
@@ -232,9 +201,9 @@ export default function AdminDashboardPage() {
       default:
         return <Badge>{status}</Badge>;
     }
-  }
+  }, []);
 
-  function getActivityIcon(type: string) {
+  const getActivityIcon = useCallback((type: string) => {
     switch (type) {
       case "approval":
         return <CheckCircle className="h-5 w-5 text-green-500" />;
@@ -247,13 +216,48 @@ export default function AdminDashboardPage() {
       default:
         return <div className="h-5 w-5 rounded-full bg-primary/20" />;
     }
+  }, []);
+
+  // Show loading skeleton while auth or data is loading
+  if (authLoading || dataLoading) {
+    return (
+      <div className="space-y-6">
+        {/* Mobile Loading */}
+        <div className="md:hidden">
+          <MobileDashboardSkeleton />
+        </div>
+        {/* Desktop Loading */}
+        <div className="hidden md:block">
+          <DashboardSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if data failed to load
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Failed to load dashboard
+            </h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       {/* Mobile (distinct UI) */}
       <div className="md:hidden">
-        <AdminMobileDashboard />
+        <Suspense fallback={<MobileDashboardSkeleton />}>
+          <AdminMobileDashboard />
+        </Suspense>
       </div>
 
       {/* Header & Welcome */}
@@ -261,7 +265,8 @@ export default function AdminDashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome back, {user?.firstName}! Here's your overview for today.
+            Welcome back, {userProfile?.firstName}! Here's your overview for
+            today.
           </p>
         </div>
         <div className="flex gap-2">
@@ -281,37 +286,7 @@ export default function AdminDashboardPage() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat, index) => (
-            <Card key={index}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {stat.title}
-                    </p>
-                    <div className="flex items-baseline">
-                      <h3 className="text-3xl font-bold">{stat.value}</h3>
-                      {stat.change && (
-                        <span
-                          className={`ml-2 text-xs font-medium ${
-                            stat.positive ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {stat.change}
-                        </span>
-                      )}
-                    </div>
-                    {stat.changeLabel && (
-                      <p className="text-xs text-muted-foreground">
-                        {stat.changeLabel}
-                      </p>
-                    )}
-                  </div>
-                  <div className="p-2 bg-primary/10 rounded-full">
-                    {stat.icon}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <StatCard key={index} stat={stat} />
           ))}
         </div>
 
@@ -335,34 +310,11 @@ export default function AdminDashboardPage() {
             <CardContent>
               <div className="space-y-4">
                 {recentApplications.slice(0, 3).map((application, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage
-                          src={application.avatar}
-                          alt={application.name}
-                        />
-                        <AvatarFallback>
-                          {application.name.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{application.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {application.service}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      {getStatusBadge(application.status)}
-                      <span className="text-xs text-muted-foreground mt-1">
-                        {application.date}
-                      </span>
-                    </div>
-                  </div>
+                  <ApplicationItem
+                    key={application.id}
+                    application={application}
+                    getStatusBadge={getStatusBadge}
+                  />
                 ))}
               </div>
               <CardFooter className="pt-6 px-0 border-t mt-4">
@@ -471,37 +423,11 @@ export default function AdminDashboardPage() {
             <CardContent>
               <div className="space-y-4">
                 {recentActivities.map((activity, index) => (
-                  <div
-                    key={index}
-                    className="flex gap-3 p-2 rounded-lg hover:bg-accent transition-colors"
-                  >
-                    <div className="mt-1">{getActivityIcon(activity.type)}</div>
-                    <div className="flex-grow">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium">{activity.action}</p>
-                        <span className="text-xs text-muted-foreground">
-                          {activity.time}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {activity.description}
-                      </p>
-                      <div className="flex items-center mt-1">
-                        <Avatar className="h-5 w-5 mr-1">
-                          <AvatarImage
-                            src={activity.avatar}
-                            alt={activity.user}
-                          />
-                          <AvatarFallback>
-                            {activity.user.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs text-muted-foreground">
-                          {activity.user}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  <ActivityItem
+                    key={activity.id}
+                    activity={activity}
+                    getActivityIcon={getActivityIcon}
+                  />
                 ))}
               </div>
             </CardContent>

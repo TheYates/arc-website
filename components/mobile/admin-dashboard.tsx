@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, memo } from "react";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,27 +15,50 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+// Memoized Stat Card Component
+const MobileStatCard = memo(({ stat }: { stat: any }) => (
+  <Card>
+    <CardContent className="p-4 flex items-center justify-between">
+      <div>
+        <p className="text-xs text-muted-foreground">{stat.label}</p>
+        <p className="text-xl font-semibold">{stat.value}</p>
+      </div>
+      {stat.icon}
+    </CardContent>
+  </Card>
+));
+
+MobileStatCard.displayName = "MobileStatCard";
+
 export function AdminMobileDashboard() {
   const { user } = useAuth();
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
-  // Demo stats — wire to real data when ready
-  const stats = [
-    {
-      label: "Patients",
-      value: "—",
-      icon: <Users className="h-5 w-5 text-primary" />,
-    },
-    {
-      label: "Apps",
-      value: "—",
-      icon: <ClipboardList className="h-5 w-5 text-primary" />,
-    },
-  ];
+  const now = useMemo(() => new Date(), []);
+  const timeStr = useMemo(
+    () =>
+      now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    [now]
+  );
+
+  // Memoized demo stats — wire to real data when ready
+  const stats = useMemo(
+    () => [
+      {
+        label: "Patients",
+        value: "—",
+        icon: <Users className="h-5 w-5 text-primary" />,
+      },
+      {
+        label: "Apps",
+        value: "—",
+        icon: <ClipboardList className="h-5 w-5 text-primary" />,
+      },
+    ],
+    []
+  );
 
   const recents: Array<{
     id: string;
@@ -56,15 +80,7 @@ export function AdminMobileDashboard() {
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-3">
         {stats.map((s) => (
-          <Card key={s.label}>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className="text-xl font-semibold">{s.value}</p>
-              </div>
-              {s.icon}
-            </CardContent>
-          </Card>
+          <MobileStatCard key={s.label} stat={s} />
         ))}
       </div>
 

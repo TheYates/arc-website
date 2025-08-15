@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Collapsible,
   CollapsibleContent,
@@ -26,7 +28,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Testimonials from "@/components/testimonials";
-import { useState, useEffect } from "react";
+import { HeroImage } from "@/components/ui/optimized-image";
+import { IMAGES, ALT_TEXTS } from "@/lib/constants/images";
 
 // Service structure types
 interface ServiceItem {
@@ -270,10 +273,10 @@ export default function RallyPackPage() {
       <section className="relative py-20 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
-          <img
-            className="absolute inset-0 w-full h-full object-cover"
-            src="https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200&h=800&fit=crop&crop=center"
-            alt="Rally and demonstration medical coverage services"
+          <HeroImage
+            src={IMAGES.services.rallyPack.hero}
+            alt={ALT_TEXTS.services.rallyPack.hero}
+            className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-green-900/80 to-emerald-900/70"></div>
         </div>
@@ -345,22 +348,6 @@ export default function RallyPackPage() {
 
             <div className="space-y-6">
               {/* Service Overview Image */}
-              <div className="bg-emerald-100 rounded-2xl p-6 text-center">
-                <div className="bg-white rounded-xl p-4 shadow-lg">
-                  <div className="text-emerald-600 text-sm font-medium mb-2">
-                    IMAGE PLACEHOLDER
-                  </div>
-                  <div className="text-slate-700 text-xs leading-relaxed">
-                    "Medical professionals with portable equipment monitoring
-                    crowd at rally"
-                    <br />
-                    <br />
-                    Search terms: crowd medical monitoring, rally safety,
-                    portable medical equipment, emergency medical response,
-                    crowd control medical
-                  </div>
-                </div>
-              </div>
 
               <div className="grid grid-cols-2 gap-6">
                 <Card className="text-center">
@@ -430,11 +417,11 @@ export default function RallyPackPage() {
 
           <div className="space-y-6">
             {loading ? (
-              <div className="text-center py-6">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-                <p className="text-slate-600 mt-2">
-                  Loading service details...
-                </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
               </div>
             ) : error ? (
               <div className="text-center py-6">

@@ -1,10 +1,11 @@
-import Header from "@/components/header";
+import ResponsiveHeader from "@/components/responsive-header";
 import { Button } from "@/components/ui/button";
 import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
 import { Phone, Home, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { HeroImage, ServiceCardImage } from "@/components/ui/optimized-image";
 import { IMAGES, ALT_TEXTS } from "@/lib/constants/images";
+import { TrustedPartnersMinimal } from "@/components/sections/trusted-partners";
 
 export default function HomePage() {
   const services = [
@@ -97,7 +98,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
+      <ResponsiveHeader />
 
       {/* Hero Section */}
       <section className="py-20 relative overflow-hidden">
@@ -248,6 +249,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Trusted Partners Section */}
+      <TrustedPartnersMinimal />
 
       {/* CTA Section */}
       <section className="bg-teal-600 py-16">

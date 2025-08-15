@@ -76,18 +76,21 @@ export default function Header() {
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
+          {/* Logo - Responsive sizing */}
+          <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
             <div className="flex items-center space-x-2">
               <div className="bg-teal-600 p-2 rounded-lg">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold ">Alpha Rescue Consult</span>
+              <span className="text-lg md:text-xl font-bold hidden sm:block">
+                Alpha Rescue Consult
+              </span>
+              <span className="text-lg font-bold sm:hidden">Alpha</span>
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
-          <NavigationMenu className="hidden md:flex">
+          {/* Desktop Navigation - Hidden on tablet portrait */}
+          <NavigationMenu className="hidden lg:flex">
             <NavigationMenuList>
               <NavigationMenuItem>
                 <Link href="/" legacyBehavior passHref>
@@ -102,8 +105,8 @@ export default function Header() {
                   Services
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[900px] p-6">
-                    <div className="grid grid-cols-3 gap-8">
+                  <div className="w-[900px] xl:w-[900px] lg:w-[700px] p-4 lg:p-6">
+                    <div className="grid grid-cols-3 gap-4 lg:gap-8">
                       {/* First Column - Home Care Service */}
                       <div className="space-y-3">
                         <div>
@@ -209,8 +212,8 @@ export default function Header() {
             </NavigationMenuList>
           </NavigationMenu>
 
-          {/* Right Side Actions */}
-          <div className="hidden md:flex items-center space-x-4">
+          {/* Right Side Actions - Responsive for tablet */}
+          <div className="hidden lg:flex items-center space-x-4">
             <Link href="/get-started">
               <Button className="bg-teal-600 hover:bg-teal-700 text-white">
                 Get Started
@@ -227,10 +230,31 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Tablet Actions - Compact version for tablet portrait */}
+          <div className="hidden md:flex lg:hidden items-center space-x-2">
+            <Link href="/get-started">
+              <Button
+                size="sm"
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+              >
+                Get Started
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-300 hover:bg-slate-50 bg-transparent"
+              >
+                <LogIn className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+
+          {/* Mobile/Tablet Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-md  hover:text-teal-600 hover:bg-slate-100"
+            className="lg:hidden p-2 rounded-md hover:text-teal-600 hover:bg-slate-100"
           >
             {isMobileMenuOpen ? (
               <X className="h-6 w-6" />
@@ -240,9 +264,9 @@ export default function Header() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile/Tablet Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200 py-4">
+          <div className="lg:hidden border-t border-slate-200 py-4">
             <div className="space-y-4">
               <Link
                 href="/"
@@ -295,20 +319,41 @@ export default function Header() {
               </Link>
 
               <div className="pt-4 border-t border-slate-200 space-y-3">
-                <Link href="/get-started" className="block">
-                  <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
-                    Get Started
-                  </Button>
-                </Link>
-                <Link href="/login" className="block">
-                  <Button
-                    variant="outline"
-                    className="w-full border-slate-300  bg-transparent"
-                  >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Login
-                  </Button>
-                </Link>
+                {/* Mobile Actions - Full width buttons */}
+                <div className="md:hidden space-y-3">
+                  <Link href="/get-started" className="block">
+                    <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+                      Get Started
+                    </Button>
+                  </Link>
+                  <Link href="/login" className="block">
+                    <Button
+                      variant="outline"
+                      className="w-full border-slate-300 bg-transparent"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Login
+                    </Button>
+                  </Link>
+                </div>
+
+                {/* Tablet Actions - Horizontal layout */}
+                <div className="hidden md:flex lg:hidden gap-3">
+                  <Link href="/get-started" className="flex-1">
+                    <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+                      Get Started
+                    </Button>
+                  </Link>
+                  <Link href="/login" className="flex-1">
+                    <Button
+                      variant="outline"
+                      className="w-full border-slate-300 bg-transparent"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Login
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

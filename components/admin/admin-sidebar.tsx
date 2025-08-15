@@ -1,24 +1,25 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useAuth } from "@/lib/auth"
+import * as React from "react";
+import { useAuth } from "@/lib/auth";
 import {
   BarChart3,
   Briefcase,
   ClipboardList,
   Home,
+  Image,
   LifeBuoy,
   Package,
   Settings,
   Shield,
   UserPlus,
   Users,
-} from "lucide-react"
+} from "lucide-react";
 
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from "@/components/nav-main";
+import { NavProjects } from "@/components/nav-projects";
+import { NavSecondary } from "@/components/nav-secondary";
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -27,7 +28,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 const adminData = {
   user: {
@@ -61,6 +62,11 @@ const adminData = {
       title: "Services",
       url: "/admin/services",
       icon: Package,
+    },
+    {
+      title: "Logos",
+      url: "/admin/logos",
+      icon: Image,
     },
     {
       title: "Users",
@@ -97,17 +103,19 @@ const adminData = {
       icon: Settings,
     },
   ],
-}
+};
 
-export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuth()
+export function AdminSidebar({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuth();
 
   // Create user data for sidebar
   const userData = {
     name: user ? `${user.firstName} ${user.lastName}` : "Admin User",
     email: user?.email || "admin@example.com",
     avatar: "", // Use empty string to fallback to initials
-  }
+  };
 
   return (
     <Sidebar
@@ -140,5 +148,5 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
         <NavUser user={userData} />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

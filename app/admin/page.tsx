@@ -33,9 +33,12 @@ import { useAuth } from "@/lib/auth";
 import {
   DashboardSkeleton,
   MobileDashboardSkeleton,
+  TabletDashboardSkeleton,
 } from "@/components/admin/dashboard-skeleton";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useOptimizedAuth } from "@/hooks/use-optimized-auth";
+import { TabletDashboard } from "@/components/admin/tablet-dashboard";
+import { useDeviceType } from "@/hooks/use-device-type";
 
 // Lazy load mobile dashboard for better performance
 const AdminMobileDashboard = lazy(() =>
@@ -147,6 +150,7 @@ export default function AdminDashboardPage() {
     isLoading: dataLoading,
     error,
   } = useDashboardData();
+  const { deviceType, isTablet, isMobile } = useDeviceType();
   // Removed selectedTab state - no longer using tabs
 
   // Memoized data with icons added
@@ -226,8 +230,12 @@ export default function AdminDashboardPage() {
         <div className="md:hidden">
           <MobileDashboardSkeleton />
         </div>
+        {/* Tablet Loading */}
+        <div className="hidden md:block lg:hidden">
+          <TabletDashboardSkeleton />
+        </div>
         {/* Desktop Loading */}
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <DashboardSkeleton />
         </div>
       </div>
@@ -253,187 +261,203 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Mobile (distinct UI) */}
+      {/* Mobile View (< 768px) */}
       <div className="md:hidden">
         <Suspense fallback={<MobileDashboardSkeleton />}>
           <AdminMobileDashboard />
         </Suspense>
       </div>
-
-      {/* Header & Welcome */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back, {userProfile?.firstName}! Here's your overview for
-            today.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Bell className="h-4 w-4 mr-2" />
-            Notifications
-          </Button>
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            New Application
-          </Button>
-        </div>
+      {/* Tablet View (768px - 1024px) */}
+      <div className="hidden md:block lg:hidden">
+        <TabletDashboard
+          userProfile={userProfile}
+          stats={stats}
+          recentApplications={recentApplications}
+          recentActivities={recentActivities}
+          upcomingConsultations={upcomingConsultations}
+          taskCompletion={taskCompletion}
+          getStatusBadge={getStatusBadge}
+          getActivityIcon={getActivityIcon}
+        />
       </div>
-
-      {/* Dashboard Overview Content */}
-      <div className="hidden md:block space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, index) => (
-            <StatCard key={index} stat={stat} />
-          ))}
+      {/* Desktop View (> 1024px) */}
+      <div className="hidden lg:block">
+        {/* Header & Welcome */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">
+              Welcome back, {userProfile?.firstName}! Here's your overview for
+              today.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm">
+              <Bell className="h-4 w-4 mr-2" />
+              Notifications
+            </Button>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              New Application
+            </Button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
-          {/* Recent Applications */}
-          <Card className="lg:col-span-3">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Recent Applications</CardTitle>
+        {/* Dashboard Overview Content */}
+        <div className="hidden md:block space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {stats.map((stat, index) => (
+              <StatCard key={index} stat={stat} />
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+            {/* Recent Applications */}
+            <Card className="lg:col-span-3">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Recent Applications</CardTitle>
+                  <CardDescription>
+                    Latest patient applications submitted
+                  </CardDescription>
+                </div>
+                <Link href="/admin/applications">
+                  <Button variant="ghost" size="sm" className="gap-1">
+                    View all
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentApplications.slice(0, 3).map((application, index) => (
+                    <ApplicationItem
+                      key={application.id}
+                      application={application}
+                      getStatusBadge={getStatusBadge}
+                    />
+                  ))}
+                </div>
+                <CardFooter className="pt-6 px-0 border-t mt-4">
+                  <div className="flex justify-between items-center w-full text-muted-foreground text-sm">
+                    <div>
+                      Showing 3 of {recentApplications.length} applications
+                    </div>
+                    <Link
+                      href="/admin/applications"
+                      className="flex items-center hover:text-foreground"
+                    >
+                      See all applications{" "}
+                      <ArrowUpRight className="h-4 w-4 ml-1" />
+                    </Link>
+                  </div>
+                </CardFooter>
+              </CardContent>
+            </Card>
+
+            {/* Task Completion */}
+            <Card className="lg:col-span-3">
+              <CardHeader className="pb-2">
+                <CardTitle>Task Completion</CardTitle>
                 <CardDescription>
-                  Latest patient applications submitted
+                  Your team's progress on key tasks
                 </CardDescription>
-              </div>
-              <Link href="/admin/applications">
-                <Button variant="ghost" size="sm" className="gap-1">
-                  View all
-                  <ArrowUpRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentApplications.slice(0, 3).map((application, index) => (
-                  <ApplicationItem
-                    key={application.id}
-                    application={application}
-                    getStatusBadge={getStatusBadge}
-                  />
+              </CardHeader>
+              <CardContent className="space-y-8">
+                {taskCompletion.map((task, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">{task.title}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {task.completed} of {task.total}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <Progress value={task.percentage} />
+                      <div className="text-xs text-right text-muted-foreground">
+                        {task.percentage}% complete
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </div>
-              <CardFooter className="pt-6 px-0 border-t mt-4">
-                <div className="flex justify-between items-center w-full text-muted-foreground text-sm">
-                  <div>
-                    Showing 3 of {recentApplications.length} applications
-                  </div>
-                  <Link
-                    href="/admin/applications"
-                    className="flex items-center hover:text-foreground"
-                  >
-                    See all applications{" "}
-                    <ArrowUpRight className="h-4 w-4 ml-1" />
-                  </Link>
-                </div>
-              </CardFooter>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Task Completion */}
-          <Card className="lg:col-span-3">
-            <CardHeader className="pb-2">
-              <CardTitle>Task Completion</CardTitle>
-              <CardDescription>
-                Your team's progress on key tasks
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              {taskCompletion.map((task, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">{task.title}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {task.completed} of {task.total}
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <Progress value={task.percentage} />
-                    <div className="text-xs text-right text-muted-foreground">
-                      {task.percentage}% complete
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
-          {/* Upcoming Consultations */}
-          <Card className="lg:col-span-3">
-            <CardHeader className="pb-2">
-              <CardTitle>Upcoming Consultations</CardTitle>
-              <CardDescription>
-                Next scheduled patient consultations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {upcomingConsultations.map((consultation, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-4 p-2 rounded-lg hover:bg-accent transition-colors"
-                  >
-                    <div className="bg-primary/10 p-3 rounded-full">
-                      <Calendar className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-grow">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                        <p className="font-medium">
-                          {consultation.patientName}
-                        </p>
-                        <div>
-                          <Badge variant="outline" className="ml-0 sm:ml-2">
-                            {consultation.type}
-                          </Badge>
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+            {/* Upcoming Consultations */}
+            <Card className="lg:col-span-3">
+              <CardHeader className="pb-2">
+                <CardTitle>Upcoming Consultations</CardTitle>
+                <CardDescription>
+                  Next scheduled patient consultations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {upcomingConsultations.map((consultation, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-4 p-2 rounded-lg hover:bg-accent transition-colors"
+                    >
+                      <div className="bg-primary/10 p-3 rounded-full">
+                        <Calendar className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-grow">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                          <p className="font-medium">
+                            {consultation.patientName}
+                          </p>
+                          <div>
+                            <Badge variant="outline" className="ml-0 sm:ml-2">
+                              {consultation.type}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1">
+                          <p className="text-sm">
+                            <span className="text-muted-foreground">
+                              Caregiver:
+                            </span>{" "}
+                            {consultation.careGiver}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {consultation.date} at {consultation.time} (
+                            {consultation.duration})
+                          </p>
                         </div>
                       </div>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1">
-                        <p className="text-sm">
-                          <span className="text-muted-foreground">
-                            Caregiver:
-                          </span>{" "}
-                          {consultation.careGiver}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {consultation.date} at {consultation.time} (
-                          {consultation.duration})
-                        </p>
-                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Recent Activities */}
-          <Card className="lg:col-span-3">
-            <CardHeader className="pb-2">
-              <CardTitle>Recent Activities</CardTitle>
-              <CardDescription>
-                Latest actions taken in the system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivities.map((activity, index) => (
-                  <ActivityItem
-                    key={activity.id}
-                    activity={activity}
-                    getActivityIcon={getActivityIcon}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+            {/* Recent Activities */}
+            <Card className="lg:col-span-3">
+              <CardHeader className="pb-2">
+                <CardTitle>Recent Activities</CardTitle>
+                <CardDescription>
+                  Latest actions taken in the system
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentActivities.map((activity, index) => (
+                    <ActivityItem
+                      key={activity.id}
+                      activity={activity}
+                      getActivityIcon={getActivityIcon}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      </div>{" "}
+      {/* End Desktop View */}
     </div>
   );
 }

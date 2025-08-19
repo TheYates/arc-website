@@ -54,6 +54,7 @@ import { useAuth, User, UserRole, hasPermission } from "@/lib/auth";
 import { getUserAccount } from "@/lib/api/users";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { authenticatedGet, authenticatedPost } from "@/lib/api/auth-headers";
 import {
   Loader2,
   Search,
@@ -128,7 +129,7 @@ export default function UsersPage() {
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch("/api/admin/users");
+        const response = await authenticatedGet("/api/admin/users", user);
         if (!response.ok) {
           throw new Error("Failed to fetch users");
         }
@@ -264,13 +265,11 @@ export default function UsersPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await authenticatedPost(
+        "/api/admin/users",
+        user,
+        formData
+      );
 
       if (!response.ok) {
         const errorData = await response.json();

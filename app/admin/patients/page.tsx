@@ -59,7 +59,7 @@ import {
 import { AdminPatientsMobile } from "@/components/mobile/admin-patients";
 
 // Simple cache for patients data
-let patientsCache: { data: Patient[], timestamp: number } | null = null;
+let patientsCache: { data: Patient[]; timestamp: number } | null = null;
 const CACHE_DURATION = 30000; // 30 seconds
 
 export default function PatientsPage() {
@@ -91,7 +91,7 @@ export default function PatientsPage() {
       try {
         // Check cache first
         const now = Date.now();
-        if (patientsCache && (now - patientsCache.timestamp) < CACHE_DURATION) {
+        if (patientsCache && now - patientsCache.timestamp < CACHE_DURATION) {
           setPatients(patientsCache.data);
           setIsLoading(false);
 
@@ -106,7 +106,7 @@ export default function PatientsPage() {
         }
 
         const [patientsResponse, staffData, statsData] = await Promise.all([
-          getPatients(1, 50),
+          getPatients(1, 50, user),
           getAvailableStaff(),
           getWorkloadStats(),
         ]);
@@ -114,7 +114,7 @@ export default function PatientsPage() {
         // Update cache
         patientsCache = {
           data: patientsResponse.patients,
-          timestamp: now
+          timestamp: now,
         };
 
         setPatients(patientsResponse.patients);
@@ -319,9 +319,9 @@ export default function PatientsPage() {
       "Event Medical Coverage": "text-green-600",
       "Emergency Response": "text-red-600",
       "Health Monitoring": "text-purple-600",
-      "Consultation": "text-orange-600",
+      Consultation: "text-orange-600",
       "Home Care": "text-teal-600",
-      "Rehabilitation": "text-indigo-600",
+      Rehabilitation: "text-indigo-600",
     };
 
     return serviceColors[serviceName] || "text-gray-600";
@@ -431,7 +431,11 @@ export default function PatientsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className={`font-medium ${getServiceColor(patient.serviceName)}`}>
+                          <span
+                            className={`font-medium ${getServiceColor(
+                              patient.serviceName
+                            )}`}
+                          >
                             {patient.serviceName || "N/A"}
                           </span>
                         </TableCell>
@@ -453,7 +457,7 @@ export default function PatientsPage() {
                               <div className="flex items-center space-x-1">
                                 <div className="w-2 h-2 bg-green-600 rounded-full"></div>
                                 <span className="text-xs font-medium text-green-600">
-                                 {patient.assignedCaregiver.name}
+                                  {patient.assignedCaregiver.name}
                                 </span>
                               </div>
                             )}

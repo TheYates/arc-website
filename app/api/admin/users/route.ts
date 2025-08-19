@@ -1,16 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/database/postgresql';
-import { UserRole } from '@/lib/auth';
-import bcrypt from 'bcryptjs';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/database/postgresql";
+import { UserRole } from "@/lib/auth";
+import bcrypt from "bcryptjs";
+import { authenticateRequest } from "@/lib/api/auth";
 
 // GET /api/admin/users - Get all users (excluding patients)
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const authResult = await authenticateRequest(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
+    }
+
+    const { user } = authResult;
+
+    // Only admins can view users
+    if (user.role !== "admin" && user.role !== "super_admin") {
+      return NextResponse.json(
+        { error: "Only administrators can view users" },
+        { status: 403 }
+      );
+    }
     const users = await prisma.user.findMany({
       where: {
         role: {
-          not: 'PATIENT'
-        }
+          not: "PATIENT",
+        },
       },
       select: {
         id: true,
@@ -29,8 +44,8 @@ export async function GET() {
         lastLogin: true,
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     });
 
     // Transform the data to match our User type
@@ -53,9 +68,9 @@ export async function GET() {
 
     return NextResponse.json({ users: transformedUsers });
   } catch (error) {
-    console.error('Failed to fetch users:', error);
+    console.error("Failed to fetch users:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch users' },
+      { error: "Failed to fetch users" },
       { status: 500 }
     );
   }
@@ -64,13 +79,27 @@ export async function GET() {
 // POST /api/admin/users - Create new user
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await authenticateRequest(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
+    }
+
+    const { user } = authResult;
+
+    // Only admins can create users
+    if (user.role !== "admin" && user.role !== "super_admin") {
+      return NextResponse.json(
+        { error: "Only administrators can create users" },
+        { status: 403 }
+      );
+    }
     const body = await request.json();
     const { firstName, lastName, email, username, phone, address, role } = body;
 
     // Validate required fields
     if (!firstName || !lastName || !email || !username || !role) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
@@ -78,22 +107,24 @@ export async function POST(request: NextRequest) {
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: email },
-          { username: username }
-        ]
-      }
+        OR: [{ email: email }, { username: username }],
+      },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: existingUser.email === email ? 'Email already exists' : 'Username already exists' },
+        {
+          error:
+            existingUser.email === email
+              ? "Email already exists"
+              : "Username already exists",
+        },
         { status: 400 }
       );
     }
 
     // Hash the default password "password" - users will be forced to change it on first login
-    const hashedPassword = await bcrypt.hash('password', 10);
+    const hashedPassword = await bcrypt.hash("password", 10);
 
     // Create user
     const newUser = await prisma.user.create({
@@ -126,7 +157,7 @@ export async function POST(request: NextRequest) {
         createdAt: true,
         updatedAt: true,
         lastLogin: true,
-      }
+      },
     });
 
     // Transform the response
@@ -149,9 +180,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ user: transformedUser }, { status: 201 });
   } catch (error) {
-    console.error('Failed to create user:', error);
+    console.error("Failed to create user:", error);
     return NextResponse.json(
-      { error: 'Failed to create user' },
+      { error: "Failed to create user" },
       { status: 500 }
     );
   }

@@ -1,22 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/database/postgresql';
-import { ApplicationStatus } from '@/lib/types/applications';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/database/postgresql";
+import { ApplicationStatus } from "@/lib/types/applications";
+import { authenticateRequest } from "@/lib/api/auth";
 
 // GET /api/admin/applications - Get all applications
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const authResult = await authenticateRequest(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
+    }
+
+    const { user } = authResult;
+
+    // Only admins can view applications
+    if (user.role !== "admin" && user.role !== "super_admin") {
+      return NextResponse.json(
+        { error: "Only administrators can view applications" },
+        { status: 403 }
+      );
+    }
     const applications = await prisma.application.findMany({
       include: {
         selectedFeatures: true,
         invoices: {
           include: {
-            items: true
-          }
-        }
+            items: true,
+          },
+        },
       },
       orderBy: {
-        submittedAt: 'desc'
-      }
+        submittedAt: "desc",
+      },
     });
 
     // Transform the data to match our ApplicationData type
@@ -38,50 +53,53 @@ export async function GET() {
       adminNotes: app.adminNotes,
       processedBy: app.processedBy,
       processedAt: app.processedAt?.toISOString(),
-      selectedFeatures: app.selectedFeatures?.map((feature: any) => ({
-        id: feature.id,
-        applicationId: feature.applicationId,
-        featureId: feature.featureId,
-        featureName: feature.featureName,
-        featureType: feature.featureType,
-        isSelected: feature.isSelected,
-        createdAt: feature.createdAt.toISOString(),
-      })) || [],
-      invoices: app.invoices?.map((invoice: any) => ({
-        id: invoice.id,
-        applicationId: invoice.applicationId,
-        invoiceNumber: invoice.invoiceNumber,
-        basePrice: parseFloat(invoice.basePrice.toString()),
-        totalAmount: parseFloat(invoice.totalAmount.toString()),
-        currency: invoice.currency,
-        status: invoice.status.toLowerCase(),
-        dueDate: invoice.dueDate?.toISOString(),
-        paidDate: invoice.paidDate?.toISOString(),
-        paymentMethod: invoice.paymentMethod,
-        notes: invoice.notes,
-        createdBy: invoice.createdBy,
-        createdAt: invoice.createdAt.toISOString(),
-        updatedAt: invoice.updatedAt.toISOString(),
-        items: invoice.items?.map((item: any) => ({
-          id: item.id,
-          invoiceId: item.invoiceId,
-          itemType: item.itemType,
-          itemId: item.itemId,
-          itemName: item.itemName,
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: parseFloat(item.unitPrice.toString()),
-          totalPrice: parseFloat(item.totalPrice.toString()),
-          sortOrder: item.sortOrder,
+      selectedFeatures:
+        app.selectedFeatures?.map((feature: any) => ({
+          id: feature.id,
+          applicationId: feature.applicationId,
+          featureId: feature.featureId,
+          featureName: feature.featureName,
+          featureType: feature.featureType,
+          isSelected: feature.isSelected,
+          createdAt: feature.createdAt.toISOString(),
         })) || [],
-      })) || [],
+      invoices:
+        app.invoices?.map((invoice: any) => ({
+          id: invoice.id,
+          applicationId: invoice.applicationId,
+          invoiceNumber: invoice.invoiceNumber,
+          basePrice: parseFloat(invoice.basePrice.toString()),
+          totalAmount: parseFloat(invoice.totalAmount.toString()),
+          currency: invoice.currency,
+          status: invoice.status.toLowerCase(),
+          dueDate: invoice.dueDate?.toISOString(),
+          paidDate: invoice.paidDate?.toISOString(),
+          paymentMethod: invoice.paymentMethod,
+          notes: invoice.notes,
+          createdBy: invoice.createdBy,
+          createdAt: invoice.createdAt.toISOString(),
+          updatedAt: invoice.updatedAt.toISOString(),
+          items:
+            invoice.items?.map((item: any) => ({
+              id: item.id,
+              invoiceId: item.invoiceId,
+              itemType: item.itemType,
+              itemId: item.itemId,
+              itemName: item.itemName,
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: parseFloat(item.unitPrice.toString()),
+              totalPrice: parseFloat(item.totalPrice.toString()),
+              sortOrder: item.sortOrder,
+            })) || [],
+        })) || [],
     }));
 
     return NextResponse.json({ applications: transformedApplications });
   } catch (error) {
-    console.error('Failed to fetch applications:', error);
+    console.error("Failed to fetch applications:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch applications' },
+      { error: "Failed to fetch applications" },
       { status: 500 }
     );
   }
@@ -103,13 +121,20 @@ export async function POST(request: NextRequest) {
       duration,
       careNeeds,
       preferredContact,
-      selectedOptionalFeatures
+      selectedOptionalFeatures,
     } = body;
 
     // Validate required fields
-    if (!firstName || !lastName || !email || !phone || !serviceId || !serviceName) {
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !phone ||
+      !serviceId ||
+      !serviceName
+    ) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
@@ -128,34 +153,38 @@ export async function POST(request: NextRequest) {
         duration: duration || null,
         careNeeds: careNeeds || null,
         preferredContact: preferredContact || null,
-        status: 'PENDING',
+        status: "PENDING",
         submittedAt: new Date(),
-      }
+      },
     });
 
     // Create selected optional features if any
-    if (selectedOptionalFeatures && Array.isArray(selectedOptionalFeatures) && selectedOptionalFeatures.length > 0) {
+    if (
+      selectedOptionalFeatures &&
+      Array.isArray(selectedOptionalFeatures) &&
+      selectedOptionalFeatures.length > 0
+    ) {
       // First, get the feature details from the pricing items
       const pricingItems = await prisma.serviceItem.findMany({
         where: {
           id: {
-            in: selectedOptionalFeatures
-          }
-        }
+            in: selectedOptionalFeatures,
+          },
+        },
       });
 
       // Create application features
-      const applicationFeatures = pricingItems.map(item => ({
+      const applicationFeatures = pricingItems.map((item) => ({
         applicationId: newApplication.id,
         featureId: item.id,
         featureName: item.name,
-        featureType: 'feature', // Default to 'feature' since ServiceItem doesn't have type field
+        featureType: "feature", // Default to 'feature' since ServiceItem doesn't have type field
         isSelected: true,
       }));
 
       if (applicationFeatures.length > 0) {
         await prisma.applicationFeature.createMany({
-          data: applicationFeatures
+          data: applicationFeatures,
         });
       }
     }
@@ -181,11 +210,14 @@ export async function POST(request: NextRequest) {
       processedAt: newApplication.processedAt?.toISOString(),
     };
 
-    return NextResponse.json({ application: transformedApplication }, { status: 201 });
-  } catch (error) {
-    console.error('Failed to create application:', error);
     return NextResponse.json(
-      { error: 'Failed to create application' },
+      { application: transformedApplication },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Failed to create application:", error);
+    return NextResponse.json(
+      { error: "Failed to create application" },
       { status: 500 }
     );
   }

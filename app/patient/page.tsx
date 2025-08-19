@@ -2,10 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth";
 import { RoleHeader } from "@/components/role-header";
@@ -73,7 +80,9 @@ export default function PatientDashboard() {
 
     const fetchApplication = async () => {
       try {
-        const response = await fetch(`/api/patient/application?userId=${user.id}`);
+        const response = await fetch(
+          `/api/patient/application?userId=${user.id}`
+        );
         if (response.ok) {
           const data = await response.json();
           setApplication(data.application);
@@ -97,18 +106,16 @@ export default function PatientDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'approved':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'rejected':
-        return 'bg-red-100 text-red-800 border-red-200';
+      case "approved":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "rejected":
+        return "bg-red-100 text-red-800 border-red-200";
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
-
- 
 
   return (
     <div className="min-h-screen bg-background w-full">
@@ -133,7 +140,7 @@ export default function PatientDashboard() {
                   : new Date().getHours() < 18
                   ? "afternoon"
                   : "evening"}
-                , {user?.firstName || 'Patient'}! 👋
+                , {user?.firstName || "Patient"}! 👋
               </h1>
               <p className="text-muted-foreground mt-1">
                 {new Date().toLocaleDateString("en-US", {
@@ -141,20 +148,117 @@ export default function PatientDashboard() {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
-                })} • {new Date().toLocaleTimeString("en-US", {
+                })}{" "}
+                •{" "}
+                {new Date().toLocaleTimeString("en-US", {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
               </p>
             </div>
-            
           </div>
         </div>
 
-        {application ? (
+        {isLoading ? (
+          /* Loading Skeleton */
+          <div className="space-y-6">
+            {/* Main Content Grid Skeleton */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Application Status Skeleton */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-5 rounded-full" />
+                    <Skeleton className="h-6 w-48" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                    <Skeleton className="h-16 w-full rounded-lg" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions Skeleton */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-5 rounded-full" />
+                    <Skeleton className="h-6 w-32" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-20 w-full rounded-lg" />
+                    <Skeleton className="h-20 w-full rounded-lg" />
+                    <Skeleton className="h-20 w-full rounded-lg" />
+                    <Skeleton className="h-20 w-full rounded-lg" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Application Details Skeleton */}
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-4 w-64" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-40" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-36" />
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-48" />
+                    </div>
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Care Team Skeleton */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-5 rounded-full" />
+                  <Skeleton className="h-6 w-32" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-4 w-4" />
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : application ? (
           <div className="space-y-6">
             {/* Welcome Section */}
-
 
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -172,24 +276,35 @@ export default function PatientDashboard() {
                       <div>
                         <p className="font-medium">{application.serviceName}</p>
                         <p className="text-sm text-muted-foreground">
-                          Submitted {new Date(application.submittedAt).toLocaleDateString()}
+                          Submitted{" "}
+                          {new Date(
+                            application.submittedAt
+                          ).toLocaleDateString()}
                         </p>
                       </div>
-                      <Badge className={getStatusColor(application.status)} variant="secondary">
-                        {application.status?.charAt(0).toUpperCase() + application.status?.slice(1)}
+                      <Badge
+                        className={getStatusColor(application.status)}
+                        variant="secondary"
+                      >
+                        {application.status?.charAt(0).toUpperCase() +
+                          application.status?.slice(1)}
                       </Badge>
                     </div>
 
-                    {application.paymentStatus !== 'completed' && (
+                    {application.paymentStatus !== "completed" && (
                       <div className="p-4 border border-gray-600 rounded-lg">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-orange-800">Payment Required</p>
-                            <p className="text-sm text-orange-700">Complete payment to activate services</p>
+                            <p className="font-medium text-orange-800">
+                              Payment Required
+                            </p>
+                            <p className="text-sm text-orange-700">
+                              Complete payment to activate services
+                            </p>
                           </div>
                           <Button
                             size="sm"
-                            onClick={() => router.push('/patient/payment')}
+                            onClick={() => router.push("/patient/payment")}
                             className="bg-orange-600 hover:bg-orange-700"
                           >
                             Pay Now
@@ -212,7 +327,7 @@ export default function PatientDashboard() {
                 <CardContent>
                   <div className="grid grid-cols-2 gap-3">
                     <Button
-                      onClick={() => router.push('/patient/medical')}
+                      onClick={() => router.push("/patient/medical")}
                       className="h-auto p-4 flex flex-col items-center gap-2 bg-blue-600 hover:bg-blue-700"
                     >
                       <Stethoscope className="h-6 w-6" />
@@ -258,7 +373,9 @@ export default function PatientDashboard() {
                     <div className="flex items-center gap-2 text-sm">
                       <User className="h-4 w-4 text-gray-500" />
                       <span className="font-medium">Name:</span>
-                      <span>{application.firstName} {application.lastName}</span>
+                      <span>
+                        {application.firstName} {application.lastName}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Mail className="h-4 w-4 text-gray-500" />
@@ -294,7 +411,9 @@ export default function PatientDashboard() {
                     <Separator />
                     <div>
                       <h4 className="font-medium text-sm mb-2">Care Needs:</h4>
-                      <p className="text-sm text-gray-600">{application.careNeeds}</p>
+                      <p className="text-sm text-gray-600">
+                        {application.careNeeds}
+                      </p>
                     </div>
                   </>
                 )}
@@ -319,8 +438,12 @@ export default function PatientDashboard() {
                           <User className="h-5 w-5 text-blue-600" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium">{application.assignedReviewer.name}</p>
-                          <p className="text-sm text-muted-foreground">Medical Reviewer</p>
+                          <p className="font-medium">
+                            {application.assignedReviewer.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Medical Reviewer
+                          </p>
                         </div>
                         <Button size="sm" variant="outline">
                           <MessageSquare className="h-4 w-4 mr-2" />
@@ -333,8 +456,12 @@ export default function PatientDashboard() {
                           <User className="h-5 w-5 text-gray-400" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-muted-foreground">No Medical Reviewer Assigned</p>
-                          <p className="text-sm text-muted-foreground">Will be assigned soon</p>
+                          <p className="font-medium text-muted-foreground">
+                            No Medical Reviewer Assigned
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Will be assigned soon
+                          </p>
                         </div>
                       </div>
                     )}
@@ -346,8 +473,12 @@ export default function PatientDashboard() {
                           <Heart className="h-5 w-5 text-green-600" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium">{application.assignedCaregiver.name}</p>
-                          <p className="text-sm text-muted-foreground">Care Coordinator</p>
+                          <p className="font-medium">
+                            {application.assignedCaregiver.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Care Coordinator
+                          </p>
                         </div>
                         <Button size="sm" variant="outline">
                           <Phone className="h-4 w-4 mr-2" />
@@ -360,8 +491,12 @@ export default function PatientDashboard() {
                           <Heart className="h-5 w-5 text-gray-400" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-muted-foreground">No Caregiver Assigned</p>
-                          <p className="text-sm text-muted-foreground">Will be assigned soon</p>
+                          <p className="font-medium text-muted-foreground">
+                            No Caregiver Assigned
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Will be assigned soon
+                          </p>
                         </div>
                       </div>
                     )}
@@ -369,7 +504,9 @@ export default function PatientDashboard() {
                 ) : (
                   <div className="text-center py-6">
                     <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Loading care team information...</p>
+                    <p className="text-muted-foreground">
+                      Loading care team information...
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -381,9 +518,10 @@ export default function PatientDashboard() {
             <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">No Application Found</h2>
             <p className="text-muted-foreground mb-6">
-              You haven't submitted an application yet. Get started with Alpha Rescue Consult today.
+              You haven't submitted an application yet. Get started with Alpha
+              Rescue Consult today.
             </p>
-            <Button onClick={() => router.push('/services')}>
+            <Button onClick={() => router.push("/services")}>
               Browse Services
             </Button>
           </div>

@@ -2,9 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth";
 import { RoleHeader } from "@/components/role-header";
@@ -94,15 +108,40 @@ export default function PatientServiceRequestsPage() {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       PENDING: { label: "Pending", variant: "secondary" as const, icon: Clock },
-      APPROVED: { label: "Approved", variant: "default" as const, icon: CheckCircle },
-      SCHEDULED: { label: "Scheduled", variant: "default" as const, icon: Calendar },
-      IN_PROGRESS: { label: "In Progress", variant: "default" as const, icon: Loader2 },
-      COMPLETED: { label: "Completed", variant: "default" as const, icon: CheckCircle },
-      CANCELLED: { label: "Cancelled", variant: "destructive" as const, icon: XCircle },
-      REJECTED: { label: "Rejected", variant: "destructive" as const, icon: XCircle },
+      APPROVED: {
+        label: "Approved",
+        variant: "default" as const,
+        icon: CheckCircle,
+      },
+      SCHEDULED: {
+        label: "Scheduled",
+        variant: "default" as const,
+        icon: Calendar,
+      },
+      IN_PROGRESS: {
+        label: "In Progress",
+        variant: "default" as const,
+        icon: Loader2,
+      },
+      COMPLETED: {
+        label: "Completed",
+        variant: "default" as const,
+        icon: CheckCircle,
+      },
+      CANCELLED: {
+        label: "Cancelled",
+        variant: "destructive" as const,
+        icon: XCircle,
+      },
+      REJECTED: {
+        label: "Rejected",
+        variant: "destructive" as const,
+        icon: XCircle,
+      },
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
+    const config =
+      statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
     const Icon = config.icon;
 
     return (
@@ -121,13 +160,11 @@ export default function PatientServiceRequestsPage() {
       CRITICAL: { label: "Critical", className: "bg-red-100 text-red-800" },
     };
 
-    const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.MEDIUM;
+    const config =
+      priorityConfig[priority as keyof typeof priorityConfig] ||
+      priorityConfig.MEDIUM;
 
-    return (
-      <Badge className={config.className}>
-        {config.label}
-      </Badge>
-    );
+    return <Badge className={config.className}>{config.label}</Badge>;
   };
 
   const formatDate = (dateString: string) => {
@@ -172,7 +209,7 @@ export default function PatientServiceRequestsPage() {
   return (
     <div className="min-h-screen bg-background">
       <RoleHeader role="patient" />
-      
+
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -191,7 +228,9 @@ export default function PatientServiceRequestsPage() {
             <CardContent className="py-12">
               <div className="text-center">
                 <Calendar className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Service Requests</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  No Service Requests
+                </h3>
                 <p className="text-muted-foreground mb-4">
                   You haven't made any service requests yet.
                 </p>
@@ -208,79 +247,61 @@ export default function PatientServiceRequestsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {serviceRequests.map((request) => (
-              <Card key={request.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <CardTitle className="text-lg">{request.title}</CardTitle>
-                      {getStatusBadge(request.status)}
-                      {getPriorityBadge(request.priority)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Requested {formatDate(request.requestedDate)}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Description</p>
-                    <p>{request.description}</p>
-                    {request.customDescription && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Additional details: {request.customDescription}
-                      </p>
-                    )}
-                  </div>
-
-                  {request.serviceType && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Service Type</p>
-                      <p className="text-sm">{request.serviceType.name}</p>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <User className="h-4 w-4" />
-                    <span>
-                      Assigned to: {request.caregiver.firstName} {request.caregiver.lastName}
-                    </span>
-                  </div>
-
-                  {request.scheduledDate && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>Scheduled for: {formatDate(request.scheduledDate)}</span>
-                    </div>
-                  )}
-
-                  {request.caregiverNotes && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Caregiver Notes</p>
-                      <p className="text-sm bg-muted p-2 rounded">{request.caregiverNotes}</p>
-                    </div>
-                  )}
-
-                  {request.outcome && (
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Outcome</p>
-                      <p className="text-sm bg-green-50 p-2 rounded border border-green-200">
-                        {request.outcome}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/patient/service-requests/${request.id}`}>
-                        View Details
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Service</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Caregiver</TableHead>
+                  <TableHead>Requested</TableHead>
+                  <TableHead className="w-24">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {serviceRequests.map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell className="font-medium">
+                      <div>
+                        <div className="font-medium">{request.title}</div>
+                        {request.serviceType && (
+                          <div className="text-xs text-muted-foreground">
+                            {request.serviceType.name}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-xs">
+                      <div className="truncate text-sm">
+                        {request.description}
+                      </div>
+                      {request.customDescription && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {request.customDescription}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(request.status)}</TableCell>
+                    <TableCell>{getPriorityBadge(request.priority)}</TableCell>
+                    <TableCell className="text-sm">
+                      {request.caregiver.firstName} {request.caregiver.lastName}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatDate(request.requestedDate)}
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/patient/service-requests/${request.id}`}>
+                          View
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>

@@ -243,8 +243,7 @@ export function RoleHeader({ role }: RoleHeaderProps) {
         </div>
 
         {/* Center section - Empty for now */}
-        <div className="flex-1">
-        </div>
+        <div className="flex-1"></div>
 
         {/* Right side - Search, Theme Toggle, Notifications and User Menu */}
         <div className="flex items-center space-x-3">
@@ -252,7 +251,7 @@ export function RoleHeader({ role }: RoleHeaderProps) {
           <div className="hidden md:block">
             <CommandSearch variant={config.searchVariant} size="sm" />
           </div>
-          
+
           {/* Theme Toggle */}
           <ThemeToggle />
 
@@ -260,7 +259,7 @@ export function RoleHeader({ role }: RoleHeaderProps) {
           <NotificationBell />
 
           {/* User Dropdown Menu */}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 w-8 rounded-full p-0">
                 <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-medium text-sm">
@@ -269,7 +268,15 @@ export function RoleHeader({ role }: RoleHeaderProps) {
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuContent
+              className="w-56"
+              align="end"
+              sideOffset={8}
+              side="bottom"
+              style={{ zIndex: 9999 }}
+              avoidCollisions={true}
+              collisionPadding={8}
+            >
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">

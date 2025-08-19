@@ -63,10 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (storedUser) {
         try {
           const parsedUser = JSON.parse(storedUser);
-          console.log("👤 Found stored user:", {
-            email: parsedUser.email,
-            role: parsedUser.role,
-          });
 
           // Check if user has old uppercase role format - if so, clear and force re-login
           if (
@@ -89,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("❌ No stored user found");
       }
 
-      console.log("✅ Auth context initialization complete, setting isLoading to false");
       setIsLoading(false);
     });
   }, []);
@@ -113,7 +108,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const updatedUser = { ...user, ...data.user };
         setUser(updatedUser);
         localStorage.setItem("auth_user", JSON.stringify(updatedUser));
-        console.log("✅ User data refreshed:", { mustChangePassword: updatedUser.mustChangePassword });
+        console.log("✅ User data refreshed:", {
+          mustChangePassword: updatedUser.mustChangePassword,
+        });
       }
     } catch (error) {
       console.error("❌ Failed to refresh user data:", error);

@@ -25,6 +25,12 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/lib/auth";
+import {
+  authenticatedGet,
+  authenticatedPut,
+  authenticatedPatch,
+} from "@/lib/api/auth-headers";
 
 interface Notification {
   id: string;
@@ -56,17 +62,25 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchNotifications();
-    // Set up polling for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    if (user) {
+      fetchNotifications();
+      // Set up polling for new notifications every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const fetchNotifications = async () => {
+    if (!user) return;
+
     try {
-      const response = await fetch("/api/notifications?limit=20");
+      const response = await authenticatedGet(
+        "/api/notifications?limit=20",
+        user
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch notifications");
       }
@@ -81,16 +95,12 @@ export function NotificationBell() {
   };
 
   const markAsRead = async (notificationIds: string[]) => {
+    if (!user) return;
+
     try {
-      const response = await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          notificationIds,
-          markAsRead: true,
-        }),
+      const response = await authenticatedPatch("/api/notifications", user, {
+        notificationIds,
+        markAsRead: true,
       });
 
       if (!response.ok) {
@@ -98,31 +108,31 @@ export function NotificationBell() {
       }
 
       // Update local state
-      setNotifications(prev =>
-        prev.map(notification =>
+      setNotifications((prev) =>
+        prev.map((notification) =>
           notificationIds.includes(notification.id)
             ? { ...notification, isRead: true }
             : notification
         )
       );
-      setUnreadCount(prev => Math.max(0, prev - notificationIds.length));
+      setUnreadCount((prev) => Math.max(0, prev - notificationIds.length));
     } catch (error) {
       console.error("Error marking notifications as read:", error);
     }
   };
 
   const markAllAsRead = async () => {
+    if (!user) return;
+
     try {
-      const response = await fetch("/api/notifications", {
-        method: "PUT",
-      });
+      const response = await authenticatedPut("/api/notifications", user);
 
       if (!response.ok) {
         throw new Error("Failed to mark all notifications as read");
       }
 
-      setNotifications(prev =>
-        prev.map(notification => ({ ...notification, isRead: true }))
+      setNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, isRead: true }))
       );
       setUnreadCount(0);
     } catch (error) {
@@ -207,7 +217,7 @@ export function NotificationBell() {
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        
+
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -228,7 +238,11 @@ export function NotificationBell() {
                 onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex items-start gap-3 w-full">
-                  <div className={`mt-1 ${getPriorityColor(notification.priority)}`}>
+                  <div
+                    className={`mt-1 ${getPriorityColor(
+                      notification.priority
+                    )}`}
+                  >
                     {getNotificationIcon(notification.type)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -261,7 +275,7 @@ export function NotificationBell() {
             ))}
           </div>
         )}
-        
+
         {notifications.length > 0 && (
           <>
             <DropdownMenuSeparator />

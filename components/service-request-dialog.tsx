@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -29,20 +35,18 @@ interface ServiceRequestDialogProps {
   trigger?: React.ReactNode;
 }
 
-export function ServiceRequestDialog({ onSuccess, trigger }: ServiceRequestDialogProps) {
+export function ServiceRequestDialog({
+  onSuccess,
+  trigger,
+}: ServiceRequestDialogProps) {
   const [open, setOpen] = useState(false);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    customDescription: "",
-    priority: "MEDIUM",
-    preferredDate: "",
-    estimatedDuration: "",
-    notes: "",
     serviceTypeId: "",
+    description: "",
+    priority: "MEDIUM",
   });
 
   useEffect(() => {
@@ -54,7 +58,9 @@ export function ServiceRequestDialog({ onSuccess, trigger }: ServiceRequestDialo
   const fetchServiceTypes = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/service-types?isActive=true&popular=true");
+      const response = await fetch(
+        "/api/service-types?isActive=true&popular=true"
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch service types");
       }
@@ -69,33 +75,25 @@ export function ServiceRequestDialog({ onSuccess, trigger }: ServiceRequestDialo
   };
 
   const handleServiceTypeChange = (serviceTypeId: string) => {
-    const selectedType = serviceTypes.find(type => type.id === serviceTypeId);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       serviceTypeId,
-      title: selectedType ? selectedType.name : prev.title,
-      description: selectedType ? selectedType.description : prev.description,
     }));
   };
 
   const resetForm = () => {
     setFormData({
-      title: "",
-      description: "",
-      customDescription: "",
-      priority: "MEDIUM",
-      preferredDate: "",
-      estimatedDuration: "",
-      notes: "",
       serviceTypeId: "",
+      description: "",
+      priority: "MEDIUM",
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.title.trim() || !formData.description.trim()) {
-      toast.error("Please fill in the title and description");
+
+    if (!formData.serviceTypeId) {
+      toast.error("Please select a service type");
       return;
     }
 
@@ -108,9 +106,15 @@ export function ServiceRequestDialog({ onSuccess, trigger }: ServiceRequestDialo
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...formData,
-          preferredDate: formData.preferredDate ? new Date(formData.preferredDate).toISOString() : null,
-          estimatedDuration: formData.estimatedDuration ? parseInt(formData.estimatedDuration) : null,
+          serviceTypeId:
+            formData.serviceTypeId === "other" ? null : formData.serviceTypeId,
+          title:
+            formData.serviceTypeId === "other"
+              ? "Other Service Request"
+              : serviceTypes.find((type) => type.id === formData.serviceTypeId)
+                  ?.name || "Service Request",
+          description: formData.description,
+          priority: formData.priority,
         }),
       });
 
@@ -120,7 +124,7 @@ export function ServiceRequestDialog({ onSuccess, trigger }: ServiceRequestDialo
       }
 
       const data = await response.json();
-      
+
       toast.success("Service request created successfully", {
         description: "Your caregiver will be notified about your request.",
       });
@@ -147,79 +151,64 @@ export function ServiceRequestDialog({ onSuccess, trigger }: ServiceRequestDialo
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || defaultTrigger}
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>New Service Request</DialogTitle>
           <DialogDescription>
             Request a service from your assigned caregiver
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Service Type Selection */}
           <div className="space-y-2">
-            <Label htmlFor="serviceType">Service Type (Optional)</Label>
+            <Label htmlFor="serviceType">Service Type *</Label>
             <Select
               value={formData.serviceTypeId}
               onValueChange={handleServiceTypeChange}
               disabled={isLoading}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a common service type or create custom" />
+                <SelectValue placeholder="Select a service type" />
               </SelectTrigger>
               <SelectContent>
                 {serviceTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <div>
                       <div className="font-medium">{type.name}</div>
-                      <div className="text-sm text-muted-foreground">{type.description}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {type.description}
+                      </div>
                     </div>
                   </SelectItem>
                 ))}
+                <SelectItem value="other">
+                  <div>
+                    <div className="font-medium">Other</div>
+                    <div className="text-sm text-muted-foreground">
+                      Custom service request
+                    </div>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-sm text-muted-foreground">
-              Choose from common services or leave blank to create a custom request
-            </p>
-          </div>
-
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title">Service Title *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="e.g., Wound dressing change, Medication assistance"
-              required
-            />
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
+            <Label htmlFor="description">Description (Optional)</Label>
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
               placeholder="Describe what you need help with..."
               rows={3}
-              required
-            />
-          </div>
-
-          {/* Custom Description */}
-          <div className="space-y-2">
-            <Label htmlFor="customDescription">Additional Details</Label>
-            <Textarea
-              id="customDescription"
-              value={formData.customDescription}
-              onChange={(e) => setFormData(prev => ({ ...prev, customDescription: e.target.value }))}
-              placeholder="Any specific instructions or additional information..."
-              rows={2}
             />
           </div>
 
@@ -228,7 +217,9 @@ export function ServiceRequestDialog({ onSuccess, trigger }: ServiceRequestDialo
             <Label htmlFor="priority">Priority</Label>
             <Select
               value={formData.priority}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value }))}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, priority: value }))
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -237,53 +228,11 @@ export function ServiceRequestDialog({ onSuccess, trigger }: ServiceRequestDialo
                 <SelectItem value="LOW">Low - Can wait a few days</SelectItem>
                 <SelectItem value="MEDIUM">Medium - Within 24 hours</SelectItem>
                 <SelectItem value="HIGH">High - Same day preferred</SelectItem>
-                <SelectItem value="CRITICAL">Critical - Urgent attention needed</SelectItem>
+                <SelectItem value="CRITICAL">
+                  Critical - Urgent attention needed
+                </SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Preferred Date */}
-          <div className="space-y-2">
-            <Label htmlFor="preferredDate">Preferred Date & Time</Label>
-            <Input
-              id="preferredDate"
-              type="datetime-local"
-              value={formData.preferredDate}
-              onChange={(e) => setFormData(prev => ({ ...prev, preferredDate: e.target.value }))}
-              min={new Date().toISOString().slice(0, 16)}
-            />
-            <p className="text-sm text-muted-foreground">
-              When would you prefer this service to be provided?
-            </p>
-          </div>
-
-          {/* Estimated Duration */}
-          <div className="space-y-2">
-            <Label htmlFor="estimatedDuration">Estimated Duration (minutes)</Label>
-            <Input
-              id="estimatedDuration"
-              type="number"
-              value={formData.estimatedDuration}
-              onChange={(e) => setFormData(prev => ({ ...prev, estimatedDuration: e.target.value }))}
-              placeholder="e.g., 30"
-              min="1"
-              max="480"
-            />
-            <p className="text-sm text-muted-foreground">
-              How long do you think this service will take?
-            </p>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Additional Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Any other information your caregiver should know..."
-              rows={2}
-            />
           </div>
 
           {/* Submit Button */}
@@ -301,9 +250,9 @@ export function ServiceRequestDialog({ onSuccess, trigger }: ServiceRequestDialo
                 </>
               )}
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => setOpen(false)}
               disabled={isSubmitting}
             >

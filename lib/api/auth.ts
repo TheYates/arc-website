@@ -8,55 +8,80 @@ export interface AuthResult {
 }
 
 /**
- * Simple authentication function for API routes
- * For now, this is a placeholder that returns a mock user
- * In a real implementation, this would validate JWT tokens or session cookies
+ * Authentication function for API routes
+ * Validates user session from cookies/headers
  */
-export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
+export async function authenticateRequest(
+  request: NextRequest
+): Promise<AuthResult> {
   try {
-    // For development/testing purposes, we'll return a mock admin user
-    // In production, this should validate actual authentication tokens
-    
-    // Check for authorization header (placeholder)
+    // Try to get user ID from various sources
+    let userId: string | null = null;
+
+    // 1. Check for Authorization header (JWT token)
     const authHeader = request.headers.get("authorization");
-    
-    // For now, return a mock user based on the URL path or referer to simulate different roles
-    const url = new URL(request.url);
-    const pathname = url.pathname;
-    const referer = request.headers.get("referer") || "";
-
-    let mockRole = "ADMIN";
-
-    // Check the current URL path first
-    if (pathname.includes("/patient/")) {
-      mockRole = "PATIENT";
-    } else if (pathname.includes("/caregiver/")) {
-      mockRole = "CAREGIVER";
-    } else if (pathname.includes("/reviewer/")) {
-      mockRole = "REVIEWER";
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      // TODO: Implement JWT token validation
+      // const token = authHeader.substring(7);
+      // userId = validateJWT(token);
     }
-    // If it's an API call, check the referer to determine the role
-    else if (pathname.startsWith("/api/")) {
-      if (referer.includes("/patient/")) {
-        mockRole = "PATIENT";
-      } else if (referer.includes("/caregiver/")) {
-        mockRole = "CAREGIVER";
-      } else if (referer.includes("/reviewer/")) {
-        mockRole = "REVIEWER";
-      } else if (referer.includes("/admin/")) {
-        mockRole = "ADMIN";
+
+    // 2. Check for session cookie
+    const cookies = request.headers.get("cookie");
+    if (cookies) {
+      const sessionMatch = cookies.match(/auth_user_id=([^;]+)/);
+      if (sessionMatch) {
+        userId = decodeURIComponent(sessionMatch[1]);
       }
     }
 
-    // Get a real user from the database
-    const user = await prisma.user.findFirst({
-      where: { role: mockRole as "PATIENT" | "ADMIN" | "CAREGIVER" | "REVIEWER" },
+    // 3. Check for custom header (for client-side requests)
+    const userIdHeader = request.headers.get("x-user-id");
+    if (userIdHeader) {
+      userId = userIdHeader;
+    }
+
+    // 4. For development: Check referer and try to extract user info from localStorage
+    // This is a fallback for when cookies aren't working properly
+    if (!userId) {
+      const referer = request.headers.get("referer") || "";
+      const userAgent = request.headers.get("user-agent") || "";
+
+      // Try to get user from session storage via a special header
+      const sessionUser = request.headers.get("x-session-user");
+      if (sessionUser) {
+        try {
+          const userData = JSON.parse(decodeURIComponent(sessionUser));
+          userId = userData.id;
+        } catch (e) {
+          console.log("Failed to parse session user header");
+        }
+      }
+    }
+
+    if (!userId) {
+      return {
+        success: false,
+        error: "No authentication token found",
+      };
+    }
+
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
     });
 
     if (!user) {
       return {
         success: false,
-        error: "No user found with the required role",
+        error: "User not found",
+      };
+    }
+
+    if (!user.isActive) {
+      return {
+        success: false,
+        error: "User account is deactivated",
       };
     }
 
@@ -95,7 +120,7 @@ export function hasRole(user: any, requiredRoles: string[]): boolean {
   if (!user || !user.role) {
     return false;
   }
-  
+
   return requiredRoles.includes(user.role);
 }
 
@@ -109,12 +134,15 @@ export function isAdmin(user: any): boolean {
 /**
  * Check if user can access patient data
  */
-export async function canAccessPatient(user: any, patientId: string): Promise<boolean> {
+export async function canAccessPatient(
+  user: any,
+  patientId: string
+): Promise<boolean> {
   if (!user) return false;
-  
+
   // Admins can access all patients
   if (isAdmin(user)) return true;
-  
+
   // Patients can only access their own data
   if (user.role === "patient") {
     const patient = await prisma.patient.findUnique({
@@ -122,7 +150,7 @@ export async function canAccessPatient(user: any, patientId: string): Promise<bo
     });
     return patient?.id === patientId;
   }
-  
+
   // Caregivers can access their assigned patients
   if (user.role === "caregiver") {
     const assignment = await prisma.caregiverAssignment.findFirst({
@@ -134,7 +162,7 @@ export async function canAccessPatient(user: any, patientId: string): Promise<bo
     });
     return !!assignment;
   }
-  
+
   // Reviewers can access their assigned patients
   if (user.role === "reviewer") {
     const assignment = await prisma.reviewerAssignment.findFirst({
@@ -146,6 +174,6 @@ export async function canAccessPatient(user: any, patientId: string): Promise<bo
     });
     return !!assignment;
   }
-  
+
   return false;
 }

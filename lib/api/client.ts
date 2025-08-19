@@ -226,7 +226,8 @@ export async function getMedicationsClient(
 }
 
 export async function getMedicationAdministrationsClient(
-  patientId: string
+  patientId: string,
+  user: AuthUser | null = null
 ): Promise<MedicationAdministration[]> {
   try {
     const cacheKey = `administrations-${patientId}`;
@@ -239,9 +240,11 @@ export async function getMedicationAdministrationsClient(
     }
 
     const start = performance.now();
+    const headers = createAuthHeaders(user);
     const response = await fetch(
       `/api/medications/administrations/${patientId}`,
       {
+        headers,
         next: { revalidate: 60 }, // Increased cache time to 1 minute
       }
     );
@@ -276,14 +279,14 @@ export async function getMedicationAdministrationsClient(
 }
 
 export async function recordMedicationAdministrationClient(
-  administration: Omit<MedicationAdministration, "id">
+  administration: Omit<MedicationAdministration, "id">,
+  user: AuthUser | null = null
 ): Promise<MedicationAdministration | null> {
   try {
+    const headers = createAuthHeaders(user);
     const response = await fetch("/api/medications/administrations", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(administration),
     });
 

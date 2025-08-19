@@ -38,6 +38,7 @@ interface AuthContextType {
   logout: () => void;
   refreshUser: () => Promise<void>;
   isLoading: boolean;
+  isHydrated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,44 +47,51 @@ export const USERS_STORAGE_KEY = "auth_users";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start with loading true
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true to prevent hydration mismatch
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Check for stored user on mount
+  // Hydration-safe auth check
   React.useEffect(() => {
     console.log("🔍 Auth context initializing, checking localStorage...");
-    const storedUser = localStorage.getItem("auth_user");
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        console.log("👤 Found stored user:", {
-          email: parsedUser.email,
-          role: parsedUser.role,
-        });
 
-        // Check if user has old uppercase role format - if so, clear and force re-login
-        if (
-          parsedUser.role &&
-          parsedUser.role === parsedUser.role.toUpperCase()
-        ) {
-          console.log(
-            "🔄 Detected old uppercase role format, clearing stored user"
-          );
+    // Use requestAnimationFrame for fastest possible execution
+    requestAnimationFrame(() => {
+      // Mark as hydrated first
+      setIsHydrated(true);
+
+      const storedUser = localStorage.getItem("auth_user");
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          console.log("👤 Found stored user:", {
+            email: parsedUser.email,
+            role: parsedUser.role,
+          });
+
+          // Check if user has old uppercase role format - if so, clear and force re-login
+          if (
+            parsedUser.role &&
+            parsedUser.role === parsedUser.role.toUpperCase()
+          ) {
+            console.log(
+              "🔄 Detected old uppercase role format, clearing stored user"
+            );
+            localStorage.removeItem("auth_user");
+            setUser(null);
+          } else {
+            setUser(parsedUser);
+          }
+        } catch (error) {
+          console.log("❌ Error parsing stored user, removing:", error);
           localStorage.removeItem("auth_user");
-          setUser(null);
-        } else {
-          setUser(parsedUser);
         }
-      } catch (error) {
-        console.log("❌ Error parsing stored user, removing:", error);
-        localStorage.removeItem("auth_user");
+      } else {
+        console.log("❌ No stored user found");
       }
-    } else {
-      console.log("❌ No stored user found");
-    }
-    console.log(
-      "✅ Auth context initialization complete, setting isLoading to false"
-    );
-    setIsLoading(false); // Set loading to false after checking localStorage
+
+      console.log("✅ Auth context initialization complete, setting isLoading to false");
+      setIsLoading(false);
+    });
   }, []);
 
   const logout = () => {
@@ -156,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         refreshUser,
         isLoading,
+        isHydrated,
       },
     },
     children

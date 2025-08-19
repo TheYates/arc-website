@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { AdminHeader } from "@/components/admin/admin-header";
-import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { Menu, X } from "lucide-react";
 
@@ -42,7 +42,7 @@ export function TabletLayout({ children }: TabletLayoutProps) {
                     </Button>
                   </div>
                   <div className="flex-1 overflow-auto">
-                    <AdminSidebar />
+                    <AppSidebar />
                   </div>
                 </div>
               </SheetContent>

@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { VitalsChart } from "@/components/medical/vitals-chart";
 import { PatientSymptomReportForm } from "@/components/medical/patient-symptom-report-form";
+import { RoleHeader } from "@/components/role-header";
+import { PatientMobileDashboard } from "@/components/mobile/patient-dashboard";
 import {
   getMedications,
   getMedicationAdministrations,
@@ -144,101 +146,118 @@ export default function PatientMedicalPage() {
   const upcomingMedications = getUpcomingMedications();
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">My Medical Information</h1>
-          <p className="text-muted-foreground">
-            Track your health progress and manage your care
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowSymptomForm(true)}
-          className="bg-orange-600 hover:bg-orange-700"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Report Symptoms
-        </Button>
+    <div className="min-h-screen bg-background w-full">
+      {/* Header Navigation */}
+      <RoleHeader role="patient" />
+
+      {/* Mobile (distinct UI) */}
+      <div className="md:hidden">
+        <PatientMobileDashboard />
       </div>
 
-      {/* Quick Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Recent Vitals */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Latest Vitals</CardTitle>
-            <Heart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {recentVitals ? (
-              <div className="space-y-2">
-                {recentVitals.bloodPressure && (
-                  <div className="flex justify-between">
-                    <span className="text-sm">Blood Pressure:</span>
-                    <span className="text-sm font-medium">
-                      {recentVitals.bloodPressure.systolic}/
-                      {recentVitals.bloodPressure.diastolic}
-                    </span>
-                  </div>
-                )}
-                {recentVitals.heartRate && (
-                  <div className="flex justify-between">
-                    <span className="text-sm">Heart Rate:</span>
-                    <span className="text-sm font-medium">
-                      {recentVitals.heartRate} BPM
-                    </span>
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {new Date(recentVitals.recordedAt).toLocaleDateString()}
-                </p>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No vitals recorded yet
+      {/* Desktop */}
+      <main className="hidden md:block container mx-auto px-4 py-6 w-full max-w-7xl">
+        {/* Welcome Header */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">
+                Medical Records
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Track your health progress and manage your care
               </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Active Medications */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Medications
-            </CardTitle>
-            <Pill className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {(medications || []).filter((m) => m.isActive).length}
             </div>
-            <p className="text-xs text-muted-foreground">
-              medications prescribed
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Upcoming Doses */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Today's Medications
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {upcomingMedications.filter((m) => m.hasBeenTaken).length}/
-              {upcomingMedications.length}
+            <div className="mt-4 md:mt-0">
+              <Button
+                onClick={() => setShowSymptomForm(true)}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Report Symptoms
+              </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              doses completed today
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+
+        {/* Quick Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Recent Vitals */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <Heart className="h-6 w-6 text-red-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Latest Vitals
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {recentVitals ? "Recorded" : "None"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Active Medications */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Pill className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Active Medications
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {(medications || []).filter((m) => m.isActive).length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Today's Doses */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Calendar className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Today's Doses
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {upcomingMedications.filter((m) => m.hasBeenTaken).length}/{upcomingMedications.length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Symptom Reports */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <AlertTriangle className="h-6 w-6 text-orange-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Symptom Reports
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {symptomReports.length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="vitals" className="space-y-6">
@@ -510,6 +529,7 @@ export default function PatientMedicalPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      </main>
     </div>
   );
 }

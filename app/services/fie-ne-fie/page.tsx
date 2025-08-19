@@ -306,7 +306,7 @@ export default function FieNeFiePage() {
               <div className="flex items-center justify-center lg:justify-start space-x-3 mb-6">
                 {/* <Baby className="h-12 w-12 text-pink-300" /> */}
                 <h1 className="text-4xl md:text-5xl font-bold text-white font-fie-ne-fie">
-                  {fieNeFieService?.name || "FIE NE FIE"}
+                  {fieNeFieService?.name}
                 </h1>
               </div>
               <Badge className="bg-white/20 text-white border border-white/30 mb-4">

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { SidebarIcon } from "lucide-react";
 
 import { SearchForm } from "@/components/search-form";
 import {
@@ -12,9 +11,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useSidebar } from "@/components/ui/sidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 interface AdminHeaderProps {
   breadcrumbs?: {
@@ -24,20 +22,10 @@ interface AdminHeaderProps {
 }
 
 export function AdminHeader({ breadcrumbs = [] }: AdminHeaderProps) {
-  const { toggleSidebar } = useSidebar();
-
   return (
     <header className="bg-background fixed top-0 left-0 right-0 z-50 flex w-full items-center border-b">
       <div className="flex h-12 w-full items-center gap-2 px-4">
-        <Button
-          className="hidden md:inline-flex h-8 w-8"
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-          aria-label="Toggle sidebar"
-        >
-          <SidebarIcon />
-        </Button>
+        <SidebarTrigger className="hidden md:inline-flex" />
         <Separator
           orientation="vertical"
           className="mr-2 h-4 hidden md:block"

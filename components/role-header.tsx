@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CommandSearch } from "@/components/ui/command-search";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useAuth } from "@/lib/auth";
 import {
   Heart,
@@ -42,7 +43,7 @@ interface NavigationItem {
 }
 
 interface RoleHeaderProps {
-  role: "admin" | "reviewer" | "caregiver";
+  role: "admin" | "reviewer" | "caregiver" | "patient";
 }
 
 export function RoleHeader({ role }: RoleHeaderProps) {
@@ -78,6 +79,15 @@ export function RoleHeader({ role }: RoleHeaderProps) {
           accentColor: "text-teal-600",
           accentBg: "bg-teal-50",
           searchVariant: "caregiver" as const,
+        };
+      case "patient":
+        return {
+          title: "Alpha Rescue",
+          icon: <Heart className="h-5 w-5 text-white" />,
+          bgColor: "bg-green-600",
+          accentColor: "text-green-600",
+          accentBg: "bg-green-50",
+          searchVariant: "patient" as const,
         };
     }
   };
@@ -118,6 +128,12 @@ export function RoleHeader({ role }: RoleHeaderProps) {
             icon: <UserPlus className="h-4 w-4 mr-2" />,
             isActive: pathname.startsWith(`${baseUrl}/users`),
           },
+          {
+            name: "Settings",
+            href: `${baseUrl}/settings`,
+            icon: <Settings className="h-4 w-4 mr-2" />,
+            isActive: pathname.startsWith(`${baseUrl}/settings`),
+          },
         ];
       case "reviewer":
         return [
@@ -126,6 +142,12 @@ export function RoleHeader({ role }: RoleHeaderProps) {
             href: baseUrl,
             icon: <Home className="h-4 w-4 mr-2" />,
             isActive: pathname === baseUrl,
+          },
+          {
+            name: "Service Requests",
+            href: `${baseUrl}/service-requests`,
+            icon: <ClipboardList className="h-4 w-4 mr-2" />,
+            isActive: pathname.startsWith(`${baseUrl}/service-requests`),
           },
           {
             name: "My Patients",
@@ -143,10 +165,43 @@ export function RoleHeader({ role }: RoleHeaderProps) {
             isActive: pathname === baseUrl,
           },
           {
+            name: "Service Requests",
+            href: `${baseUrl}/service-requests`,
+            icon: <ClipboardList className="h-4 w-4 mr-2" />,
+            isActive: pathname.startsWith(`${baseUrl}/service-requests`),
+          },
+          {
+            name: "My Schedule",
+            href: `${baseUrl}/schedules`,
+            icon: <Calendar className="h-4 w-4 mr-2" />,
+            isActive: pathname.startsWith(`${baseUrl}/schedules`),
+          },
+          {
             name: "My Patients",
             href: `${baseUrl}/patients`,
             icon: <Users className="h-4 w-4 mr-2" />,
             isActive: pathname.startsWith(`${baseUrl}/patients`),
+          },
+        ];
+      case "patient":
+        return [
+          {
+            name: "Dashboard",
+            href: baseUrl,
+            icon: <Home className="h-4 w-4 mr-2" />,
+            isActive: pathname === baseUrl,
+          },
+          {
+            name: "Service Requests",
+            href: `${baseUrl}/service-requests`,
+            icon: <ClipboardList className="h-4 w-4 mr-2" />,
+            isActive: pathname.startsWith(`${baseUrl}/service-requests`),
+          },
+          {
+            name: "Medical",
+            href: `${baseUrl}/medical`,
+            icon: <Stethoscope className="h-4 w-4 mr-2" />,
+            isActive: pathname.startsWith(`${baseUrl}/medical`),
           },
         ];
     }
@@ -202,12 +257,7 @@ export function RoleHeader({ role }: RoleHeaderProps) {
           <ThemeToggle />
 
           {/* Notifications */}
-          <Button size="icon" variant="ghost" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-xs">
-              1
-            </span>
-          </Button>
+          <NotificationBell />
 
           {/* User Dropdown Menu */}
           <DropdownMenu>

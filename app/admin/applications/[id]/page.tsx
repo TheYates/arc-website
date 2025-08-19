@@ -44,6 +44,7 @@ import {
 import { ApplicationData } from "@/lib/types/applications";
 import { useAuth } from "@/lib/auth";
 import { AdminApplicationDetailMobile } from "@/components/mobile/admin-application-detail";
+import { InvoiceManagement } from "@/components/admin/invoice-management";
 import {
   Calendar,
   Clock,
@@ -56,6 +57,13 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  Send,
+  MessageSquare,
+  FileText,
+  Plus,
+  Eye,
+  EyeOff,
+  Copy,
 } from "lucide-react";
 
 export default function ApplicationDetailPage({
@@ -68,6 +76,9 @@ export default function ApplicationDetailPage({
   const [isLoading, setIsLoading] = useState(true);
   const [adminNotes, setAdminNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
@@ -77,6 +88,7 @@ export default function ApplicationDetailPage({
       setIsLoading(true);
       try {
         const data = await getApplicationById(id);
+        console.log("Application data:", data); // Debug log
         setApplication(data);
         if (data?.adminNotes) {
           setAdminNotes(data.adminNotes);
@@ -111,17 +123,30 @@ export default function ApplicationDetailPage({
       if (updatedApplication) {
         setApplication(updatedApplication);
 
-        toast({
-          title: `Application ${
-            status === "approved" ? "Approved" : "Rejected"
-          }`,
-          description: `The application has been successfully ${status}.`,
-          variant: status === "approved" ? "default" : "destructive",
-        });
-
-        // If approved, navigate to the onboarding page
         if (status === "approved") {
-          router.push(`/admin/patients/onboard/${application.id}`);
+          // Handle approval response with user creation and notifications
+          const data = updatedApplication as any;
+
+          let notificationStatus = "";
+          if (data.notifications) {
+            const emailStatus = data.notifications.email.success ? "✅" : "❌";
+            const smsStatus = data.notifications.sms.success ? "✅" : "❌";
+            notificationStatus = ` | Email: ${emailStatus} SMS: ${smsStatus}`;
+          }
+
+          toast({
+            title: "Application Approved & Account Created",
+            description: `User account created for ${application.firstName} ${application.lastName}. Credentials sent via email and SMS.${notificationStatus}`,
+            variant: "default",
+          });
+
+          // Don't navigate to onboarding - the new flow handles everything
+        } else {
+          toast({
+            title: "Application Rejected",
+            description: "The application has been successfully rejected.",
+            variant: "destructive",
+          });
         }
       }
     } catch (error) {
@@ -144,6 +169,112 @@ export default function ApplicationDetailPage({
       month: "long",
       day: "numeric",
     });
+  };
+
+  const handleResendCredentials = async (method: 'email' | 'sms' | 'both' = 'both') => {
+    if (!application) return;
+
+    setIsResending(true);
+    try {
+      const response = await fetch(`/api/admin/applications/${application.id}/resend-credentials`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ method }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Credentials Resent",
+          description: `Credentials have been resent via ${method}`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to resend credentials",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to resend credentials:", error);
+      toast({
+        title: "Error",
+        description: "Failed to resend credentials",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!application) return;
+
+    setIsCreatingInvoice(true);
+    try {
+      const response = await fetch(`/api/admin/applications/${application.id}/create-invoice`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          basePrice: 500, // Default price - can be customized
+          currency: 'GHS',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Invoice Created",
+          description: `Invoice ${data.invoice.invoiceNumber} created successfully`,
+          variant: "default",
+        });
+
+        // Refresh the application data to show the new invoice
+        const updatedApp = await getApplicationById(application.id);
+        if (updatedApp) {
+          setApplication(updatedApp);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create invoice",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to create invoice:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create invoice",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingInvoice(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Copied!",
+        description: `${label} copied to clipboard`,
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Copy Failed",
+        description: "Failed to copy to clipboard",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -311,6 +442,47 @@ export default function ApplicationDetailPage({
                   </div>
                 </>
               )}
+
+              {/* Selected Optional Features */}
+              {application.selectedFeatures && application.selectedFeatures.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground">
+                      Selected Optional Features
+                    </h3>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {application.selectedFeatures.map((feature) => (
+                        <Badge key={feature.id} variant="outline">
+                          {feature.featureName}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Invoice Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoice Management</CardTitle>
+              <CardDescription>
+                Create and manage invoices for this application
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <InvoiceManagement
+                application={application}
+                onInvoiceCreated={(invoice) => {
+                  // Update the application state to include the new invoice
+                  setApplication(prev => prev ? {
+                    ...prev,
+                    invoices: [...(prev.invoices || []), invoice]
+                  } : null);
+                }}
+              />
             </CardContent>
           </Card>
         </div>
@@ -353,8 +525,9 @@ export default function ApplicationDetailPage({
                       <DialogHeader>
                         <DialogTitle>Approve Application</DialogTitle>
                         <DialogDescription>
-                          Approving this application will start the onboarding
-                          process for this patient.
+                          Approving this application will create a user account,
+                          generate temporary credentials, and send welcome notifications
+                          via email and SMS to the applicant.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="py-4">
@@ -365,10 +538,16 @@ export default function ApplicationDetailPage({
                           </strong>{" "}
                           for {application.serviceName} service.
                         </p>
-                        <p className="mt-2">
-                          After approval, you'll be taken to the patient
-                          onboarding page to complete the process.
-                        </p>
+                        <div className="mt-4 p-3 border border-gray-800 rounded-lg">
+                          <h4 className="font-medium  mb-2">What will happen:</h4>
+                          <ul className="text-sm  space-y-1">
+                            <li>✓ User account will be created</li>
+                            <li>✓ Temporary password will be generated</li>
+                            <li>✓ Welcome email will be sent with login credentials</li>
+                            <li>✓ SMS notification will be sent with credentials</li>
+                            <li>✓ User can login to view invoice and make payment</li>
+                          </ul>
+                        </div>
                       </div>
                       <DialogFooter>
                         <DialogClose asChild>
@@ -381,12 +560,12 @@ export default function ApplicationDetailPage({
                           {isSubmitting ? (
                             <>
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Processing...
+                              Creating Account & Sending Notifications...
                             </>
                           ) : (
                             <>
                               <CheckCircle className="h-4 w-4 mr-2" />
-                              Approve & Continue to Onboarding
+                              Approve & Create Account
                             </>
                           )}
                         </Button>
@@ -454,14 +633,119 @@ export default function ApplicationDetailPage({
                     </span>
                   </p>
                   {application.status === "approved" && (
-                    <Button
-                      className="mt-4 w-full"
-                      onClick={() =>
-                        router.push(`/admin/patients/onboard/${application.id}`)
-                      }
-                    >
-                      Continue to Patient Onboarding
-                    </Button>
+                    <div className="mt-4 space-y-3">
+                      {/* Show temporary password for testing */}
+                      {application.tempPassword ? (
+                        <div className=" border border-gray-700 rounded-lg p-4">
+                          <h4 className="font-medium  text-sm mb-3 flex items-center gap-2">
+                            🔑 User Login Credentials
+                          </h4>
+                          <div className="space-y-3 text-sm">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className=" font-medium">Email:</span>
+                                <code className=" px-2 py-1 rounded ">{application.email}</code>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(application.email, "Email")}
+                                className="h-6 w-6 p-0"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className=" font-medium">Password:</span>
+                                <code className=" px-2 py-1 rounded ">
+                                  {showPassword ? application.tempPassword : '••••••••••'}
+                                </code>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setShowPassword(!showPassword)}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                </Button>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(application.tempPassword || "", "Password")}
+                                className="h-6 w-6 p-0"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                         
+                        </div>
+                      ) : (
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                          <h4 className="font-medium text-orange-800 text-sm mb-2">⚠️ No Credentials Found</h4>
+                          <p className="text-sm text-orange-700 mb-3">
+                            This application was approved but no temporary password was generated.
+                            This usually happens with applications approved before the new credential system.
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleResendCredentials('both')}
+                            disabled={isResending}
+                            className="w-full"
+                          >
+                            {isResending ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4 mr-2" />
+                            )}
+                            Generate & Send Credentials
+                          </Button>
+                        </div>
+                      )}
+
+                      <div className="border-t pt-4">
+                        <h4 className="font-medium text-sm mb-3">Credential Management</h4>
+                        <div className="grid grid-cols-1 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleResendCredentials('both')}
+                            disabled={isResending}
+                            className="w-full"
+                          >
+                            {isResending ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4 mr-2" />
+                            )}
+                            Resend All Credentials
+                          </Button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResendCredentials('email')}
+                              disabled={isResending}
+                            >
+                              <Mail className="h-4 w-4 mr-1" />
+                              Email Only
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResendCredentials('sms')}
+                              disabled={isResending}
+                            >
+                              <MessageSquare className="h-4 w-4 mr-1" />
+                              SMS Only
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}

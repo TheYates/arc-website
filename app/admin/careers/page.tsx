@@ -117,7 +117,7 @@ export default function JobManagementPage() {
     location: "",
     description: "",
     requirements: "",
-    salary: "",
+
     category: "",
     status: "draft",
     publicationDate: "",
@@ -305,7 +305,7 @@ export default function JobManagementPage() {
         location: "",
         description: "",
         requirements: "",
-        salary: "",
+
         category: "",
         status: "draft",
         publicationDate: "",
@@ -331,7 +331,7 @@ export default function JobManagementPage() {
       requirements: Array.isArray(job.requirements)
         ? job.requirements.join("\n")
         : job.requirements,
-      salary: job.salary,
+
       category: job.category,
       status: job.status,
       publicationDate: job.publicationDate || "",
@@ -379,7 +379,7 @@ export default function JobManagementPage() {
         location: "",
         description: "",
         requirements: "",
-        salary: "",
+
         category: "",
         status: "draft",
         publicationDate: "",
@@ -452,7 +452,7 @@ export default function JobManagementPage() {
               requirements: Array.isArray(job.requirements)
                 ? job.requirements.join("\n")
                 : job.requirements,
-              salary: job.salary,
+
               category: job.category,
               status: job.status,
               publicationDate: job.publicationDate || "",
@@ -532,17 +532,7 @@ export default function JobManagementPage() {
                       placeholder="e.g., Accra or Remote"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="m-salary">Salary Range</Label>
-                    <Input
-                      id="m-salary"
-                      value={formData.salary}
-                      onChange={(e) =>
-                        setFormData({ ...formData, salary: e.target.value })
-                      }
-                      placeholder="e.g., $80,000 - $120,000"
-                    />
-                  </div>
+
                 </div>
                 <div>
                   <Label htmlFor="m-description">Job Description</Label>
@@ -680,16 +670,7 @@ export default function JobManagementPage() {
                       }
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="me-salary">Salary Range</Label>
-                    <Input
-                      id="me-salary"
-                      value={formData.salary}
-                      onChange={(e) =>
-                        setFormData({ ...formData, salary: e.target.value })
-                      }
-                    />
-                  </div>
+
                 </div>
                 <div>
                   <Label htmlFor="me-description">Job Description</Label>
@@ -825,34 +806,20 @@ export default function JobManagementPage() {
                       </div>
                     </div>
 
-                    {/* Location and Salary - 2 columns */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="location">Location</Label>
-                        <Input
-                          id="location"
-                          value={formData.location}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              location: e.target.value,
-                            })
-                          }
-                          placeholder="e.g., New York, NY or Remote"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="salary">Salary Range</Label>
-                        <Input
-                          id="salary"
-                          value={formData.salary}
-                          onChange={(e) =>
-                            setFormData({ ...formData, salary: e.target.value })
-                          }
-                          placeholder="e.g., $80,000 - $120,000"
-                        />
-                      </div>
+                    {/* Location - Full width */}
+                    <div>
+                      <Label htmlFor="location">Location</Label>
+                      <Input
+                        id="location"
+                        value={formData.location}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            location: e.target.value,
+                          })
+                        }
+                        placeholder="e.g., New York, NY or Remote"
+                      />
                     </div>
 
                     {/* Job Description - Full width */}
@@ -1212,10 +1179,6 @@ export default function JobManagementPage() {
                                 <span className="h-4 w-4 mr-1">📍</span>
                                 {job.location}
                               </span>
-                              <span className="flex items-center">
-                                <span className="h-4 w-4 mr-1">💰</span>
-                                {job.salary}
-                              </span>
                               <Badge variant="outline">
                                 <Tag className="h-3 w-3 mr-1" />
                                 {job.category}
@@ -1556,16 +1519,7 @@ export default function JobManagementPage() {
                     }
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-salary">Salary Range</Label>
-                  <Input
-                    id="edit-salary"
-                    value={formData.salary}
-                    onChange={(e) =>
-                      setFormData({ ...formData, salary: e.target.value })
-                    }
-                  />
-                </div>
+
               </div>
 
               <div>

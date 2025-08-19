@@ -16,8 +16,8 @@ export function AdminPatientsMobile() {
     (async () => {
       setIsLoading(true);
       try {
-        const data = await getPatients();
-        if (mounted) setPatients(data);
+        const response = await getPatients(1, 50);
+        if (mounted) setPatients(response.patients);
       } finally {
         if (mounted) setIsLoading(false);
       }

@@ -11,7 +11,7 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isHydrated } = useAuth();
   const router = useRouter();
 
   // Redirect to login if not authenticated or not an admin/super_admin
@@ -24,20 +24,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
   }, [user, router, isLoading]);
 
-  // Show loading while auth is loading or redirecting
-  if (isLoading || !user) {
+  // Show loading state only if auth is still loading or not hydrated yet
+  if (isLoading || !isHydrated) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="space-y-4 w-full max-w-md mx-auto">
-            <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
-          </div>
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="h-screen bg-background">
+        {/* Minimal loading - just a progress bar */}
+        <div className="w-full h-1 bg-muted">
+          <div className="h-full bg-primary animate-pulse"></div>
         </div>
       </div>
     );
+  }
+
+  // If not loading but no user, redirect immediately (no loading screen)
+  if (!user) {
+    return null; // Return null to avoid flash, redirect will happen in useEffect
   }
 
   // Show access denied for non-admin users

@@ -164,6 +164,7 @@ export default function ApplicationsPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Service</TableHead>
+                    <TableHead>Optional Features</TableHead>
                     <TableHead>Submission Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -197,6 +198,23 @@ export default function ApplicationsPage() {
                       <TableCell>
                         <div className="font-medium">
                           {application.serviceName}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {application.selectedFeatures && application.selectedFeatures.length > 0 ? (
+                            application.selectedFeatures.map((feature) => (
+                              <Badge
+                                key={feature.id}
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                {feature.featureName}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-sm text-muted-foreground">None</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>

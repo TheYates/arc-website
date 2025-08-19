@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronDown, ChevronRight, Plus, Edit, Trash2, Copy, Expand, Minimize2, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -241,7 +241,7 @@ export const PricingTreeView = ({ items = [], onAdd, onEdit, onDelete, onClone, 
   )
 
   // Initialize all nodes as expanded
-  useState(() => {
+  useEffect(() => {
     const allNodeIds = new Set<string>()
     const collectNodeIds = (items: PricingItem[]) => {
       items.forEach(item => {

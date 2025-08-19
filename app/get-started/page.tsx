@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Users, Phone, Check } from "lucide-react";
 import { createApplication } from "@/lib/api/applications";
 import { Loader2 } from "lucide-react";
@@ -268,9 +269,11 @@ function GetStartedContent() {
     startDate: "",
     careNeeds: "",
     preferredContact: "",
-    selectedFeatures: [] as string[], // IDs of selected optional features
     customizations: "", // Additional customization notes
   });
+
+  // Separate state for selected optional features
+  const [selectedOptionalFeatures, setSelectedOptionalFeatures] = useState<Set<string>>(new Set());
 
   const [selectedDate, setSelectedDate] = useState<Date>();
 
@@ -403,6 +406,7 @@ function GetStartedContent() {
       const applicationData = {
         ...formData,
         serviceName: selectedService?.name || "",
+        selectedOptionalFeatures: Array.from(selectedOptionalFeatures), // Convert Set to Array
       };
 
       // Submit application to API
@@ -684,9 +688,29 @@ function GetStartedContent() {
                                         className="space-y-1"
                                       >
                                         <div className="flex items-start gap-2">
-                                          <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                          {feature.isOptional ? (
+                                            <Checkbox
+                                              id={`feature-${feature.id}`}
+                                              checked={selectedOptionalFeatures.has(feature.id)}
+                                              onCheckedChange={(checked) => {
+                                                const newSelection = new Set(selectedOptionalFeatures);
+                                                if (checked) {
+                                                  newSelection.add(feature.id);
+                                                } else {
+                                                  newSelection.delete(feature.id);
+                                                }
+                                                setSelectedOptionalFeatures(newSelection);
+                                              }}
+                                              className="mt-0.5"
+                                            />
+                                          ) : (
+                                            <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                          )}
                                           <div className="flex-1">
-                                            <span className="text-sm font-medium">
+                                            <label
+                                              htmlFor={feature.isOptional ? `feature-${feature.id}` : undefined}
+                                              className={`text-sm font-medium ${feature.isOptional ? 'cursor-pointer' : ''}`}
+                                            >
                                               {feature.name}
                                               {feature.isOptional === false && (
                                                 <Badge
@@ -696,7 +720,15 @@ function GetStartedContent() {
                                                   Included
                                                 </Badge>
                                               )}
-                                            </span>
+                                              {feature.isOptional && (
+                                                <Badge
+                                                  variant="outline"
+                                                  className="ml-2 text-xs"
+                                                >
+                                                  Optional
+                                                </Badge>
+                                              )}
+                                            </label>
                                             {feature.description && (
                                               <p className="text-xs text-muted-foreground mt-0.5">
                                                 {feature.description}
@@ -715,9 +747,29 @@ function GetStartedContent() {
                                                     key={subFeature.id}
                                                     className="flex items-start gap-2 py-1 px-2"
                                                   >
-                                                    <Check className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
+                                                    {subFeature.isOptional ? (
+                                                      <Checkbox
+                                                        id={`subfeature-${subFeature.id}`}
+                                                        checked={selectedOptionalFeatures.has(subFeature.id)}
+                                                        onCheckedChange={(checked) => {
+                                                          const newSelection = new Set(selectedOptionalFeatures);
+                                                          if (checked) {
+                                                            newSelection.add(subFeature.id);
+                                                          } else {
+                                                            newSelection.delete(subFeature.id);
+                                                          }
+                                                          setSelectedOptionalFeatures(newSelection);
+                                                        }}
+                                                        className="mt-0.5"
+                                                      />
+                                                    ) : (
+                                                      <Check className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
+                                                    )}
                                                     <div className="flex-1">
-                                                      <span className="text-xs font-medium">
+                                                      <label
+                                                        htmlFor={subFeature.isOptional ? `subfeature-${subFeature.id}` : undefined}
+                                                        className={`text-xs font-medium ${subFeature.isOptional ? 'cursor-pointer' : ''}`}
+                                                      >
                                                         {subFeature.name}
                                                         {!subFeature.isOptional && (
                                                           <Badge
@@ -735,7 +787,7 @@ function GetStartedContent() {
                                                             Optional
                                                           </Badge>
                                                         )}
-                                                      </span>
+                                                      </label>
                                                       {subFeature.description && (
                                                         <p className="text-xs text-muted-foreground">
                                                           {

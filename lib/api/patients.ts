@@ -3,17 +3,17 @@ import { getApplicationById } from "./applications";
 
 // API-based patient functions using Neon DB
 
-export async function getPatients(): Promise<Patient[]> {
+export async function getPatients(page: number = 1, limit: number = 50): Promise<{ patients: Patient[], pagination: any }> {
   try {
-    const response = await fetch('/api/admin/patients');
+    const response = await fetch(`/api/admin/patients?page=${page}&limit=${limit}`);
     if (!response.ok) {
       throw new Error('Failed to fetch patients');
     }
     const data = await response.json();
-    return data.patients || [];
+    return data;
   } catch (error) {
     console.error('Error fetching patients:', error);
-    return [];
+    return { patients: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0, hasNext: false, hasPrev: false } };
   }
 }
 
@@ -38,8 +38,8 @@ export async function getPatientByApplicationId(applicationId: string): Promise<
   try {
     // For now, we'll get all patients and filter by applicationId
     // In a real app, you might want a dedicated endpoint for this
-    const patients = await getPatients();
-    return patients.find((patient) => patient.applicationId === applicationId) || null;
+    const response = await getPatients(1, 1000); // Get more patients to search through
+    return response.patients.find((patient) => patient.applicationId === applicationId) || null;
   } catch (error) {
     console.error('Error fetching patient by application ID:', error);
     return null;

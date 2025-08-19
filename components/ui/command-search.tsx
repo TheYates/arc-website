@@ -30,7 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 interface CommandSearchProps {
-  variant?: "admin" | "caregiver" | "reviewer";
+  variant?: "admin" | "caregiver" | "reviewer" | "patient";
   size?: "default" | "sm";
 }
 
@@ -143,12 +143,38 @@ export function CommandSearch({
     },
   ];
 
+  const patientCommands = [
+    {
+      group: "Navigation",
+      items: [
+        { icon: Home, label: "Dashboard", shortcut: "⌘D", href: "/patient" },
+        {
+          icon: Stethoscope,
+          label: "Medical Records",
+          shortcut: "⌘M",
+          href: "/patient/medical",
+        },
+      ],
+    },
+    {
+      group: "Quick Actions",
+      items: [
+        { icon: User, label: "Update Profile", href: "/profile" },
+        { icon: Calendar, label: "Book Appointment" },
+        { icon: FileText, label: "View Care Plan" },
+        { icon: Bell, label: "View Notifications" },
+      ],
+    },
+  ];
+
   const commands =
     variant === "admin"
       ? adminCommands
       : variant === "reviewer"
       ? reviewerCommands
-      : caregiverCommands;
+      : variant === "caregiver"
+      ? caregiverCommands
+      : patientCommands;
 
   const handleCommand = (href?: string) => {
     setOpen(false);
@@ -181,7 +207,9 @@ export function CommandSearch({
               ? "admin panel"
               : variant === "reviewer"
               ? "reviewer portal"
-              : "caregiver portal"
+              : variant === "caregiver"
+              ? "caregiver portal"
+              : "patient portal"
           }...`}
         />
         <CommandList>

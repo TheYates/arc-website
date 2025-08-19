@@ -6,6 +6,14 @@ import { ApplicationStatus } from '@/lib/types/applications';
 export async function GET() {
   try {
     const applications = await prisma.application.findMany({
+      include: {
+        selectedFeatures: true,
+        invoices: {
+          include: {
+            items: true
+          }
+        }
+      },
       orderBy: {
         submittedAt: 'desc'
       }
@@ -30,6 +38,43 @@ export async function GET() {
       adminNotes: app.adminNotes,
       processedBy: app.processedBy,
       processedAt: app.processedAt?.toISOString(),
+      selectedFeatures: app.selectedFeatures?.map((feature: any) => ({
+        id: feature.id,
+        applicationId: feature.applicationId,
+        featureId: feature.featureId,
+        featureName: feature.featureName,
+        featureType: feature.featureType,
+        isSelected: feature.isSelected,
+        createdAt: feature.createdAt.toISOString(),
+      })) || [],
+      invoices: app.invoices?.map((invoice: any) => ({
+        id: invoice.id,
+        applicationId: invoice.applicationId,
+        invoiceNumber: invoice.invoiceNumber,
+        basePrice: parseFloat(invoice.basePrice.toString()),
+        totalAmount: parseFloat(invoice.totalAmount.toString()),
+        currency: invoice.currency,
+        status: invoice.status.toLowerCase(),
+        dueDate: invoice.dueDate?.toISOString(),
+        paidDate: invoice.paidDate?.toISOString(),
+        paymentMethod: invoice.paymentMethod,
+        notes: invoice.notes,
+        createdBy: invoice.createdBy,
+        createdAt: invoice.createdAt.toISOString(),
+        updatedAt: invoice.updatedAt.toISOString(),
+        items: invoice.items?.map((item: any) => ({
+          id: item.id,
+          invoiceId: item.invoiceId,
+          itemType: item.itemType,
+          itemId: item.itemId,
+          itemName: item.itemName,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: parseFloat(item.unitPrice.toString()),
+          totalPrice: parseFloat(item.totalPrice.toString()),
+          sortOrder: item.sortOrder,
+        })) || [],
+      })) || [],
     }));
 
     return NextResponse.json({ applications: transformedApplications });
@@ -46,18 +91,19 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      firstName, 
-      lastName, 
-      email, 
-      phone, 
-      address, 
-      serviceId, 
-      serviceName, 
-      startDate, 
-      duration, 
-      careNeeds, 
-      preferredContact 
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      address,
+      serviceId,
+      serviceName,
+      startDate,
+      duration,
+      careNeeds,
+      preferredContact,
+      selectedOptionalFeatures
     } = body;
 
     // Validate required fields
@@ -86,6 +132,33 @@ export async function POST(request: NextRequest) {
         submittedAt: new Date(),
       }
     });
+
+    // Create selected optional features if any
+    if (selectedOptionalFeatures && Array.isArray(selectedOptionalFeatures) && selectedOptionalFeatures.length > 0) {
+      // First, get the feature details from the pricing items
+      const pricingItems = await prisma.serviceItem.findMany({
+        where: {
+          id: {
+            in: selectedOptionalFeatures
+          }
+        }
+      });
+
+      // Create application features
+      const applicationFeatures = pricingItems.map(item => ({
+        applicationId: newApplication.id,
+        featureId: item.id,
+        featureName: item.name,
+        featureType: 'feature', // Default to 'feature' since ServiceItem doesn't have type field
+        isSelected: true,
+      }));
+
+      if (applicationFeatures.length > 0) {
+        await prisma.applicationFeature.createMany({
+          data: applicationFeatures
+        });
+      }
+    }
 
     // Transform the response
     const transformedApplication = {

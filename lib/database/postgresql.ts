@@ -9,7 +9,19 @@ declare global {
 export const prisma =
   globalThis.prisma ??
   new PrismaClient({
-    log: ['error', 'warn'],
+    log: process.env.NODE_ENV === 'development' ? [] : ['error', 'warn'], // Disable query logging in dev
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
+    // Connection pool configuration
+    __internal: {
+      engine: {
+        connectionTimeout: 20000, // 20 seconds
+        poolTimeout: 20000, // 20 seconds
+      },
+    },
   })
 
 if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma

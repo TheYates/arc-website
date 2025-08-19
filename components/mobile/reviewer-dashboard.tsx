@@ -51,13 +51,13 @@ export function ReviewerMobileDashboard() {
       {/* Primary Actions */}
       <div className="grid grid-cols-2 gap-3">
         <Button asChild className="w-full">
-          <Link href="/reviewer/patients">
-            <Users className="h-4 w-4 mr-2" /> My Patients
+          <Link href="/reviewer/service-requests">
+            <ClipboardList className="h-4 w-4 mr-2" /> Requests
           </Link>
         </Button>
         <Button asChild variant="outline" className="w-full">
-          <Link href="/reviewer/tasks">
-            <ClipboardList className="h-4 w-4 mr-2" /> Tasks
+          <Link href="/reviewer/patients">
+            <Users className="h-4 w-4 mr-2" /> Patients
           </Link>
         </Button>
       </div>

@@ -1,4 +1,4 @@
-import { ApplicationData, ApplicationStatus } from "../types/applications";
+import { ApplicationData, ApplicationStatus, CreateApplicationData } from "../types/applications";
 
 export async function getApplications(): Promise<ApplicationData[]> {
   try {
@@ -34,7 +34,7 @@ export async function getApplicationById(
 }
 
 export async function createApplication(
-  data: Omit<ApplicationData, "id" | "status" | "submittedAt">
+  data: CreateApplicationData
 ): Promise<ApplicationData | null> {
   try {
     const response = await fetch('/api/admin/applications', {

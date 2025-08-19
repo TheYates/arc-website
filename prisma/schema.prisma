@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,77 +8,81 @@ datasource db {
 }
 
 model User {
-  id                String    @id @default(uuid())
-  email             String    @unique
-  username          String    @unique
-  passwordHash          String    @map("password_hash")
-  mustChangePassword    Boolean   @default(true) @map("must_change_password")
-  passwordChangedAt     DateTime? @map("password_changed_at")
-  firstName             String    @map("first_name")
-  lastName              String    @map("last_name")
-  phone                 String?
-  address               String?
-  role                  UserRole
-  isEmailVerified       Boolean   @default(false) @map("is_email_verified")
-  isActive              Boolean   @default(true) @map("is_active")
-  profileComplete       Boolean   @default(false) @map("profile_complete")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at")
-  lastLogin             DateTime? @map("last_login")
-
-  // Relations
-  patient                    Patient?
-  caregiverAssignments       CaregiverAssignment[]
-  reviewerAssignments        ReviewerAssignment[]  @relation("ReviewerAssignments")
-  prescriptionsCreated       Prescription[]        @relation("PrescriptionCreatedBy")
-  prescriptionsApproved      Prescription[]        @relation("PrescriptionApprovedBy")
-  medicationAdministrations  MedicationAdministration[]
-  vitalSignsRecorded         VitalSigns[]
-  medicalReviewsCreated      MedicalReview[]       @relation("MedicalReviewCreatedBy")
-  medicalReviewsReviewed     MedicalReview[]       @relation("MedicalReviewReviewedBy")
-  symptomReportsCreated      SymptomReport[]       @relation("SymptomReportCreatedBy")
-  symptomReportsReviewed     SymptomReport[]       @relation("SymptomReportReviewedBy")
-  medicalSupplyRequestsApproved MedicalSupplyRequest[] @relation("MedicalSupplyRequestApprovedBy")
-  careNotesAuthored          CareNote[]            @relation("CareNoteAuthor")
+  id                            String                     @id @default(uuid())
+  email                         String                     @unique
+  username                      String                     @unique
+  passwordHash                  String                     @map("password_hash")
+  mustChangePassword            Boolean                    @default(true) @map("must_change_password")
+  passwordChangedAt             DateTime?                  @map("password_changed_at")
+  firstName                     String                     @map("first_name")
+  lastName                      String                     @map("last_name")
+  phone                         String?
+  address                       String?
+  role                          UserRole
+  isEmailVerified               Boolean                    @default(false) @map("is_email_verified")
+  isActive                      Boolean                    @default(true) @map("is_active")
+  profileComplete               Boolean                    @default(false) @map("profile_complete")
+  createdAt                     DateTime                   @default(now()) @map("created_at")
+  updatedAt                     DateTime                   @default(now()) @updatedAt @map("updated_at")
+  lastLogin                     DateTime?                  @map("last_login")
+  careNotesAuthored             CareNote[]                 @relation("CareNoteAuthor")
+  caregiverAssignments          CaregiverAssignment[]
+  medicalReviewsCreated         MedicalReview[]            @relation("MedicalReviewCreatedBy")
+  medicalReviewsReviewed        MedicalReview[]            @relation("MedicalReviewReviewedBy")
+  medicalSupplyRequestsApproved MedicalSupplyRequest[]     @relation("MedicalSupplyRequestApprovedBy")
+  medicationAdministrations     MedicationAdministration[]
+  patient                       Patient?
+  prescriptionsApproved         Prescription[]             @relation("PrescriptionApprovedBy")
+  prescriptionsCreated          Prescription[]             @relation("PrescriptionCreatedBy")
+  reviewerAssignments           ReviewerAssignment[]       @relation("ReviewerAssignments")
+  symptomReportsCreated         SymptomReport[]            @relation("SymptomReportCreatedBy")
+  symptomReportsReviewed        SymptomReport[]            @relation("SymptomReportReviewedBy")
+  vitalSignsRecorded            VitalSigns[]
+  applications                  Application[]
+  serviceRequestsAsCaregiver    ServiceRequest[]       @relation("ServiceRequestCaregiver")
+  serviceRequestsApproved       ServiceRequest[]       @relation("ServiceRequestApprovedBy")
+  caregiverSchedules            CaregiverSchedule[]    @relation("CaregiverScheduleCaregiver")
+  caregiverSchedulesApproved    CaregiverSchedule[]    @relation("CaregiverScheduleApprovedBy")
+  notifications                 InAppNotification[]    @relation("UserNotifications")
 
   @@map("users")
 }
 
 model Patient {
-  id                           String    @id @default(uuid())
-  userId                       String    @unique @map("user_id")
-  dateOfBirth                  DateTime? @map("date_of_birth") @db.Date
+  id                           String                     @id @default(uuid())
+  userId                       String                     @unique @map("user_id")
+  dateOfBirth                  DateTime?                  @map("date_of_birth") @db.Date
   gender                       Gender?
-  bloodType                    String?   @map("blood_type")
-  heightCm                     Int?      @map("height_cm")
-  weightKg                     Decimal?  @map("weight_kg") @db.Decimal(5, 2)
-  careLevel                    CareLevel @default(MEDIUM) @map("care_level")
-  status                       PatientStatus @default(STABLE)
-  assignedDate                 DateTime  @default(now()) @map("assigned_date") @db.Date
-  emergencyContactName         String?   @map("emergency_contact_name")
-  emergencyContactRelationship String?   @map("emergency_contact_relationship")
-  emergencyContactPhone        String?   @map("emergency_contact_phone")
-  medicalRecordNumber          String?   @unique @map("medical_record_number")
-  insuranceProvider            String?   @map("insurance_provider")
-  insurancePolicyNumber        String?   @map("insurance_policy_number")
-  primaryPhysician             String?   @map("primary_physician")
+  bloodType                    String?                    @map("blood_type")
+  heightCm                     Int?                       @map("height_cm")
+  weightKg                     Decimal?                   @map("weight_kg") @db.Decimal(5, 2)
+  careLevel                    CareLevel                  @default(MEDIUM) @map("care_level")
+  status                       PatientStatus              @default(STABLE)
+  assignedDate                 DateTime                   @default(now()) @map("assigned_date") @db.Date
+  emergencyContactName         String?                    @map("emergency_contact_name")
+  emergencyContactRelationship String?                    @map("emergency_contact_relationship")
+  emergencyContactPhone        String?                    @map("emergency_contact_phone")
+  medicalRecordNumber          String?                    @unique @map("medical_record_number")
+  insuranceProvider            String?                    @map("insurance_provider")
+  insurancePolicyNumber        String?                    @map("insurance_policy_number")
+  primaryPhysician             String?                    @map("primary_physician")
   allergies                    String[]
-  chronicConditions            String[]  @map("chronic_conditions")
-  currentMedications           String[]  @map("current_medications")
-  medicalHistory               String?   @map("medical_history")
-  specialInstructions          String?   @map("special_instructions")
-
-  // Relations
-  user                      User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  caregiverAssignments      CaregiverAssignment[]
-  reviewerAssignments       ReviewerAssignment[]
-  prescriptions             Prescription[]
-  medicationAdministrations MedicationAdministration[]
-  vitalSigns                VitalSigns[]
-  medicalReviews            MedicalReview[]
-  symptomReports            SymptomReport[]
-  medicalSupplyRequests     MedicalSupplyRequest[]
-  careNotes                 CareNote[]
+  chronicConditions            String[]                   @map("chronic_conditions")
+  currentMedications           String[]                   @map("current_medications")
+  medicalHistory               String?                    @map("medical_history")
+  specialInstructions          String?                    @map("special_instructions")
+  careNotes                    CareNote[]
+  caregiverAssignments         CaregiverAssignment[]
+  medicalReviews               MedicalReview[]
+  medicalSupplyRequests        MedicalSupplyRequest[]
+  medicationAdministrations    MedicationAdministration[]
+  user                         User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prescriptions                Prescription[]
+  reviewerAssignments          ReviewerAssignment[]
+  symptomReports               SymptomReport[]
+  vitalSigns                   VitalSigns[]
+  serviceRequests              ServiceRequest[]
+  caregiverSchedules           CaregiverSchedule[]
 
   @@map("patients")
 }
@@ -92,18 +93,15 @@ model CaregiverAssignment {
   patientId   String   @map("patient_id")
   assignedAt  DateTime @default(now()) @map("assigned_at")
   isActive    Boolean  @default(true) @map("is_active")
+  caregiver   User     @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
-  // Relations
-  caregiver User    @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
-  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  // Indexes for better query performance
+  @@unique([caregiverId, patientId])
   @@index([caregiverId])
   @@index([patientId])
   @@index([isActive])
   @@index([caregiverId, isActive])
   @@index([patientId, isActive])
-  @@unique([caregiverId, patientId])
   @@map("caregiver_assignments")
 }
 
@@ -113,77 +111,69 @@ model ReviewerAssignment {
   patientId  String   @map("patient_id")
   assignedAt DateTime @default(now()) @map("assigned_at")
   isActive   Boolean  @default(true) @map("is_active")
+  patient    Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  reviewer   User     @relation("ReviewerAssignments", fields: [reviewerId], references: [id], onDelete: Cascade)
 
-  // Relations
-  reviewer User    @relation("ReviewerAssignments", fields: [reviewerId], references: [id], onDelete: Cascade)
-  patient  Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  // Indexes for better query performance
+  @@unique([reviewerId, patientId])
   @@index([reviewerId])
   @@index([patientId])
   @@index([isActive])
   @@index([reviewerId, isActive])
   @@index([patientId, isActive])
-  @@unique([reviewerId, patientId])
   @@map("reviewer_assignments")
 }
 
 model Medication {
-  id                           String   @id @default(uuid())
-  name                         String
-  genericName                  String?  @map("generic_name")
-  brandNames                   String[] @map("brand_names")
-  drugClass                    String?  @map("drug_class")
-  dosageForms                  String[] @map("dosage_forms")
-  strengthOptions              String[] @map("strength_options")
-  routeOfAdministration        String?  @map("route_of_administration")
-  contraindications            String[] @map("contraindications")
-  sideEffects                  String[] @map("side_effects")
-  drugInteractions             String[] @map("drug_interactions")
-  pregnancyCategory            String?  @map("pregnancy_category")
-  controlledSubstanceSchedule  String?  @map("controlled_substance_schedule")
-  createdAt                    DateTime @default(now()) @map("created_at")
-
-  // Relations
-  prescriptions Prescription[]
+  id                          String         @id @default(uuid())
+  name                        String
+  genericName                 String?        @map("generic_name")
+  brandNames                  String[]       @map("brand_names")
+  drugClass                   String?        @map("drug_class")
+  dosageForms                 String[]       @map("dosage_forms")
+  strengthOptions             String[]       @map("strength_options")
+  routeOfAdministration       String?        @map("route_of_administration")
+  contraindications           String[]       @map("contraindications")
+  sideEffects                 String[]       @map("side_effects")
+  drugInteractions            String[]       @map("drug_interactions")
+  pregnancyCategory           String?        @map("pregnancy_category")
+  controlledSubstanceSchedule String?        @map("controlled_substance_schedule")
+  createdAt                   DateTime       @default(now()) @map("created_at")
+  prescriptions               Prescription[]
 
   @@map("medications")
 }
 
 model Prescription {
-  id                      String            @id @default(uuid())
-  patientId               String            @map("patient_id")
-  medicationId            String            @map("medication_id")
-  prescribedById          String            @map("prescribed_by_id")
-  dosage                  String
-  frequency               String
-  duration                String?
-  instructions            String?
-  status                  PrescriptionStatus @default(DRAFT)
-  prescribedDate          DateTime          @default(now()) @map("prescribed_date")
-  startDate               DateTime?         @map("start_date") @db.Date
-  endDate                 DateTime?         @map("end_date") @db.Date
-  approvedById            String?           @map("approved_by_id")
-  approvedDate            DateTime?         @map("approved_date")
-  dispensedDate           DateTime?         @map("dispensed_date")
-  notes                   String?
-  reviewerNotes           String?           @map("reviewer_notes")
-  pharmacyNotes           String?           @map("pharmacy_notes")
-  monitoringRequired      Boolean           @default(false) @map("monitoring_required")
-  monitoringInstructions  String?           @map("monitoring_instructions")
-  costEstimate            Decimal?          @map("cost_estimate") @db.Decimal(10, 2)
-  insuranceCovered        Boolean           @default(true) @map("insurance_covered")
-  createdAt               DateTime          @default(now()) @map("created_at")
-  updatedAt               DateTime          @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  patient                   Patient                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  medication                Medication                 @relation(fields: [medicationId], references: [id])
-  prescribedBy              User                       @relation("PrescriptionCreatedBy", fields: [prescribedById], references: [id])
-  approvedBy                User?                      @relation("PrescriptionApprovedBy", fields: [approvedById], references: [id])
+  id                        String                     @id @default(uuid())
+  patientId                 String                     @map("patient_id")
+  medicationId              String                     @map("medication_id")
+  prescribedById            String                     @map("prescribed_by_id")
+  dosage                    String
+  frequency                 String
+  duration                  String?
+  instructions              String?
+  status                    PrescriptionStatus         @default(DRAFT)
+  prescribedDate            DateTime                   @default(now()) @map("prescribed_date")
+  startDate                 DateTime?                  @map("start_date") @db.Date
+  endDate                   DateTime?                  @map("end_date") @db.Date
+  approvedById              String?                    @map("approved_by_id")
+  approvedDate              DateTime?                  @map("approved_date")
+  dispensedDate             DateTime?                  @map("dispensed_date")
+  notes                     String?
+  reviewerNotes             String?                    @map("reviewer_notes")
+  pharmacyNotes             String?                    @map("pharmacy_notes")
+  monitoringRequired        Boolean                    @default(false) @map("monitoring_required")
+  monitoringInstructions    String?                    @map("monitoring_instructions")
+  costEstimate              Decimal?                   @map("cost_estimate") @db.Decimal(10, 2)
+  insuranceCovered          Boolean                    @default(true) @map("insurance_covered")
+  createdAt                 DateTime                   @default(now()) @map("created_at")
+  updatedAt                 DateTime                   @default(now()) @updatedAt @map("updated_at")
   medicationAdministrations MedicationAdministration[]
+  approvedBy                User?                      @relation("PrescriptionApprovedBy", fields: [approvedById], references: [id])
+  medication                Medication                 @relation(fields: [medicationId], references: [id])
+  patient                   Patient                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  prescribedBy              User                       @relation("PrescriptionCreatedBy", fields: [prescribedById], references: [id])
 
-  // Indexes for better query performance
   @@index([patientId])
   @@index([medicationId])
   @@index([status])
@@ -193,26 +183,23 @@ model Prescription {
 }
 
 model MedicationAdministration {
-  id                   String                        @id @default(uuid())
-  prescriptionId       String                        @map("prescription_id")
-  patientId            String                        @map("patient_id")
-  administeredById     String?                       @map("administered_by_id")
-  scheduledTime        DateTime                      @map("scheduled_time")
-  administeredTime     DateTime?                     @map("administered_time")
-  status               MedicationAdministrationStatus @default(SCHEDULED)
-  dosageGiven          String?                       @map("dosage_given")
-  notes                String?
-  sideEffectsObserved  String?                       @map("side_effects_observed")
-  vitalSigns           Json?                         @map("vital_signs")
-  nextDoseTime         DateTime?                     @map("next_dose_time")
-  createdAt            DateTime                      @default(now()) @map("created_at")
+  id                  String                         @id @default(uuid())
+  prescriptionId      String                         @map("prescription_id")
+  patientId           String                         @map("patient_id")
+  administeredById    String?                        @map("administered_by_id")
+  scheduledTime       DateTime                       @map("scheduled_time")
+  administeredTime    DateTime?                      @map("administered_time")
+  status              MedicationAdministrationStatus @default(SCHEDULED)
+  dosageGiven         String?                        @map("dosage_given")
+  notes               String?
+  sideEffectsObserved String?                        @map("side_effects_observed")
+  vitalSigns          Json?                          @map("vital_signs")
+  nextDoseTime        DateTime?                      @map("next_dose_time")
+  createdAt           DateTime                       @default(now()) @map("created_at")
+  administeredBy      User?                          @relation(fields: [administeredById], references: [id])
+  patient             Patient                        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  prescription        Prescription                   @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
 
-  // Relations
-  prescription    Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
-  patient         Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  administeredBy  User?        @relation(fields: [administeredById], references: [id])
-
-  // Indexes for better query performance
   @@index([patientId])
   @@index([prescriptionId])
   @@index([status])
@@ -223,29 +210,26 @@ model MedicationAdministration {
 }
 
 model VitalSigns {
-  id                 String               @id @default(uuid())
-  patientId          String               @map("patient_id")
-  recordedById       String?              @map("recorded_by_id")
-  recordedDate       DateTime             @default(now()) @map("recorded_date")
-  systolicBp         Int?                 @map("systolic_bp")
-  diastolicBp        Int?                 @map("diastolic_bp")
-  heartRate          Int?                 @map("heart_rate")
-  temperature        Decimal?             @db.Decimal(4, 1)
-  temperatureUnit    TemperatureUnit      @default(C) @map("temperature_unit")
-  oxygenSaturation   Int?                 @map("oxygen_saturation")
-  respiratoryRate    Int?                 @map("respiratory_rate")
-  weightKg           Decimal?             @map("weight_kg") @db.Decimal(5, 2)
-  heightCm           Int?                 @map("height_cm")
-  bloodSugar         Decimal?             @map("blood_sugar") @db.Decimal(5, 1)
-  bloodSugarType     BloodSugarType?      @map("blood_sugar_type")
-  painLevel          Int?                 @map("pain_level")
-  notes              String?
+  id               String          @id @default(uuid())
+  patientId        String          @map("patient_id")
+  recordedById     String?         @map("recorded_by_id")
+  recordedDate     DateTime        @default(now()) @map("recorded_date")
+  systolicBp       Int?            @map("systolic_bp")
+  diastolicBp      Int?            @map("diastolic_bp")
+  heartRate        Int?            @map("heart_rate")
+  temperature      Decimal?        @db.Decimal(4, 1)
+  temperatureUnit  TemperatureUnit @default(C) @map("temperature_unit")
+  oxygenSaturation Int?            @map("oxygen_saturation")
+  respiratoryRate  Int?            @map("respiratory_rate")
+  weightKg         Decimal?        @map("weight_kg") @db.Decimal(5, 2)
+  heightCm         Int?            @map("height_cm")
+  bloodSugar       Decimal?        @map("blood_sugar") @db.Decimal(5, 1)
+  bloodSugarType   BloodSugarType? @map("blood_sugar_type")
+  painLevel        Int?            @map("pain_level")
+  notes            String?
+  patient          Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  recordedBy       User?           @relation(fields: [recordedById], references: [id])
 
-  // Relations
-  patient    Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  recordedBy User?   @relation(fields: [recordedById], references: [id])
-
-  // Indexes for better query performance
   @@index([patientId])
   @@index([recordedDate])
   @@index([patientId, recordedDate])
@@ -269,13 +253,10 @@ model MedicalReview {
   reviewedDate     DateTime?           @map("reviewed_date")
   createdAt        DateTime            @default(now()) @map("created_at")
   updatedAt        DateTime            @default(now()) @updatedAt @map("updated_at")
+  createdBy        User                @relation("MedicalReviewCreatedBy", fields: [createdById], references: [id])
+  patient          Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  reviewer         User?               @relation("MedicalReviewReviewedBy", fields: [reviewerId], references: [id])
 
-  // Relations
-  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  reviewer  User?   @relation("MedicalReviewReviewedBy", fields: [reviewerId], references: [id])
-  createdBy User    @relation("MedicalReviewCreatedBy", fields: [createdById], references: [id])
-
-  // Indexes for better query performance
   @@index([patientId])
   @@index([reviewerId])
   @@index([status])
@@ -286,77 +267,70 @@ model MedicalReview {
 }
 
 model SymptomReport {
-  id          String              @id @default(uuid())
-  patientId   String              @map("patient_id")
-  reportedById String?            @map("reported_by_id")
-  createdById String              @map("created_by_id")
-  symptoms    String[]
-  severity    Severity            @default(MILD)
-  status      SymptomReportStatus @default(REPORTED)
-  description String
-  notes       String?
-  reviewedDate DateTime?          @map("reviewed_date")
-  createdAt   DateTime            @default(now()) @map("created_at")
-  updatedAt   DateTime            @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  patient    Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  reportedBy User?   @relation("SymptomReportReviewedBy", fields: [reportedById], references: [id])
-  createdBy  User    @relation("SymptomReportCreatedBy", fields: [createdById], references: [id])
+  id           String              @id @default(uuid())
+  patientId    String              @map("patient_id")
+  reportedById String?             @map("reported_by_id")
+  createdById  String              @map("created_by_id")
+  symptoms     String[]
+  severity     Severity            @default(MILD)
+  status       SymptomReportStatus @default(REPORTED)
+  description  String
+  notes        String?
+  reviewedDate DateTime?           @map("reviewed_date")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @default(now()) @updatedAt @map("updated_at")
+  createdBy    User                @relation("SymptomReportCreatedBy", fields: [createdById], references: [id])
+  patient      Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  reportedBy   User?               @relation("SymptomReportReviewedBy", fields: [reportedById], references: [id])
 
   @@map("symptom_reports")
 }
 
 model MedicalSupplyRequest {
-  id                    String                      @id @default(uuid())
-  patientId             String                      @map("patient_id")
-  requestedById         String                      @map("requested_by_id")
-  itemName              String                      @map("item_name")
+  id                    String                     @id @default(uuid())
+  patientId             String                     @map("patient_id")
+  requestedById         String                     @map("requested_by_id")
+  itemName              String                     @map("item_name")
   category              MedicalSupplyCategory
   quantity              Int
-  urgency               Priority                    @default(MEDIUM)
-  status                MedicalSupplyRequestStatus  @default(PENDING)
+  urgency               Priority                   @default(MEDIUM)
+  status                MedicalSupplyRequestStatus @default(PENDING)
   justification         String
-  medicalNecessity      String?                     @map("medical_necessity")
-  approvedById          String?                     @map("approved_by_id")
-  approvedDate          DateTime?                   @map("approved_date")
-  rejectionReason       String?                     @map("rejection_reason")
-  reviewerNotes         String?                     @map("reviewer_notes")
+  medicalNecessity      String?                    @map("medical_necessity")
+  approvedById          String?                    @map("approved_by_id")
+  approvedDate          DateTime?                  @map("approved_date")
+  rejectionReason       String?                    @map("rejection_reason")
+  reviewerNotes         String?                    @map("reviewer_notes")
   vendor                String?
-  deliveryDate          DateTime?                   @map("delivery_date") @db.Date
-  insuranceCovered      Boolean                     @default(true) @map("insurance_covered")
-  patientResponsibility Decimal?                    @map("patient_responsibility") @db.Decimal(10, 2)
-  createdAt             DateTime                    @default(now()) @map("created_at")
-  updatedAt             DateTime                    @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  patient    Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  approvedBy User?   @relation("MedicalSupplyRequestApprovedBy", fields: [approvedById], references: [id])
+  deliveryDate          DateTime?                  @map("delivery_date") @db.Date
+  insuranceCovered      Boolean                    @default(true) @map("insurance_covered")
+  patientResponsibility Decimal?                   @map("patient_responsibility") @db.Decimal(10, 2)
+  createdAt             DateTime                   @default(now()) @map("created_at")
+  updatedAt             DateTime                   @default(now()) @updatedAt @map("updated_at")
+  approvedBy            User?                      @relation("MedicalSupplyRequestApprovedBy", fields: [approvedById], references: [id])
+  patient               Patient                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@map("medical_supply_requests")
 }
 
 model CareNote {
-  id                String        @id @default(uuid())
-  patientId         String        @map("patient_id")
-  authorId          String        @map("author_id")
-  noteType          CareNoteType  @default(GENERAL) @map("note_type")
-  title             String
-  content           String
-  priority          Priority      @default(MEDIUM)
-  status            CareNoteStatus @default(SUBMITTED)
-  tags              String[]
-  isPrivate         Boolean       @default(false) @map("is_private")
-  followUpRequired  Boolean       @default(false) @map("follow_up_required")
-  followUpDate      DateTime?     @map("follow_up_date") @db.Date
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at")
+  id               String         @id @default(uuid())
+  patientId        String         @map("patient_id")
+  authorId         String         @map("author_id")
+  noteType         CareNoteType   @default(GENERAL) @map("note_type")
+  title            String
+  content          String
+  priority         Priority       @default(MEDIUM)
+  status           CareNoteStatus @default(SUBMITTED)
+  tags             String[]
+  isPrivate        Boolean        @default(false) @map("is_private")
+  followUpRequired Boolean        @default(false) @map("follow_up_required")
+  followUpDate     DateTime?      @map("follow_up_date") @db.Date
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @default(now()) @updatedAt @map("updated_at")
+  author           User           @relation("CareNoteAuthor", fields: [authorId], references: [id])
+  patient          Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
-  // Relations
-  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  author  User    @relation("CareNoteAuthor", fields: [authorId], references: [id])
-
-  // Indexes for better query performance
   @@index([patientId])
   @@index([authorId])
   @@index([noteType])
@@ -368,49 +342,191 @@ model CareNote {
 }
 
 model Service {
-  id               String        @id @default(uuid())
+  id               String          @id @default(uuid())
   name             String
-  slug             String        @unique
-  displayName      String        @map("display_name")
+  slug             String          @unique
+  displayName      String          @map("display_name")
   description      String?
-  shortDescription String?       @map("short_description")
+  shortDescription String?         @map("short_description")
   category         ServiceCategory
-  isActive         Boolean       @default(true) @map("is_active")
-  isPopular        Boolean       @default(false) @map("is_popular")
-  sortOrder        Int           @default(0) @map("sort_order")
-  colorTheme       String        @default("teal") @map("color_theme")
+  isActive         Boolean         @default(true) @map("is_active")
+  isPopular        Boolean         @default(false) @map("is_popular")
+  sortOrder        Int             @default(0) @map("sort_order")
+  colorTheme       String          @default("teal") @map("color_theme")
   icon             String?
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  serviceItems ServiceItem[]
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @default(now()) @updatedAt @map("updated_at")
+  serviceItems     ServiceItem[]
 
   @@map("services")
 }
 
 model ServiceItem {
-  id                String      @id @default(uuid())
-  serviceId         String      @map("service_id")
-  name              String
-  description       String?
-  isRequired        Boolean     @default(false) @map("is_required")
-  isPopular         Boolean     @default(false) @map("is_popular")
-  sortOrder         Int         @default(0) @map("sort_order")
-  level             Int         @default(1)
-  parentId          String?     @map("parent_id")
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @default(now()) @updatedAt @map("updated_at")
-
-  // Relations
-  service  Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  parent   ServiceItem?  @relation("ServiceItemHierarchy", fields: [parentId], references: [id])
-  children ServiceItem[] @relation("ServiceItemHierarchy")
+  id          String        @id @default(uuid())
+  serviceId   String        @map("service_id")
+  name        String
+  description String?
+  isRequired  Boolean       @default(false) @map("is_required")
+  isPopular   Boolean       @default(false) @map("is_popular")
+  sortOrder   Int           @default(0) @map("sort_order")
+  level       Int           @default(1)
+  parentId    String?       @map("parent_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @default(now()) @updatedAt @map("updated_at")
+  parent      ServiceItem?  @relation("ServiceItemHierarchy", fields: [parentId], references: [id])
+  children    ServiceItem[] @relation("ServiceItemHierarchy")
+  service     Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@map("service_items")
 }
 
-// Enums
+model Application {
+  id                  String            @id @default(uuid())
+  firstName           String            @map("first_name")
+  lastName            String            @map("last_name")
+  email               String
+  phone               String
+  address             String?
+  serviceId           String            @map("service_id")
+  serviceName         String            @map("service_name")
+  startDate           String?           @map("start_date")
+  duration            String?
+  careNeeds           String?           @map("care_needs")
+  preferredContact    String?           @map("preferred_contact")
+  submittedAt         DateTime          @default(now()) @map("submitted_at")
+  status              ApplicationStatus @default(PENDING)
+  adminNotes          String?           @map("admin_notes")
+  processedBy         String?           @map("processed_by")
+  processedAt         DateTime?         @map("processed_at")
+
+  // User account fields
+  userId              String?           @map("user_id")
+  tempPassword        String?           @map("temp_password")
+  credentialsSentAt   DateTime?         @map("credentials_sent_at")
+  emailSent           Boolean           @default(false) @map("email_sent")
+  smsSent             Boolean           @default(false) @map("sms_sent")
+
+  // Payment tracking fields
+  paymentStatus       PaymentStatus     @default(PENDING) @map("payment_status")
+  paymentMethod       String?           @map("payment_method")
+  paymentReference    String?           @map("payment_reference")
+  paymentCompletedAt  DateTime?         @map("payment_completed_at")
+
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  user                User?             @relation(fields: [userId], references: [id])
+  selectedFeatures    ApplicationFeature[]
+  invoices            Invoice[]
+  notificationHistory NotificationHistory[]
+  paymentAttempts     PaymentAttempt[]
+
+  @@map("applications")
+}
+
+model ApplicationFeature {
+  id            String      @id @default(uuid())
+  applicationId String      @map("application_id")
+  featureId     String      @map("feature_id")
+  featureName   String      @map("feature_name")
+  featureType   String      @map("feature_type") // "feature" or "addon"
+  isSelected    Boolean     @default(true) @map("is_selected")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("application_features")
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  applicationId String        @map("application_id")
+  invoiceNumber String        @unique @map("invoice_number")
+  basePrice     Decimal       @default(0) @map("base_price") @db.Decimal(10, 2)
+  totalAmount   Decimal       @default(0) @map("total_amount") @db.Decimal(10, 2)
+  currency      String        @default("USD")
+  status        InvoiceStatus @default(PENDING)
+  dueDate       DateTime?     @map("due_date")
+  paidDate      DateTime?     @map("paid_date")
+  paymentMethod String?       @map("payment_method")
+  notes         String?
+  createdBy     String?       @map("created_by")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  application     Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  items           InvoiceItem[]
+  paymentAttempts PaymentAttempt[]
+
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String  @id @default(uuid())
+  invoiceId   String  @map("invoice_id")
+  itemType    String  @map("item_type") // "service", "feature", "addon"
+  itemId      String? @map("item_id") // Reference to pricing item ID
+  itemName    String  @map("item_name")
+  description String?
+  quantity    Int     @default(1)
+  unitPrice   Decimal @map("unit_price") @db.Decimal(10, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(10, 2)
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  // Relations
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_items")
+}
+
+model NotificationHistory {
+  id            String    @id @default(uuid())
+  applicationId String    @map("application_id")
+  type          NotificationType
+  recipient     String
+  subject       String?
+  content       String
+  status        NotificationStatus @default(PENDING)
+  sentAt        DateTime? @map("sent_at")
+  deliveredAt   DateTime? @map("delivered_at")
+  errorMessage  String?   @map("error_message")
+  retryCount    Int       @default(0) @map("retry_count")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("notification_history")
+}
+
+model PaymentAttempt {
+  id                String        @id @default(uuid())
+  applicationId     String        @map("application_id")
+  invoiceId         String?       @map("invoice_id")
+  amount            Decimal       @db.Decimal(10, 2)
+  currency          String        @default("GHS")
+  paymentMethod     String        @map("payment_method")
+  paymentProvider   String?       @map("payment_provider")
+  providerReference String?       @map("provider_reference")
+  status            PaymentAttemptStatus @default(PENDING)
+  failureReason     String?       @map("failure_reason")
+  metadata          Json?
+  initiatedAt       DateTime      @default(now()) @map("initiated_at")
+  completedAt       DateTime?     @map("completed_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  application       Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  invoice           Invoice?      @relation(fields: [invoiceId], references: [id])
+
+  @@map("payment_attempts")
+}
+
 enum UserRole {
   SUPER_ADMIN @map("super_admin")
   ADMIN       @map("admin")
@@ -433,27 +549,27 @@ enum CareLevel {
 }
 
 enum PatientStatus {
-  STABLE     @map("stable")
-  IMPROVING  @map("improving")
-  DECLINING  @map("declining")
-  CRITICAL   @map("critical")
+  STABLE    @map("stable")
+  IMPROVING @map("improving")
+  DECLINING @map("declining")
+  CRITICAL  @map("critical")
 }
 
 enum PrescriptionStatus {
-  DRAFT      @map("draft")
-  PENDING    @map("pending")
-  APPROVED   @map("approved")
-  DISPENSED  @map("dispensed")
-  COMPLETED  @map("completed")
-  CANCELLED  @map("cancelled")
+  DRAFT     @map("draft")
+  PENDING   @map("pending")
+  APPROVED  @map("approved")
+  DISPENSED @map("dispensed")
+  COMPLETED @map("completed")
+  CANCELLED @map("cancelled")
 }
 
 enum MedicationAdministrationStatus {
-  SCHEDULED @map("scheduled")
+  SCHEDULED    @map("scheduled")
   ADMINISTERED @map("administered")
-  MISSED    @map("missed")
-  REFUSED   @map("refused")
-  DELAYED   @map("delayed")
+  MISSED       @map("missed")
+  REFUSED      @map("refused")
+  DELAYED      @map("delayed")
 }
 
 enum TemperatureUnit {
@@ -468,47 +584,31 @@ enum BloodSugarType {
 }
 
 enum MedicalReviewType {
-  ROUTINE     @map("routine")
-  URGENT      @map("urgent")
-  FOLLOW_UP   @map("follow_up")
+  ROUTINE      @map("routine")
+  URGENT       @map("urgent")
+  FOLLOW_UP    @map("follow_up")
   CONSULTATION @map("consultation")
 }
 
 enum MedicalReviewStatus {
-  PENDING    @map("pending")
-  IN_REVIEW  @map("in_review")
-  COMPLETED  @map("completed")
-  CANCELLED  @map("cancelled")
-}
-
-model Application {
-  id              String            @id @default(uuid())
-  firstName       String            @map("first_name")
-  lastName        String            @map("last_name")
-  email           String
-  phone           String
-  address         String?
-  serviceId       String            @map("service_id")
-  serviceName     String            @map("service_name")
-  startDate       String?           @map("start_date")
-  duration        String?
-  careNeeds       String?           @map("care_needs")
-  preferredContact String?          @map("preferred_contact")
-  submittedAt     DateTime          @default(now()) @map("submitted_at")
-  status          ApplicationStatus @default(PENDING)
-  adminNotes      String?           @map("admin_notes")
-  processedBy     String?           @map("processed_by")
-  processedAt     DateTime?         @map("processed_at")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at")
-
-  @@map("applications")
+  PENDING   @map("pending")
+  IN_REVIEW @map("in_review")
+  COMPLETED @map("completed")
+  CANCELLED @map("cancelled")
 }
 
 enum ApplicationStatus {
   PENDING  @map("pending")
   APPROVED @map("approved")
   REJECTED @map("rejected")
+}
+
+enum InvoiceStatus {
+  PENDING  @map("pending")
+  SENT     @map("sent")
+  PAID     @map("paid")
+  OVERDUE  @map("overdue")
+  CANCELLED @map("cancelled")
 }
 
 enum Priority {
@@ -525,29 +625,29 @@ enum Severity {
 }
 
 enum SymptomReportStatus {
-  REPORTED   @map("reported")
-  REVIEWED   @map("reviewed")
-  RESOLVED   @map("resolved")
-  ESCALATED  @map("escalated")
+  REPORTED  @map("reported")
+  REVIEWED  @map("reviewed")
+  RESOLVED  @map("resolved")
+  ESCALATED @map("escalated")
 }
 
 enum MedicalSupplyCategory {
-  MOBILITY_AIDS    @map("mobility_aids")
-  MONITORING       @map("monitoring")
-  THERAPEUTIC      @map("therapeutic")
-  SAFETY           @map("safety")
-  COMFORT          @map("comfort")
-  MEDICATION       @map("medication")
-  OTHER            @map("other")
+  MOBILITY_AIDS @map("mobility_aids")
+  MONITORING    @map("monitoring")
+  THERAPEUTIC   @map("therapeutic")
+  SAFETY        @map("safety")
+  COMFORT       @map("comfort")
+  MEDICATION    @map("medication")
+  OTHER         @map("other")
 }
 
 enum MedicalSupplyRequestStatus {
-  PENDING    @map("pending")
-  APPROVED   @map("approved")
-  REJECTED   @map("rejected")
-  ORDERED    @map("ordered")
-  DELIVERED  @map("delivered")
-  CANCELLED  @map("cancelled")
+  PENDING   @map("pending")
+  APPROVED  @map("approved")
+  REJECTED  @map("rejected")
+  ORDERED   @map("ordered")
+  DELIVERED @map("delivered")
+  CANCELLED @map("cancelled")
 }
 
 enum ServiceCategory {
@@ -572,4 +672,221 @@ enum CareNoteStatus {
   SUBMITTED @map("submitted")
   REVIEWED  @map("reviewed")
   ARCHIVED  @map("archived")
+}
+
+enum PaymentStatus {
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  COMPLETED  @map("completed")
+  FAILED     @map("failed")
+  REFUNDED   @map("refunded")
+}
+
+enum PaymentAttemptStatus {
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  COMPLETED  @map("completed")
+  FAILED     @map("failed")
+  CANCELLED  @map("cancelled")
+  REFUNDED   @map("refunded")
+}
+
+enum NotificationType {
+  EMAIL @map("email")
+  SMS   @map("sms")
+}
+
+enum NotificationStatus {
+  PENDING   @map("pending")
+  SENT      @map("sent")
+  FAILED    @map("failed")
+  DELIVERED @map("delivered")
+}
+
+// New models for service requests and caregiver scheduling
+
+model ServiceRequest {
+  id                String                @id @default(uuid())
+  patientId         String                @map("patient_id")
+  caregiverId       String                @map("caregiver_id")
+  serviceTypeId     String?               @map("service_type_id")
+  title             String
+  description       String
+  customDescription String?               @map("custom_description")
+  priority          Priority              @default(MEDIUM)
+  status            ServiceRequestStatus  @default(PENDING)
+  requestedDate     DateTime              @default(now()) @map("requested_date")
+  preferredDate     DateTime?             @map("preferred_date")
+  scheduledDate     DateTime?             @map("scheduled_date")
+  completedDate     DateTime?             @map("completed_date")
+  estimatedDuration Int?                  @map("estimated_duration") // in minutes
+  notes             String?
+  caregiverNotes    String?               @map("caregiver_notes")
+  reviewerNotes     String?               @map("reviewer_notes")
+  outcome           String?               // completion outcome/results
+  requiresApproval  Boolean               @default(false) @map("requires_approval")
+  approvedById      String?               @map("approved_by_id")
+  approvedDate      DateTime?             @map("approved_date")
+  rejectionReason   String?               @map("rejection_reason")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  patient           Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  caregiver         User                  @relation("ServiceRequestCaregiver", fields: [caregiverId], references: [id], onDelete: Cascade)
+  serviceType       ServiceType?          @relation(fields: [serviceTypeId], references: [id])
+  approvedBy        User?                 @relation("ServiceRequestApprovedBy", fields: [approvedById], references: [id])
+  notifications     InAppNotification[]
+
+  @@index([patientId])
+  @@index([caregiverId])
+  @@index([status])
+  @@index([requestedDate])
+  @@index([scheduledDate])
+  @@index([patientId, status])
+  @@index([caregiverId, status])
+  @@map("service_requests")
+}
+
+model CaregiverSchedule {
+  id                String                  @id @default(uuid())
+  caregiverId       String                  @map("caregiver_id")
+  patientId         String                  @map("patient_id")
+  scheduleType      CaregiverScheduleType   @map("schedule_type")
+  title             String
+  description       String?
+  scheduledDate     DateTime                @map("scheduled_date")
+  estimatedDuration Int?                    @map("estimated_duration") // in minutes
+  status            CaregiverScheduleStatus @default(SCHEDULED)
+  priority          Priority                @default(MEDIUM)
+  isRecurring       Boolean                 @default(false) @map("is_recurring")
+  recurringPattern  String?                 @map("recurring_pattern") // JSON string for recurring rules
+  notes             String?
+  completionNotes   String?                 @map("completion_notes")
+  outcome           String?                 // visit outcome/results
+  completedDate     DateTime?               @map("completed_date")
+  cancelledReason   String?                 @map("cancelled_reason")
+  requiresApproval  Boolean                 @default(false) @map("requires_approval")
+  approvedById      String?                 @map("approved_by_id")
+  approvedDate      DateTime?               @map("approved_date")
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  caregiver         User                    @relation("CaregiverScheduleCaregiver", fields: [caregiverId], references: [id], onDelete: Cascade)
+  patient           Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  approvedBy        User?                   @relation("CaregiverScheduleApprovedBy", fields: [approvedById], references: [id])
+  notifications     InAppNotification[]
+
+  @@index([caregiverId])
+  @@index([patientId])
+  @@index([scheduledDate])
+  @@index([status])
+  @@index([caregiverId, scheduledDate])
+  @@index([patientId, scheduledDate])
+  @@map("caregiver_schedules")
+}
+
+model ServiceType {
+  id               String           @id @default(uuid())
+  name             String           @unique
+  description      String?
+  category         String?
+  isActive         Boolean          @default(true) @map("is_active")
+  usageCount       Int              @default(0) @map("usage_count") // track popularity
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  serviceRequests  ServiceRequest[]
+
+  @@map("service_types")
+}
+
+model AdminSettings {
+  id                              String   @id @default(uuid())
+  key                             String   @unique
+  value                           String   // JSON string for complex values
+  description                     String?
+  category                        String   @default("general")
+  isEditable                      Boolean  @default(true) @map("is_editable")
+  createdAt                       DateTime @default(now()) @map("created_at")
+  updatedAt                       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("admin_settings")
+}
+
+model InAppNotification {
+  id                String                    @id @default(uuid())
+  userId            String                    @map("user_id")
+  type              InAppNotificationType     @map("type")
+  title             String
+  message           String
+  isRead            Boolean                   @default(false) @map("is_read")
+  priority          Priority                  @default(MEDIUM)
+  actionUrl         String?                   @map("action_url")
+  actionLabel       String?                   @map("action_label")
+  metadata          Json?                     // additional data
+  expiresAt         DateTime?                 @map("expires_at")
+  serviceRequestId  String?                   @map("service_request_id")
+  scheduleId        String?                   @map("schedule_id")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  readAt            DateTime?                 @map("read_at")
+
+  // Relations
+  user              User                      @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  serviceRequest    ServiceRequest?           @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  schedule          CaregiverSchedule?        @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([userId, isRead])
+  @@index([type])
+  @@map("in_app_notifications")
+}
+
+// New enums for service requests and scheduling
+
+enum ServiceRequestStatus {
+  PENDING     @map("pending")
+  APPROVED    @map("approved")
+  SCHEDULED   @map("scheduled")
+  IN_PROGRESS @map("in_progress")
+  COMPLETED   @map("completed")
+  CANCELLED   @map("cancelled")
+  REJECTED    @map("rejected")
+}
+
+enum CaregiverScheduleType {
+  ROUTINE_VISIT    @map("routine_visit")
+  EMERGENCY_VISIT  @map("emergency_visit")
+  FOLLOW_UP        @map("follow_up")
+  ASSESSMENT       @map("assessment")
+  MEDICATION       @map("medication")
+  THERAPY          @map("therapy")
+  CONSULTATION     @map("consultation")
+  OTHER            @map("other")
+}
+
+enum CaregiverScheduleStatus {
+  SCHEDULED   @map("scheduled")
+  IN_PROGRESS @map("in_progress")
+  COMPLETED   @map("completed")
+  CANCELLED   @map("cancelled")
+  RESCHEDULED @map("rescheduled")
+  NO_SHOW     @map("no_show")
+}
+
+enum InAppNotificationType {
+  SERVICE_REQUEST_CREATED    @map("service_request_created")
+  SERVICE_REQUEST_APPROVED   @map("service_request_approved")
+  SERVICE_REQUEST_REJECTED   @map("service_request_rejected")
+  SERVICE_REQUEST_SCHEDULED  @map("service_request_scheduled")
+  SERVICE_REQUEST_COMPLETED  @map("service_request_completed")
+  SCHEDULE_CREATED           @map("schedule_created")
+  SCHEDULE_UPDATED           @map("schedule_updated")
+  SCHEDULE_CANCELLED         @map("schedule_cancelled")
+  SCHEDULE_REMINDER          @map("schedule_reminder")
+  GENERAL                    @map("general")
 }

@@ -188,9 +188,7 @@ export function AdminCareersMobile({
                           <span className="flex items-center">
                             📍{j.location || "—"}
                           </span>
-                          <span className="flex items-center">
-                            💰{j.salary || "—"}
-                          </span>
+
                           <Badge variant="outline" className="text-[10px]">
                             <Tag className="h-3 w-3 mr-1" />
                             {j.category}

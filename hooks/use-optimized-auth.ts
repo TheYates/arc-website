@@ -6,7 +6,7 @@ import { useAuth, User } from "@/lib/auth";
  * stable references to prevent unnecessary re-renders
  */
 export function useOptimizedAuth() {
-  const { user, isLoading, login, logout, refreshUser } = useAuth();
+  const { user, isLoading, login, logout, refreshUser, isHydrated } = useAuth();
 
   // Memoize user data to prevent unnecessary re-renders
   const memoizedUser = useMemo(() => user, [user?.id, user?.role, user?.email]);
@@ -46,6 +46,7 @@ export function useOptimizedAuth() {
     userProfile,
     authState,
     isLoading,
+    isHydrated,
     login,
     logout,
     refreshUser,
@@ -57,12 +58,13 @@ export function useOptimizedAuth() {
  * This prevents re-renders when user data changes but auth status doesn't
  */
 export function useAuthStatus() {
-  const { user, isLoading } = useAuth();
-  
+  const { user, isLoading, isHydrated } = useAuth();
+
   return useMemo(() => ({
     isAuthenticated: !!user,
     isLoading,
-  }), [!!user, isLoading]);
+    isHydrated,
+  }), [!!user, isLoading, isHydrated]);
 }
 
 /**

@@ -5,7 +5,7 @@ export interface PricingItem {
   id: string;
   name: string;
   description?: string;
-  type: "service" | "feature" | "addon";
+  type: "service" | "plan" | "feature" | "addon";
   basePrice?: number;
   isRequired: boolean;
   isRecurring?: boolean;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/database/postgresql';
 import { ApplicationStatus } from '@/lib/types/applications';
+import { ApplicationApprovalService } from '@/lib/services/application-approval';
 
 // GET /api/admin/applications/[id] - Get specific application
 export async function GET(
@@ -10,7 +11,18 @@ export async function GET(
   try {
     const { id } = await params;
     const application = await prisma.application.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        selectedFeatures: true,
+        invoices: {
+          include: {
+            items: {
+              orderBy: { sortOrder: 'asc' }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
     });
 
     if (!application) {
@@ -39,6 +51,60 @@ export async function GET(
       adminNotes: application.adminNotes,
       processedBy: application.processedBy,
       processedAt: application.processedAt?.toISOString(),
+
+      // User account fields
+      userId: application.userId,
+      tempPassword: application.tempPassword,
+      credentialsSentAt: application.credentialsSentAt?.toISOString(),
+      emailSent: application.emailSent,
+      smsSent: application.smsSent,
+
+      // Payment tracking fields
+      paymentStatus: application.paymentStatus?.toLowerCase(),
+      paymentMethod: application.paymentMethod,
+      paymentReference: application.paymentReference,
+      paymentCompletedAt: application.paymentCompletedAt?.toISOString(),
+
+      createdAt: application.createdAt.toISOString(),
+      updatedAt: application.updatedAt.toISOString(),
+
+      selectedFeatures: application.selectedFeatures?.map((feature: any) => ({
+        id: feature.id,
+        applicationId: feature.applicationId,
+        featureId: feature.featureId,
+        featureName: feature.featureName,
+        featureType: feature.featureType,
+        isSelected: feature.isSelected,
+        createdAt: feature.createdAt.toISOString(),
+      })) || [],
+      invoices: application.invoices?.map((invoice: any) => ({
+        id: invoice.id,
+        applicationId: invoice.applicationId,
+        invoiceNumber: invoice.invoiceNumber,
+        basePrice: parseFloat(invoice.basePrice.toString()),
+        totalAmount: parseFloat(invoice.totalAmount.toString()),
+        currency: invoice.currency,
+        status: invoice.status.toLowerCase(),
+        dueDate: invoice.dueDate?.toISOString(),
+        paidDate: invoice.paidDate?.toISOString(),
+        paymentMethod: invoice.paymentMethod,
+        notes: invoice.notes,
+        createdBy: invoice.createdBy,
+        createdAt: invoice.createdAt.toISOString(),
+        updatedAt: invoice.updatedAt.toISOString(),
+        items: invoice.items?.map((item: any) => ({
+          id: item.id,
+          invoiceId: item.invoiceId,
+          itemType: item.itemType,
+          itemId: item.itemId,
+          itemName: item.itemName,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: parseFloat(item.unitPrice.toString()),
+          totalPrice: parseFloat(item.totalPrice.toString()),
+          sortOrder: item.sortOrder,
+        })) || [],
+      })) || [],
     };
 
     return NextResponse.json({ application: transformedApplication });
@@ -81,16 +147,36 @@ export async function PUT(
       );
     }
 
-    // Update application
+    // Handle approval with enhanced flow
+    if (status.toLowerCase() === 'approved') {
+      const approvalResult = await ApplicationApprovalService.approveApplication(
+        id,
+        adminNotes || '',
+        processedBy || 'admin'
+      );
+
+      if (!approvalResult.success) {
+        return NextResponse.json(
+          { error: approvalResult.error },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({
+        application: approvalResult.application,
+        user: approvalResult.user,
+        notifications: approvalResult.notifications
+      });
+    }
+
+    // Handle rejection (existing logic)
     const updatedApplication = await prisma.application.update({
       where: { id },
       data: {
-        status: status.toUpperCase() as any, // Convert to uppercase for Prisma enum
+        status: status.toUpperCase() as any,
         adminNotes: adminNotes || null,
         processedBy: processedBy || null,
-        processedAt: ['approved', 'rejected'].includes(status.toLowerCase()) 
-          ? new Date() 
-          : null,
+        processedAt: new Date(),
         updatedAt: new Date(),
       }
     });

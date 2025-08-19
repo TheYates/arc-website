@@ -24,7 +24,6 @@ import {
   Loader2,
   MapPin,
   Briefcase,
-  DollarSign,
   FileText,
 } from "lucide-react";
 import {
@@ -331,10 +330,6 @@ export default function CareersPage() {
                           <MapPin className="h-4 w-4 mr-2" />
                           {position.location}
                         </div>
-                        <div className="flex items-center text-sm font-semibold text-teal-600">
-                          <DollarSign className="h-4 w-4 mr-2" />
-                          {position.salary}
-                        </div>
                         <div className="flex flex-wrap gap-2">
                           <Badge variant="outline">{position.category}</Badge>
                           {position.numberOfPositions &&
@@ -412,8 +407,10 @@ export default function CareersPage() {
               </h3>
               <p className="text-slate-600 mb-6">
                 We're always looking for passionate healthcare and childcare
-                professionals. Send us your resume and we'll keep you in mind
-                for future opportunities.
+                professionals.
+                <br />
+                Send us your resume and we'll keep you in mind for future
+                opportunities.
               </p>
               <Button
                 size="lg"
@@ -688,9 +685,6 @@ export default function CareersPage() {
                   </p>
                   <p>
                     <strong>Type:</strong> {selectedJob.type}
-                  </p>
-                  <p>
-                    <strong>Salary:</strong> {selectedJob.salary}
                   </p>
                   <p>
                     <strong>Category:</strong> {selectedJob.category}

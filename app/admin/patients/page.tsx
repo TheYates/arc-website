@@ -58,12 +58,18 @@ import {
 } from "lucide-react";
 import { AdminPatientsMobile } from "@/components/mobile/admin-patients";
 
+// Simple cache for patients data
+let patientsCache: { data: Patient[], timestamp: number } | null = null;
+const CACHE_DURATION = 30000; // 30 seconds
+
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
   const [availableStaff, setAvailableStaff] = useState<{
     caregivers: User[];
     reviewers: User[];
@@ -83,12 +89,35 @@ export default function PatientsPage() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [patientsData, staffData, statsData] = await Promise.all([
-          getPatients(),
+        // Check cache first
+        const now = Date.now();
+        if (patientsCache && (now - patientsCache.timestamp) < CACHE_DURATION) {
+          setPatients(patientsCache.data);
+          setIsLoading(false);
+
+          // Still fetch other data
+          const [staffData, statsData] = await Promise.all([
+            getAvailableStaff(),
+            getWorkloadStats(),
+          ]);
+          setAvailableStaff(staffData);
+          setWorkloadStats(statsData);
+          return;
+        }
+
+        const [patientsResponse, staffData, statsData] = await Promise.all([
+          getPatients(1, 50),
           getAvailableStaff(),
           getWorkloadStats(),
         ]);
-        setPatients(patientsData);
+
+        // Update cache
+        patientsCache = {
+          data: patientsResponse.patients,
+          timestamp: now
+        };
+
+        setPatients(patientsResponse.patients);
         setAvailableStaff(staffData);
         setWorkloadStats(statsData);
       } catch (error) {
@@ -198,12 +227,12 @@ export default function PatientsPage() {
       }
 
       // Refresh data
-      const [patientsData, staffData, statsData] = await Promise.all([
-        getPatients(),
+      const [patientsResponse, staffData, statsData] = await Promise.all([
+        getPatients(1, 50),
         getAvailableStaff(),
         getWorkloadStats(),
       ]);
-      setPatients(patientsData);
+      setPatients(patientsResponse.patients);
       setAvailableStaff(staffData);
       setWorkloadStats(statsData);
 
@@ -224,32 +253,37 @@ export default function PatientsPage() {
     }
   };
 
-  const handleRemoveAssignment = async (patient: Patient) => {
-    if (!user) return;
+  const handleRemoveAssignment = (patient: Patient) => {
+    setPatientToDelete(patient);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmRemoveAssignment = async () => {
+    if (!user || !patientToDelete) return;
 
     setIsAssigning(true);
     try {
       let success = true;
 
       // Remove caregiver assignment
-      if (patient.assignedCaregiverId) {
-        success = await removeAssignment(patient.id, "caregiver");
+      if (patientToDelete.assignedCaregiverId) {
+        success = await removeAssignment(patientToDelete.id, "caregiver");
         if (!success) throw new Error("Failed to remove caregiver assignment");
       }
 
       // Remove reviewer assignment
-      if (patient.assignedReviewerId) {
-        success = await removeAssignment(patient.id, "reviewer");
+      if (patientToDelete.assignedReviewerId) {
+        success = await removeAssignment(patientToDelete.id, "reviewer");
         if (!success) throw new Error("Failed to remove reviewer assignment");
       }
 
       // Refresh data
-      const [patientsData, staffData, statsData] = await Promise.all([
-        getPatients(),
+      const [patientsResponse, staffData, statsData] = await Promise.all([
+        getPatients(1, 50),
         getAvailableStaff(),
         getWorkloadStats(),
       ]);
-      setPatients(patientsData);
+      setPatients(patientsResponse.patients);
       setAvailableStaff(staffData);
       setWorkloadStats(statsData);
 
@@ -266,6 +300,8 @@ export default function PatientsPage() {
       });
     } finally {
       setIsAssigning(false);
+      setShowDeleteDialog(false);
+      setPatientToDelete(null);
     }
   };
 
@@ -273,6 +309,22 @@ export default function PatientsPage() {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
     return formatDate(date);
+  };
+
+  const getServiceColor = (serviceName?: string) => {
+    if (!serviceName) return "text-muted-foreground";
+
+    const serviceColors: { [key: string]: string } = {
+      "Yonko Pa": "text-blue-600",
+      "Event Medical Coverage": "text-green-600",
+      "Emergency Response": "text-red-600",
+      "Health Monitoring": "text-purple-600",
+      "Consultation": "text-orange-600",
+      "Home Care": "text-teal-600",
+      "Rehabilitation": "text-indigo-600",
+    };
+
+    return serviceColors[serviceName] || "text-gray-600";
   };
 
   return (
@@ -374,11 +426,15 @@ export default function PatientsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-mono text-sm">
+                          <div className="font-mono text-xs">
                             {patient.medicalRecordNumber || "N/A"}
                           </div>
                         </TableCell>
-                        <TableCell>{patient.serviceName || "N/A"}</TableCell>
+                        <TableCell>
+                          <span className={`font-medium ${getServiceColor(patient.serviceName)}`}>
+                            {patient.serviceName || "N/A"}
+                          </span>
+                        </TableCell>
                         <TableCell>
                           {getCareLevelBadge(patient.careLevel)}
                         </TableCell>
@@ -397,7 +453,7 @@ export default function PatientsPage() {
                               <div className="flex items-center space-x-1">
                                 <div className="w-2 h-2 bg-green-600 rounded-full"></div>
                                 <span className="text-xs font-medium text-green-600">
-                                  CG: {patient.assignedCaregiver.name}
+                                 {patient.assignedCaregiver.name}
                                 </span>
                               </div>
                             )}
@@ -405,16 +461,16 @@ export default function PatientsPage() {
                               <div className="flex items-center space-x-1">
                                 <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
                                 <span className="text-xs font-medium text-purple-600">
-                                  RV: {patient.assignedReviewer.name}
+                                  RV:
+                                  {patient.assignedReviewer.name}
                                 </span>
                               </div>
                             )}
                             {!patient.assignedCaregiver &&
                               !patient.assignedReviewer && (
-                                <Badge variant="outline" className="text-xs">
-                                  <AlertCircle className="h-3 w-3 mr-1" />
-                                  Unassigned
-                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  No assignments
+                                </span>
                               )}
                           </div>
                         </TableCell>
@@ -653,6 +709,51 @@ export default function PatientsPage() {
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Update Assignments
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remove Assignments</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove all assignments for{" "}
+                <strong>
+                  {patientToDelete?.firstName} {patientToDelete?.lastName}
+                </strong>
+                ? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setPatientToDelete(null);
+                }}
+                disabled={isAssigning}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmRemoveAssignment}
+                disabled={isAssigning}
+              >
+                {isAssigning ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Removing...
+                  </>
+                ) : (
+                  <>
+                    <X className="h-4 w-4 mr-2" />
+                    Remove Assignments
                   </>
                 )}
               </Button>

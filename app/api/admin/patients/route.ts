@@ -3,9 +3,19 @@ import { prisma } from '@/lib/database/postgresql';
 import { generateTempPassword, hashPassword } from '@/lib/utils/password';
 
 // GET /api/admin/patients - Get all patients
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination
+    const totalCount = await prisma.patient.count();
+
     const patients = await prisma.patient.findMany({
+      skip,
+      take: limit,
       include: {
         user: {
           select: {
@@ -14,15 +24,30 @@ export async function GET() {
             lastName: true,
             email: true,
             phone: true,
-            address: true,
             createdAt: true,
+            applications: {
+              where: {
+                status: 'APPROVED'
+              },
+              select: {
+                id: true,
+                serviceName: true,
+                serviceId: true,
+              },
+              take: 1,
+              orderBy: {
+                processedAt: 'desc'
+              }
+            }
           }
         },
         caregiverAssignments: {
           where: {
             isActive: true
           },
-          include: {
+          select: {
+            id: true,
+            assignedAt: true,
             caregiver: {
               select: {
                 id: true,
@@ -31,13 +56,19 @@ export async function GET() {
                 email: true,
               }
             }
+          },
+          take: 1,
+          orderBy: {
+            assignedAt: 'desc'
           }
         },
         reviewerAssignments: {
           where: {
             isActive: true
           },
-          include: {
+          select: {
+            id: true,
+            assignedAt: true,
             reviewer: {
               select: {
                 id: true,
@@ -46,6 +77,10 @@ export async function GET() {
                 email: true,
               }
             }
+          },
+          take: 1,
+          orderBy: {
+            assignedAt: 'desc'
           }
         }
       },
@@ -55,49 +90,72 @@ export async function GET() {
     });
 
     // Transform the data to match our Patient type
-    const transformedPatients = patients.map((patient: any) => ({
-      id: patient.id,
-      firstName: patient.user.firstName,
-      lastName: patient.user.lastName,
-      email: patient.user.email,
-      phone: patient.user.phone,
-      address: patient.user.address,
-      dateOfBirth: patient.dateOfBirth ? patient.dateOfBirth.toISOString().split('T')[0] : undefined,
-      gender: patient.gender?.toLowerCase(),
-      bloodType: patient.bloodType,
-      heightCm: patient.heightCm,
-      weightKg: patient.weightKg,
-      careLevel: patient.careLevel?.toLowerCase(),
-      status: patient.status?.toLowerCase(),
-      assignedDate: patient.assignedDate,
-      emergencyContactName: patient.emergencyContactName,
-      emergencyContactRelationship: patient.emergencyContactRelationship,
-      emergencyContactPhone: patient.emergencyContactPhone,
-      medicalRecordNumber: patient.medicalRecordNumber,
-      insuranceProvider: patient.insuranceProvider,
-      insurancePolicyNumber: patient.insurancePolicyNumber,
-      createdAt: patient.user.createdAt.toISOString(),
-      // Add caregiver info if assigned
-      assignedCaregiverId: patient.caregiverAssignments.length > 0 ? patient.caregiverAssignments[0].caregiver.id : undefined,
-      assignedCaregiver: patient.caregiverAssignments.length > 0 ? {
-        id: patient.caregiverAssignments[0].caregiver.id,
-        name: `${patient.caregiverAssignments[0].caregiver.firstName} ${patient.caregiverAssignments[0].caregiver.lastName}`,
-        email: patient.caregiverAssignments[0].caregiver.email,
-        assignedAt: patient.caregiverAssignments[0].assignedAt.toISOString(),
-        assignedBy: '', // TODO: Add assignedBy field to schema if needed
-      } : undefined,
-      // Add reviewer info if assigned
-      assignedReviewerId: patient.reviewerAssignments.length > 0 ? patient.reviewerAssignments[0].reviewer.id : undefined,
-      assignedReviewer: patient.reviewerAssignments.length > 0 ? {
-        id: patient.reviewerAssignments[0].reviewer.id,
-        name: `${patient.reviewerAssignments[0].reviewer.firstName} ${patient.reviewerAssignments[0].reviewer.lastName}`,
-        email: patient.reviewerAssignments[0].reviewer.email,
-        assignedAt: patient.reviewerAssignments[0].assignedAt.toISOString(),
-        assignedBy: '', // TODO: Add assignedBy field to schema if needed
-      } : undefined,
-    }));
+    const transformedPatients = patients.map((patient: any) => {
+      const application = patient.user.applications?.[0];
 
-    return NextResponse.json({ patients: transformedPatients });
+      return {
+        id: patient.id,
+        firstName: patient.user.firstName,
+        lastName: patient.user.lastName,
+        email: patient.user.email,
+        phone: patient.user.phone,
+        address: patient.user.address,
+        dateOfBirth: patient.dateOfBirth ? patient.dateOfBirth.toISOString().split('T')[0] : undefined,
+        gender: patient.gender?.toLowerCase(),
+        bloodType: patient.bloodType,
+        heightCm: patient.heightCm,
+        weightKg: patient.weightKg,
+        careLevel: patient.careLevel?.toLowerCase(),
+        status: patient.status?.toLowerCase(),
+        assignedDate: patient.assignedDate,
+        emergencyContactName: patient.emergencyContactName,
+        emergencyContactRelationship: patient.emergencyContactRelationship,
+        emergencyContactPhone: patient.emergencyContactPhone,
+        medicalRecordNumber: patient.medicalRecordNumber,
+        insuranceProvider: patient.insuranceProvider,
+        insurancePolicyNumber: patient.insurancePolicyNumber,
+        createdAt: patient.user.createdAt.toISOString(),
+        // Add service information from application
+        serviceId: application?.serviceId,
+        serviceName: application?.serviceName,
+        applicationId: application?.id,
+        // Add caregiver info if assigned
+        assignedCaregiverId: patient.caregiverAssignments.length > 0 ? patient.caregiverAssignments[0].caregiver.id : undefined,
+        assignedCaregiver: patient.caregiverAssignments.length > 0 ? {
+          id: patient.caregiverAssignments[0].caregiver.id,
+          name: `${patient.caregiverAssignments[0].caregiver.firstName} ${patient.caregiverAssignments[0].caregiver.lastName}`,
+          email: patient.caregiverAssignments[0].caregiver.email,
+          assignedAt: patient.caregiverAssignments[0].assignedAt.toISOString(),
+          assignedBy: '', // TODO: Add assignedBy field to schema if needed
+        } : undefined,
+        // Add reviewer info if assigned
+        assignedReviewerId: patient.reviewerAssignments.length > 0 ? patient.reviewerAssignments[0].reviewer.id : undefined,
+        assignedReviewer: patient.reviewerAssignments.length > 0 ? {
+          id: patient.reviewerAssignments[0].reviewer.id,
+          name: `${patient.reviewerAssignments[0].reviewer.firstName} ${patient.reviewerAssignments[0].reviewer.lastName}`,
+          email: patient.reviewerAssignments[0].reviewer.email,
+          assignedAt: patient.reviewerAssignments[0].assignedAt.toISOString(),
+          assignedBy: '', // TODO: Add assignedBy field to schema if needed
+        } : undefined,
+      };
+    });
+
+    const response = NextResponse.json({
+      patients: transformedPatients,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNext: page * limit < totalCount,
+        hasPrev: page > 1
+      }
+    });
+
+    // Add caching headers for better performance
+    response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+
+    return response;
   } catch (error) {
     console.error('Failed to fetch patients:', error);
     return NextResponse.json(

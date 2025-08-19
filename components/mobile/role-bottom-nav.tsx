@@ -12,6 +12,7 @@ import {
   FileText,
   User,
   MoreHorizontal,
+  Stethoscope,
 } from "lucide-react";
 
 interface RoleBottomNavProps {
@@ -104,14 +105,14 @@ export function RoleBottomNav({ role }: RoleBottomNavProps) {
       items = [
         { label: "Home", href: baseUrl, icon: <Home className="h-5 w-5" /> },
         {
+          label: "Medical",
+          href: `${baseUrl}/medical`,
+          icon: <Stethoscope className="h-5 w-5" />,
+        },
+        {
           label: "Appts",
           href: `${baseUrl}/appointments`,
           icon: <Calendar className="h-5 w-5" />,
-        },
-        {
-          label: "Plan",
-          href: `${baseUrl}/care-plan`,
-          icon: <FileText className="h-5 w-5" />,
         },
         {
           label: "Profile",

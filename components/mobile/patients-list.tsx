@@ -29,8 +29,10 @@ export function PatientsListMobile({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return patients;
-    return patients.filter((p) =>
+    // Ensure patients is always an array
+    const safePatients = Array.isArray(patients) ? patients : [];
+    if (!q) return safePatients;
+    return safePatients.filter((p) =>
       [p.firstName, p.lastName, p.email, p.phone, p.serviceName]
         .filter(Boolean)
         .some((s) => s!.toLowerCase().includes(q))

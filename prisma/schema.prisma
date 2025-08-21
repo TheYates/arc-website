@@ -44,6 +44,8 @@ model User {
   caregiverSchedules            CaregiverSchedule[]    @relation("CaregiverScheduleCaregiver")
   caregiverSchedulesApproved    CaregiverSchedule[]    @relation("CaregiverScheduleApprovedBy")
   notifications                 InAppNotification[]    @relation("UserNotifications")
+  jobPositionsCreated           JobPosition[]
+  careerApplicationsReviewed    CareerApplication[]
 
   @@map("users")
 }
@@ -889,4 +891,147 @@ enum InAppNotificationType {
   SCHEDULE_CANCELLED         @map("schedule_cancelled")
   SCHEDULE_REMINDER          @map("schedule_reminder")
   GENERAL                    @map("general")
+}
+
+// Careers and Job Management
+model JobCategory {
+  id          String        @id @default(uuid())
+  name        String        @unique
+  description String?
+  isActive    Boolean       @default(true) @map("is_active")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  jobPositions JobPosition[]
+
+  @@map("job_categories")
+}
+
+model JobPosition {
+  id                String              @id @default(uuid())
+  title             String
+  categoryId        String              @map("category_id")
+  description       String
+  requirements      String[]
+  responsibilities  String[]
+  location          String?
+  employmentType    EmploymentType      @default(FULL_TIME) @map("employment_type")
+  status            JobStatus           @default(ACTIVE)
+  isRemote          Boolean             @default(false) @map("is_remote")
+  experienceLevel   ExperienceLevel     @default(MID_LEVEL) @map("experience_level")
+  applicationDeadline DateTime?         @map("application_deadline")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  createdById       String              @map("created_by_id")
+
+  // Relations
+  category          JobCategory         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdBy         User                @relation(fields: [createdById], references: [id])
+  applications      CareerApplication[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("job_positions")
+}
+
+model CareerApplication {
+  id                String                    @id @default(uuid())
+  jobPositionId     String                    @map("job_position_id")
+  firstName         String                    @map("first_name")
+  lastName          String                    @map("last_name")
+  email             String
+  phone             String?
+  address           String?
+  dateOfBirth       DateTime?                 @map("date_of_birth")
+  nationality       String?
+
+  // Education
+  education         Json?                     // Array of education objects
+
+  // Experience
+  workExperience    Json?                     @map("work_experience") // Array of work experience objects
+
+  // Skills and Certifications
+  skills            String[]
+  certifications    Json?                     // Array of certification objects
+  languages         Json?                     // Array of language objects
+
+  // Application specific
+  coverLetter       String?                   @map("cover_letter")
+  resumeUrl         String?                   @map("resume_url")
+  portfolioUrl      String?                   @map("portfolio_url")
+  linkedinUrl       String?                   @map("linkedin_url")
+
+  // Application status
+  status            CareerApplicationStatus   @default(PENDING)
+  appliedAt         DateTime                  @default(now()) @map("applied_at")
+  reviewedAt        DateTime?                 @map("reviewed_at")
+  reviewedById      String?                   @map("reviewed_by_id")
+  adminNotes        String?                   @map("admin_notes")
+
+  // Interview scheduling
+  interviewDate     DateTime?                 @map("interview_date")
+  interviewType     InterviewType?            @map("interview_type")
+  interviewNotes    String?                   @map("interview_notes")
+
+  // References
+  references        Json?                     // Array of reference objects
+
+  // Availability
+  availableStartDate DateTime?               @map("available_start_date")
+
+  // Relations
+  jobPosition       JobPosition               @relation(fields: [jobPositionId], references: [id], onDelete: Cascade)
+  reviewedBy        User?                     @relation(fields: [reviewedById], references: [id])
+
+  @@index([jobPositionId])
+  @@index([status])
+  @@index([appliedAt])
+  @@index([email])
+  @@map("career_applications")
+}
+
+// Enums for careers
+enum EmploymentType {
+  FULL_TIME     @map("full_time")
+  PART_TIME     @map("part_time")
+  CONTRACT      @map("contract")
+  TEMPORARY     @map("temporary")
+  INTERNSHIP    @map("internship")
+  VOLUNTEER     @map("volunteer")
+}
+
+enum JobStatus {
+  ACTIVE        @map("active")
+  INACTIVE      @map("inactive")
+  CLOSED        @map("closed")
+  DRAFT         @map("draft")
+}
+
+enum ExperienceLevel {
+  ENTRY_LEVEL   @map("entry_level")
+  MID_LEVEL     @map("mid_level")
+  SENIOR_LEVEL  @map("senior_level")
+  EXECUTIVE     @map("executive")
+}
+
+enum CareerApplicationStatus {
+  PENDING       @map("pending")
+  REVIEWING     @map("reviewing")
+  SHORTLISTED   @map("shortlisted")
+  INTERVIEW     @map("interview")
+  OFFERED       @map("offered")
+  HIRED         @map("hired")
+  REJECTED      @map("rejected")
+  WITHDRAWN     @map("withdrawn")
+}
+
+enum InterviewType {
+  PHONE         @map("phone")
+  VIDEO         @map("video")
+  IN_PERSON     @map("in_person")
+  PANEL         @map("panel")
+  TECHNICAL     @map("technical")
 }

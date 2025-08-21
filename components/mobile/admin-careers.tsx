@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,7 @@ export function AdminCareersMobile({
   subtitle = "Manage job positions and review applications",
 }: AdminCareersMobileProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [tab, setTab] = useState("jobs");
   const [jobs, setJobs] = useState<JobPosition[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -57,13 +59,15 @@ export function AdminCareersMobile({
   const [appStatus, setAppStatus] = useState<string>("all");
 
   useEffect(() => {
+    if (!user) return; // Wait for user to be available
+
     (async () => {
       setLoading(true);
       try {
         const [jobsData, categoriesData, applicationsData] = await Promise.all([
-          getJobPositions(),
-          getJobCategories(),
-          getCareerApplications(),
+          getJobPositions(user),
+          getJobCategories(user),
+          getCareerApplications(user),
         ]);
         setJobs(jobsData || []);
         setCategories(categoriesData || []);
@@ -72,7 +76,7 @@ export function AdminCareersMobile({
         setLoading(false);
       }
     })();
-  }, []);
+  }, [user]);
 
   const jobList = useMemo(() => {
     return jobs.filter(

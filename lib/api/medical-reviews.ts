@@ -17,7 +17,7 @@ const defaultReviews: MedicalReview[] = [
     patientId: "101",
     reviewerId: "reviewer-001",
     reviewerName: "Dr. Kwame Mensah",
-    type: "routine_checkup",
+    type: "routine",
     title: "Monthly Health Assessment",
     findings:
       "Patient shows good vital signs overall. Blood pressure slightly elevated but within acceptable range. Weight stable since last visit.",
@@ -123,7 +123,7 @@ export const createMedicalReview = (
     patientId: reviewData.patientId || "",
     reviewerId: reviewData.reviewerId || "",
     reviewerName: reviewData.reviewerName || "",
-    type: reviewData.type || "routine_checkup",
+    type: reviewData.type || "routine",
     title: reviewData.title || "",
     findings: reviewData.findings || "",
     assessment: reviewData.assessment || "",
@@ -132,7 +132,7 @@ export const createMedicalReview = (
     followUpRequired: reviewData.followUpRequired || false,
     followUpDate: reviewData.followUpDate,
     priority: reviewData.priority || "medium",
-    status: reviewData.status || "draft",
+    status: reviewData.status || "pending",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     reviewedDate:
@@ -282,15 +282,15 @@ export const getReviewSummary = (
   const pendingFollowUps = reviews.filter(
     (review) =>
       review.followUpRequired &&
-      review.status !== "archived" &&
+      review.status !== "cancelled" &&
       (!review.followUpDate || new Date(review.followUpDate) <= new Date())
   ).length;
 
   const urgentReviews = reviews.filter(
     (review) =>
-      review.priority === "urgent" &&
+      review.priority === "high" &&
       review.status !== "completed" &&
-      review.status !== "archived"
+      review.status !== "cancelled"
   ).length;
 
   // Calculate average reviews per month (rough estimate)

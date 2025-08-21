@@ -1,10 +1,6 @@
-import {
-  Patient,
-  Medication,
-  MedicationAdministration,
-  User,
-} from "@/lib/types";
-import { User as AuthUser } from "@/lib/auth";
+import { Patient } from "@/lib/types/patients";
+import { Medication, MedicationAdministration } from "@/lib/types/medications";
+import { User } from "@/lib/auth";
 import { createAuthHeaders } from "@/lib/api/auth-headers";
 
 // Client-side API functions that call Next.js API routes
@@ -114,7 +110,7 @@ export async function authenticateUserClient(
 // Patients
 export async function getPatientByIdClient(
   patientId: string,
-  user: AuthUser | null = null
+  user: User | null = null
 ): Promise<Patient | null> {
   try {
     const cacheKey = `patient-${patientId}`;
@@ -157,7 +153,7 @@ export async function getPatientByIdClient(
 
 export async function getPatientsByCaregiverClient(
   caregiverId: string,
-  user: AuthUser | null = null
+  user: User | null = null
 ): Promise<Patient[]> {
   try {
     const headers = createAuthHeaders(user);
@@ -181,7 +177,7 @@ export async function getPatientsByCaregiverClient(
 // Medications
 export async function getMedicationsClient(
   patientId: string,
-  user: AuthUser | null = null
+  user: User | null = null
 ): Promise<Medication[]> {
   try {
     const cacheKey = `medications-${patientId}`;
@@ -227,7 +223,7 @@ export async function getMedicationsClient(
 
 export async function getMedicationAdministrationsClient(
   patientId: string,
-  user: AuthUser | null = null
+  user: User | null = null
 ): Promise<MedicationAdministration[]> {
   try {
     const cacheKey = `administrations-${patientId}`;
@@ -280,7 +276,7 @@ export async function getMedicationAdministrationsClient(
 
 export async function recordMedicationAdministrationClient(
   administration: Omit<MedicationAdministration, "id">,
-  user: AuthUser | null = null
+  user: User | null = null
 ): Promise<MedicationAdministration | null> {
   try {
     const headers = createAuthHeaders(user);

@@ -16,11 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-import {
-  getCareerApplicationById,
-  updateCareerApplicationStatus,
-  getJobPositionById,
-} from "@/lib/api/careers";
+import { updateCareerApplicationStatus } from "@/lib/api/careers";
 import type {
   CareerApplication,
   ApplicationStatus,
@@ -36,38 +32,34 @@ import {
   FileText,
 } from "lucide-react";
 
-export function AdminCareerApplicationDetailMobile({ id }: { id: string }) {
+export function AdminCareerApplicationDetailMobile({
+  id,
+  application,
+  jobPosition,
+  isLoading,
+}: {
+  id: string;
+  application: CareerApplication | null;
+  jobPosition: JobPosition | null;
+  isLoading: boolean;
+}) {
   const router = useRouter();
   const { user } = useAuth();
-  const [app, setApp] = useState<CareerApplication | null>(null);
-  const [job, setJob] = useState<JobPosition | null>(null);
-  const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<ApplicationStatus>("pending");
   const [notes, setNotes] = useState("");
   const [interviewAt, setInterviewAt] = useState("");
   const [updating, setUpdating] = useState(false);
 
+  // Update local state when props change
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const data = await getCareerApplicationById(id);
-        setApp(data || null);
-        if (data) {
-          setStatus(data.status);
-          setNotes(data.notes || "");
-          if (data.interviewDate)
-            setInterviewAt(data.interviewDate.substring(0, 16));
-          if (data.positionId) {
-            const jp = await getJobPositionById(data.positionId);
-            setJob(jp || null);
-          }
-        }
-      } finally {
-        setLoading(false);
+    if (application) {
+      setStatus(application.status);
+      setNotes(application.notes || "");
+      if (application.interviewDate) {
+        setInterviewAt(application.interviewDate.substring(0, 16));
       }
-    })();
-  }, [id]);
+    }
+  }, [application]);
 
   const badge = (s: ApplicationStatus) => {
     const map: Record<ApplicationStatus, string> = {
@@ -81,27 +73,28 @@ export function AdminCareerApplicationDetailMobile({ id }: { id: string }) {
   };
 
   const handleUpdate = async () => {
-    if (!app || !user) return;
+    if (!application || !user) return;
     setUpdating(true);
     try {
-      const updated = await updateCareerApplicationStatus(
-        app.id,
+      await updateCareerApplicationStatus(
+        application.id,
         status,
         notes,
         user.email,
-        status === "interview" ? interviewAt : undefined
+        status === "interview" ? interviewAt : undefined,
+        user
       );
-      setApp(updated);
+      // Note: The parent component will handle updating the application state
     } finally {
       setUpdating(false);
     }
   };
 
-  if (loading)
+  if (isLoading)
     return (
       <div className="px-4 py-6 text-sm text-muted-foreground">Loading...</div>
     );
-  if (!app)
+  if (!application)
     return (
       <div className="px-4 py-6">
         <Card>
@@ -137,47 +130,47 @@ export function AdminCareerApplicationDetailMobile({ id }: { id: string }) {
 
       <div className="flex items-center justify-between">
         <div className="font-semibold">
-          {app.firstName} {app.lastName}
+          {application.firstName} {application.lastName}
         </div>
-        {badge(app.status)}
+        {badge(application.status)}
       </div>
 
       <Card>
         <CardContent className="p-4 space-y-2">
           <div className="flex items-center text-sm">
             <Mail className="h-4 w-4 mr-2" />
-            {app.email}
+            {application.email}
           </div>
           <div className="flex items-center text-sm">
             <Phone className="h-4 w-4 mr-2" />
-            {app.phone}
+            {application.phone}
           </div>
           <div className="flex items-center text-xs text-muted-foreground mt-1">
             <Calendar className="h-3 w-3 mr-1" />
-            Submitted {formatDate(new Date(app.submittedAt))}
+            Submitted {formatDate(new Date(application.submittedAt))}
           </div>
           <div className="mt-2">
             <div className="font-medium">
-              {app.positionTitle || "General Application"}
+              {application.positionTitle || "General Application"}
             </div>
-            {app.positionId && (
+            {application.positionId && (
               <div className="text-xs text-muted-foreground flex items-center mt-1">
                 <Briefcase className="h-3 w-3 mr-1" />
-                Job ID: {app.positionId}
+                Job ID: {application.positionId}
               </div>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {(app.resumeUrl || app.coverLetter) && (
+      {(application.resumeUrl || application.coverLetter) && (
         <Card>
           <CardContent className="p-4 space-y-3">
             <div className="font-medium flex items-center">
               <Paperclip className="h-4 w-4 mr-2" />
               Documents
             </div>
-            {app.resumeUrl && (
+            {application.resumeUrl && (
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center">
                   <FileText className="h-4 w-4 mr-2" />
@@ -186,7 +179,7 @@ export function AdminCareerApplicationDetailMobile({ id }: { id: string }) {
                 <div className="flex gap-2">
                   <Button asChild size="sm" variant="outline">
                     <a
-                      href={app.resumeUrl}
+                      href={application.resumeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -194,18 +187,18 @@ export function AdminCareerApplicationDetailMobile({ id }: { id: string }) {
                     </a>
                   </Button>
                   <Button asChild size="sm" variant="outline">
-                    <a href={app.resumeUrl} download>
+                    <a href={application.resumeUrl} download>
                       Download
                     </a>
                   </Button>
                 </div>
               </div>
             )}
-            {app.coverLetter && (
+            {application.coverLetter && (
               <div className="text-sm text-muted-foreground whitespace-pre-line">
-                {app.coverLetter.startsWith("Uploaded file:")
-                  ? app.coverLetter
-                  : app.coverLetter}
+                {application.coverLetter.startsWith("Uploaded file:")
+                  ? application.coverLetter
+                  : application.coverLetter}
               </div>
             )}
           </CardContent>
@@ -254,11 +247,11 @@ export function AdminCareerApplicationDetailMobile({ id }: { id: string }) {
       <Card>
         <CardContent className="p-4 grid grid-cols-2 gap-2">
           <Button asChild variant="outline">
-            <a href={`mailto:${app.email}`}>Email</a>
+            <a href={`mailto:${application.email}`}>Email</a>
           </Button>
-          {app.resumeUrl && (
+          {application.resumeUrl && (
             <Button asChild variant="outline">
-              <a href={app.resumeUrl} download>
+              <a href={application.resumeUrl} download>
                 Resume
               </a>
             </Button>

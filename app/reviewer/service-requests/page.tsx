@@ -2,13 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth";
 import { RoleHeader } from "@/components/role-header";
+import { authenticatedGet } from "@/lib/api/auth-headers";
 import {
   Calendar,
   Clock,
@@ -86,11 +93,7 @@ export default function ReviewerServiceRequestsPage() {
 
   const fetchServiceRequests = async () => {
     try {
-      const response = await fetch("/api/service-requests", {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await authenticatedGet("/api/service-requests", user);
 
       if (!response.ok) {
         throw new Error("Failed to fetch service requests");
@@ -179,16 +182,45 @@ export default function ReviewerServiceRequestsPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      PENDING: { label: "Pending Review", variant: "secondary" as const, icon: Clock },
-      APPROVED: { label: "Approved", variant: "default" as const, icon: CheckCircle },
-      SCHEDULED: { label: "Scheduled", variant: "default" as const, icon: Calendar },
-      IN_PROGRESS: { label: "In Progress", variant: "default" as const, icon: Loader2 },
-      COMPLETED: { label: "Completed", variant: "default" as const, icon: CheckCircle },
-      CANCELLED: { label: "Cancelled", variant: "destructive" as const, icon: XCircle },
-      REJECTED: { label: "Rejected", variant: "destructive" as const, icon: XCircle },
+      PENDING: {
+        label: "Pending Review",
+        variant: "secondary" as const,
+        icon: Clock,
+      },
+      APPROVED: {
+        label: "Approved",
+        variant: "default" as const,
+        icon: CheckCircle,
+      },
+      SCHEDULED: {
+        label: "Scheduled",
+        variant: "default" as const,
+        icon: Calendar,
+      },
+      IN_PROGRESS: {
+        label: "In Progress",
+        variant: "default" as const,
+        icon: Loader2,
+      },
+      COMPLETED: {
+        label: "Completed",
+        variant: "default" as const,
+        icon: CheckCircle,
+      },
+      CANCELLED: {
+        label: "Cancelled",
+        variant: "destructive" as const,
+        icon: XCircle,
+      },
+      REJECTED: {
+        label: "Rejected",
+        variant: "destructive" as const,
+        icon: XCircle,
+      },
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
+    const config =
+      statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
     const Icon = config.icon;
 
     return (
@@ -207,13 +239,11 @@ export default function ReviewerServiceRequestsPage() {
       CRITICAL: { label: "Critical", className: "bg-red-100 text-red-800" },
     };
 
-    const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.MEDIUM;
+    const config =
+      priorityConfig[priority as keyof typeof priorityConfig] ||
+      priorityConfig.MEDIUM;
 
-    return (
-      <Badge className={config.className}>
-        {config.label}
-      </Badge>
-    );
+    return <Badge className={config.className}>{config.label}</Badge>;
   };
 
   const formatDate = (dateString: string) => {
@@ -229,13 +259,20 @@ export default function ReviewerServiceRequestsPage() {
   const filterRequestsByStatus = (status: string) => {
     switch (status) {
       case "pending":
-        return serviceRequests.filter(req => req.status === "PENDING" && req.requiresApproval);
+        return serviceRequests.filter(
+          (req) => req.status === "PENDING" && req.requiresApproval
+        );
       case "approved":
-        return serviceRequests.filter(req => req.status === "APPROVED" || req.status === "SCHEDULED" || req.status === "IN_PROGRESS");
+        return serviceRequests.filter(
+          (req) =>
+            req.status === "APPROVED" ||
+            req.status === "SCHEDULED" ||
+            req.status === "IN_PROGRESS"
+        );
       case "completed":
-        return serviceRequests.filter(req => req.status === "COMPLETED");
+        return serviceRequests.filter((req) => req.status === "COMPLETED");
       case "rejected":
-        return serviceRequests.filter(req => req.status === "REJECTED");
+        return serviceRequests.filter((req) => req.status === "REJECTED");
       default:
         return serviceRequests;
     }
@@ -275,7 +312,7 @@ export default function ReviewerServiceRequestsPage() {
   return (
     <div className="min-h-screen bg-background">
       <RoleHeader role="reviewer" />
-      
+
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -291,16 +328,41 @@ export default function ReviewerServiceRequestsPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="pending">
-              Pending ({serviceRequests.filter(req => req.status === "PENDING" && req.requiresApproval).length})
+              Pending (
+              {
+                serviceRequests.filter(
+                  (req) => req.status === "PENDING" && req.requiresApproval
+                ).length
+              }
+              )
             </TabsTrigger>
             <TabsTrigger value="approved">
-              Approved ({serviceRequests.filter(req => req.status === "APPROVED" || req.status === "SCHEDULED" || req.status === "IN_PROGRESS").length})
+              Approved (
+              {
+                serviceRequests.filter(
+                  (req) =>
+                    req.status === "APPROVED" ||
+                    req.status === "SCHEDULED" ||
+                    req.status === "IN_PROGRESS"
+                ).length
+              }
+              )
             </TabsTrigger>
             <TabsTrigger value="completed">
-              Completed ({serviceRequests.filter(req => req.status === "COMPLETED").length})
+              Completed (
+              {
+                serviceRequests.filter((req) => req.status === "COMPLETED")
+                  .length
+              }
+              )
             </TabsTrigger>
             <TabsTrigger value="rejected">
-              Rejected ({serviceRequests.filter(req => req.status === "REJECTED").length})
+              Rejected (
+              {
+                serviceRequests.filter((req) => req.status === "REJECTED")
+                  .length
+              }
+              )
             </TabsTrigger>
           </TabsList>
 
@@ -310,9 +372,12 @@ export default function ReviewerServiceRequestsPage() {
                 <CardContent className="py-12">
                   <div className="text-center">
                     <Calendar className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No Service Requests</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      No Service Requests
+                    </h3>
                     <p className="text-muted-foreground">
-                      No {activeTab} service requests from your assigned patients.
+                      No {activeTab} service requests from your assigned
+                      patients.
                     </p>
                   </div>
                 </CardContent>
@@ -320,11 +385,16 @@ export default function ReviewerServiceRequestsPage() {
             ) : (
               <div className="grid gap-4">
                 {filteredRequests.map((request) => (
-                  <Card key={request.id} className="hover:shadow-md transition-shadow">
+                  <Card
+                    key={request.id}
+                    className="hover:shadow-md transition-shadow"
+                  >
                     <CardHeader className="pb-3">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
-                          <CardTitle className="text-lg">{request.title}</CardTitle>
+                          <CardTitle className="text-lg">
+                            {request.title}
+                          </CardTitle>
                           {getStatusBadge(request.status)}
                           {getPriorityBadge(request.priority)}
                         </div>
@@ -337,15 +407,19 @@ export default function ReviewerServiceRequestsPage() {
                       <div className="flex items-center gap-2 text-sm">
                         <User className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">
-                          {request.patient.user.firstName} {request.patient.user.lastName}
+                          {request.patient.user.firstName}{" "}
+                          {request.patient.user.lastName}
                         </span>
                         <span className="text-muted-foreground">
-                          → {request.caregiver.firstName} {request.caregiver.lastName}
+                          → {request.caregiver.firstName}{" "}
+                          {request.caregiver.lastName}
                         </span>
                       </div>
 
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">Description</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Description
+                        </p>
                         <p>{request.description}</p>
                         {request.customDescription && (
                           <p className="text-sm text-muted-foreground mt-1">
@@ -357,44 +431,58 @@ export default function ReviewerServiceRequestsPage() {
                       {request.preferredDate && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="h-4 w-4" />
-                          <span>Preferred: {formatDate(request.preferredDate)}</span>
+                          <span>
+                            Preferred: {formatDate(request.preferredDate)}
+                          </span>
                         </div>
                       )}
 
                       {request.reviewerNotes && (
                         <div>
-                          <p className="text-sm text-muted-foreground mb-1">Review Notes</p>
-                          <p className="text-sm bg-muted p-2 rounded">{request.reviewerNotes}</p>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Review Notes
+                          </p>
+                          <p className="text-sm bg-muted p-2 rounded">
+                            {request.reviewerNotes}
+                          </p>
                         </div>
                       )}
 
                       <div className="flex justify-end gap-2">
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={`/reviewer/service-requests/${request.id}`}>
+                          <Link
+                            href={`/reviewer/service-requests/${request.id}`}
+                          >
                             <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </Link>
                         </Button>
-                        {request.status === "PENDING" && request.requiresApproval && (
-                          <>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleRejectRequest(request.id, "Rejected by reviewer")}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <ThumbsDown className="h-4 w-4 mr-2" />
-                              Reject
-                            </Button>
-                            <Button 
-                              size="sm"
-                              onClick={() => handleApproveRequest(request.id)}
-                            >
-                              <ThumbsUp className="h-4 w-4 mr-2" />
-                              Approve
-                            </Button>
-                          </>
-                        )}
+                        {request.status === "PENDING" &&
+                          request.requiresApproval && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  handleRejectRequest(
+                                    request.id,
+                                    "Rejected by reviewer"
+                                  )
+                                }
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <ThumbsDown className="h-4 w-4 mr-2" />
+                                Reject
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleApproveRequest(request.id)}
+                              >
+                                <ThumbsUp className="h-4 w-4 mr-2" />
+                                Approve
+                              </Button>
+                            </>
+                          )}
                       </div>
                     </CardContent>
                   </Card>

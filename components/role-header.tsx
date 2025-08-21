@@ -89,6 +89,15 @@ export function RoleHeader({ role }: RoleHeaderProps) {
           accentBg: "bg-green-50",
           searchVariant: "patient" as const,
         };
+      default:
+        return {
+          title: "Alpha Rescue",
+          icon: <Heart className="h-5 w-5 text-white" />,
+          bgColor: "bg-gray-600",
+          accentColor: "text-gray-600",
+          accentBg: "bg-gray-50",
+          searchVariant: "patient" as const,
+        };
     }
   };
 
@@ -202,6 +211,15 @@ export function RoleHeader({ role }: RoleHeaderProps) {
             href: `${baseUrl}/medical`,
             icon: <Stethoscope className="h-4 w-4 mr-2" />,
             isActive: pathname.startsWith(`${baseUrl}/medical`),
+          },
+        ];
+      default:
+        return [
+          {
+            name: "Dashboard",
+            href: baseUrl,
+            icon: <Home className="h-4 w-4 mr-2" />,
+            isActive: pathname === baseUrl,
           },
         ];
     }

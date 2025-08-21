@@ -1,6 +1,6 @@
 import { Patient } from "../types/patients";
 import { getApplicationById } from "./applications";
-import { AuthUser } from "../auth";
+import { User } from "../auth";
 import { authenticatedGet } from "./auth-headers";
 
 // API-based patient functions using Neon DB
@@ -8,7 +8,7 @@ import { authenticatedGet } from "./auth-headers";
 export async function getPatients(
   page: number = 1,
   limit: number = 50,
-  user: AuthUser | null = null
+  user: User | null = null
 ): Promise<{ patients: Patient[]; pagination: any }> {
   try {
     const response = await authenticatedGet(

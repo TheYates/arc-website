@@ -12,10 +12,33 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth";
 import { RoleHeader } from "@/components/role-header";
-import { authenticatedGet } from "@/lib/api/auth-headers";
+import {
+  authenticatedGet,
+  authenticatedPatch,
+  authenticatedPost,
+} from "@/lib/api/auth-headers";
 import {
   Table,
   TableBody,
@@ -25,15 +48,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Calendar,
   Clock,
-  User,
   AlertCircle,
   CheckCircle,
   XCircle,
   Loader2,
   Eye,
   CalendarPlus,
+  CalendarCheck,
+  CalendarDays,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -71,6 +94,20 @@ export default function CaregiverServiceRequestsPage() {
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pending");
+  const [isScheduling, setIsScheduling] = useState<string | null>(null);
+  const [scheduleDialog, setScheduleDialog] = useState<{
+    isOpen: boolean;
+    request: ServiceRequest | null;
+    selectedDate: Date | undefined;
+    notes: string;
+    isCalendarOpen: boolean;
+  }>({
+    isOpen: false,
+    request: null,
+    selectedDate: undefined,
+    notes: "",
+    isCalendarOpen: false,
+  });
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -107,6 +144,105 @@ export default function CaregiverServiceRequestsPage() {
     }
   };
 
+  const handleScheduleRequest = (request: ServiceRequest) => {
+    setScheduleDialog({
+      isOpen: true,
+      request,
+      selectedDate: request.preferredDate
+        ? new Date(request.preferredDate)
+        : undefined,
+      notes: "",
+      isCalendarOpen: false,
+    });
+  };
+
+  const confirmSchedule = async () => {
+    if (!scheduleDialog.request || !scheduleDialog.selectedDate) {
+      toast({
+        title: "Error",
+        description: "Please select a date for scheduling",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsScheduling(scheduleDialog.request.id);
+    try {
+      const response = await authenticatedPatch(
+        `/api/service-requests/${scheduleDialog.request.id}`,
+        user,
+        {
+          status: "SCHEDULED",
+          scheduledDate: scheduleDialog.selectedDate.toISOString(),
+          caregiverNotes: scheduleDialog.notes || undefined,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to schedule service request");
+      }
+
+      // Send notification to patient
+      try {
+        await authenticatedPost("/api/notifications", user, {
+          userId: scheduleDialog.request.patient.user.id,
+          type: "SERVICE_SCHEDULED",
+          title: "Service Request Scheduled",
+          message: `Your service request "${
+            scheduleDialog.request.title
+          }" has been scheduled for ${scheduleDialog.selectedDate.toLocaleDateString(
+            "en-US",
+            {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }
+          )}.`,
+          metadata: {
+            serviceRequestId: scheduleDialog.request.id,
+            scheduledDate: scheduleDialog.selectedDate.toISOString(),
+          },
+        });
+      } catch (notificationError) {
+        console.error("Failed to send notification:", notificationError);
+        // Don't fail the whole operation if notification fails
+      }
+
+      toast({
+        title: "Success",
+        description: `Service request scheduled for ${scheduleDialog.selectedDate.toLocaleDateString(
+          "en-US",
+          {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }
+        )}. Patient has been notified.`,
+      });
+
+      // Close dialog and refresh data
+      setScheduleDialog({
+        isOpen: false,
+        request: null,
+        selectedDate: undefined,
+        notes: "",
+        isCalendarOpen: false,
+      });
+      fetchServiceRequests();
+    } catch (error) {
+      console.error("Error scheduling service request:", error);
+      toast({
+        title: "Error",
+        description: "Failed to schedule service request",
+        variant: "destructive",
+      });
+    } finally {
+      setIsScheduling(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       PENDING: { label: "Pending", variant: "secondary" as const, icon: Clock },
@@ -118,7 +254,7 @@ export default function CaregiverServiceRequestsPage() {
       SCHEDULED: {
         label: "Scheduled",
         variant: "default" as const,
-        icon: Calendar,
+        icon: CalendarCheck,
       },
       IN_PROGRESS: {
         label: "In Progress",
@@ -245,9 +381,9 @@ export default function CaregiverServiceRequestsPage() {
             </p>
           </div>
           <Button asChild>
-            <Link href="/caregiver/schedules/new">
-              <CalendarPlus className="h-4 w-4 mr-2" />
-              Create Schedule
+            <Link href="/caregiver/schedules">
+              <CalendarDays className="h-4 w-4 mr-2" />
+              View Schedules
             </Link>
           </Button>
         </div>
@@ -313,7 +449,7 @@ export default function CaregiverServiceRequestsPage() {
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-12">
                         <div className="flex flex-col items-center">
-                          <Calendar className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                          <CalendarDays className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
                           <h3 className="text-lg font-semibold mb-2">
                             No Service Requests
                           </h3>
@@ -382,12 +518,12 @@ export default function CaregiverServiceRequestsPage() {
                             </Button>
                             {(request.status === "APPROVED" ||
                               request.status === "PENDING") && (
-                              <Button size="sm" asChild>
-                                <Link
-                                  href={`/caregiver/service-requests/${request.id}/schedule`}
-                                >
-                                  <CalendarPlus className="h-4 w-4" />
-                                </Link>
+                              <Button
+                                size="sm"
+                                onClick={() => handleScheduleRequest(request)}
+                                title="Schedule this service request"
+                              >
+                                <CalendarPlus className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
@@ -401,6 +537,139 @@ export default function CaregiverServiceRequestsPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Schedule Dialog */}
+      <Dialog
+        open={scheduleDialog.isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setScheduleDialog({
+              isOpen: false,
+              request: null,
+              selectedDate: undefined,
+              notes: "",
+              isCalendarOpen: false,
+            });
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Schedule Service Request</DialogTitle>
+            <DialogDescription>
+              {scheduleDialog.request && (
+                <>
+                  Schedule "{scheduleDialog.request.title}" for{" "}
+                  {scheduleDialog.request.patient.user.firstName}{" "}
+                  {scheduleDialog.request.patient.user.lastName}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Date Picker */}
+            <div>
+              <Label htmlFor="schedule-date">Select Date</Label>
+              <Popover
+                open={scheduleDialog.isCalendarOpen}
+                onOpenChange={(open) =>
+                  setScheduleDialog((prev) => ({
+                    ...prev,
+                    isCalendarOpen: open,
+                  }))
+                }
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal mt-2",
+                      !scheduleDialog.selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {scheduleDialog.selectedDate ? (
+                      format(scheduleDialog.selectedDate, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={scheduleDialog.selectedDate}
+                    onSelect={(date) => {
+                      setScheduleDialog((prev) => ({
+                        ...prev,
+                        selectedDate: date,
+                        isCalendarOpen: false, // Close popover after selection
+                      }));
+                    }}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const isDisabled = date < today;
+                      return isDisabled;
+                    }}
+                    initialFocus
+                    numberOfMonths={1}
+                    defaultMonth={scheduleDialog.selectedDate || new Date()}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Label htmlFor="schedule-notes">Notes (Optional)</Label>
+              <Textarea
+                id="schedule-notes"
+                value={scheduleDialog.notes}
+                onChange={(e) =>
+                  setScheduleDialog((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
+                placeholder="Add any notes about the scheduling..."
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setScheduleDialog({
+                  isOpen: false,
+                  request: null,
+                  selectedDate: undefined,
+                  notes: "",
+                  isCalendarOpen: false,
+                })
+              }
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmSchedule}
+              disabled={!scheduleDialog.selectedDate || !!isScheduling}
+            >
+              {isScheduling ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Scheduling...
+                </>
+              ) : (
+                "Schedule Request"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

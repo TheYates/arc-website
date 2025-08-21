@@ -18,7 +18,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Package, TrendingUp, Users, DollarSign, Save } from "lucide-react";
+import {
+  Package,
+  TrendingUp,
+  Users,
+  DollarSign,
+  Save,
+  Download,
+  Upload,
+} from "lucide-react";
 import { AdminServicesMobile } from "@/components/mobile/admin-services";
 import { useAuth } from "@/lib/auth";
 import { PricingCardView } from "@/components/admin/pricing-card-view";
@@ -159,6 +167,116 @@ export default function AdminPackagesPage() {
       console.log("Save process completed");
     }
   }, [hasUnsavedChanges, isSaving, pricingItems]);
+
+  // Export services data to JSON file (using server-side API)
+  const handleExportServices = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/services/export");
+      const result = await response.json();
+
+      if (result.success) {
+        const dataStr = JSON.stringify(result.data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(dataBlob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `arc-services-export-${
+          new Date().toISOString().split("T")[0]
+        }.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        showNotification(
+          "Export Successful",
+          `Exported ${result.data.totalServices} services to JSON file`,
+          "success"
+        );
+      } else {
+        throw new Error(result.error || "Export failed");
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      showNotification(
+        "Export Failed",
+        `Failed to export services data: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        "error"
+      );
+    }
+  }, []);
+
+  // Import services data from JSON file (using server-side API)
+  const handleImportServices = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const importData = JSON.parse(text);
+
+        // Validate import data structure
+        if (!importData.services || !Array.isArray(importData.services)) {
+          throw new Error("Invalid file format: missing services array");
+        }
+
+        // Confirm import with user
+        const clearExisting = window.confirm(
+          `Import ${importData.services.length} services?\n\nClick OK to REPLACE all existing services, or Cancel to merge with existing services.`
+        );
+
+        // Send to server for import
+        const response = await fetch("/api/admin/services/import", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            services: importData.services,
+            clearExisting: clearExisting,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Reload services from database
+          const loadResponse = await fetch("/api/admin/pricing");
+          const loadResult = await loadResponse.json();
+
+          if (loadResult.success && loadResult.data) {
+            setPricingItems(loadResult.data);
+          }
+
+          showNotification("Import Successful", result.message, "success");
+
+          // Show detailed results if available
+          if (result.details) {
+            console.log("Import details:", result.details);
+          }
+        } else {
+          throw new Error(result.error || "Import failed");
+        }
+      } catch (error) {
+        console.error("Import error:", error);
+        showNotification(
+          "Import Failed",
+          `Failed to import services: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          "error"
+        );
+      }
+    };
+    input.click();
+  }, []);
 
   // Debug useEffect to track hasUnsavedChanges changes
   useEffect(() => {
@@ -791,6 +909,31 @@ export default function AdminPackagesPage() {
                     </>
                   )}
                 </Button>
+
+                {/* Export/Import Buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleExportServices}
+                    variant="outline"
+                    size="sm"
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                    type="button"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+
+                  <Button
+                    onClick={handleImportServices}
+                    variant="outline"
+                    size="sm"
+                    className="text-green-600 border-green-200 hover:bg-green-50"
+                    type="button"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import
+                  </Button>
+                </div>
               </div>
             </div>
           </CardHeader>

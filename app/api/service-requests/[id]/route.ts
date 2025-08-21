@@ -5,7 +5,7 @@ import { createServiceCompletionCareNote } from "@/lib/integrations/care-notes-i
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -14,7 +14,7 @@ export async function GET(
     }
 
     const { user } = authResult;
-    const { id } = params;
+    const { id } = await params;
 
     const serviceRequest = await prisma.serviceRequest.findUnique({
       where: { id },
@@ -75,7 +75,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -84,7 +84,7 @@ export async function PATCH(
     }
 
     const { user } = authResult;
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     const existingRequest = await prisma.serviceRequest.findUnique({
@@ -117,14 +117,24 @@ export async function PATCH(
       if (existingRequest.patient.userId !== user.id) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
-      if (existingRequest.status !== "PENDING" && existingRequest.status !== "APPROVED") {
+      if (
+        existingRequest.status !== "PENDING" &&
+        existingRequest.status !== "APPROVED"
+      ) {
         return NextResponse.json(
           { error: "Cannot update request after it's been scheduled" },
           { status: 400 }
         );
       }
-      
-      const { title, description, customDescription, priority, preferredDate, notes } = body;
+
+      const {
+        title,
+        description,
+        customDescription,
+        priority,
+        preferredDate,
+        notes,
+      } = body;
       updateData = {
         ...(title && { title }),
         ...(description && { description }),
@@ -139,8 +149,9 @@ export async function PATCH(
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
 
-      const { status, scheduledDate, caregiverNotes, outcome, completedDate } = body;
-      
+      const { status, scheduledDate, caregiverNotes, outcome, completedDate } =
+        body;
+
       updateData = {
         ...(status && { status }),
         ...(scheduledDate && { scheduledDate: new Date(scheduledDate) }),
@@ -181,38 +192,56 @@ export async function PATCH(
                 serviceDescription: existingRequest.description,
                 outcome,
                 caregiverNotes,
-                completedDate: completedDate ? new Date(completedDate) : new Date(),
+                completedDate: completedDate
+                  ? new Date(completedDate)
+                  : new Date(),
                 priority: existingRequest.priority,
               });
             } catch (error) {
-              console.error("Error creating care note for service completion:", error);
+              console.error(
+                "Error creating care note for service completion:",
+                error
+              );
               // Don't fail the request if care note creation fails
             }
           }
         }
       }
-    } else if (user.role === "reviewer" || user.role === "admin" || user.role === "super_admin") {
+    } else if (
+      user.role === "reviewer" ||
+      user.role === "admin" ||
+      user.role === "super_admin"
+    ) {
       // Reviewers and admins can approve/reject requests
       const { status, reviewerNotes, approvedById, rejectionReason } = body;
-      
+
       if (status === "APPROVED" || status === "REJECTED") {
         updateData = {
           status,
           ...(reviewerNotes !== undefined && { reviewerNotes }),
-          ...(status === "APPROVED" && { approvedById: user.id, approvedDate: new Date() }),
+          ...(status === "APPROVED" && {
+            approvedById: user.id,
+            approvedDate: new Date(),
+          }),
           ...(status === "REJECTED" && { rejectionReason }),
         };
 
         // Create notifications
-        const notificationType = status === "APPROVED" ? "SERVICE_REQUEST_APPROVED" : "SERVICE_REQUEST_REJECTED";
-        const message = status === "APPROVED" 
-          ? `Your request "${existingRequest.title}" has been approved`
-          : `Your request "${existingRequest.title}" has been rejected`;
+        const notificationType =
+          status === "APPROVED"
+            ? "SERVICE_REQUEST_APPROVED"
+            : "SERVICE_REQUEST_REJECTED";
+        const message =
+          status === "APPROVED"
+            ? `Your request "${existingRequest.title}" has been approved`
+            : `Your request "${existingRequest.title}" has been rejected`;
 
         notificationData = {
           userId: existingRequest.patient.userId,
           type: notificationType,
-          title: `Service Request ${status === "APPROVED" ? "Approved" : "Rejected"}`,
+          title: `Service Request ${
+            status === "APPROVED" ? "Approved" : "Rejected"
+          }`,
           message,
           actionUrl: `/patient/service-requests/${id}`,
           serviceRequestId: id,
@@ -287,7 +316,10 @@ export async function PATCH(
   }
 }
 
-async function checkServiceRequestAccess(user: any, serviceRequest: any): Promise<boolean> {
+async function checkServiceRequestAccess(
+  user: any,
+  serviceRequest: any
+): Promise<boolean> {
   if (user.role === "admin" || user.role === "super_admin") {
     return true;
   }

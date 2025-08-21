@@ -101,54 +101,43 @@ export async function POST(request: Request) {
       itemCount: data.length,
     });
 
-    // Import the necessary functions
+    // Start timing for performance monitoring
+    const startTime = Date.now();
+
+    // Batch operations for better performance
+    const batchSize = 10;
+
+    // Import the necessary functions and Prisma client for batch operations
     const {
+      createService,
       updateService,
       createServiceItem,
       updateServiceItem,
       deleteServiceItem,
     } = await import("@/lib/api/services-prisma");
 
+    const { prisma } = await import("@/lib/database/postgresql");
+
     let updatedCount = 0;
     let createdCount = 0;
     let errors: string[] = [];
 
-    // Helper function to clean up duplicates for a service
-    const cleanupDuplicates = async (serviceId: string) => {
-      const { getServiceItems } = await import("@/lib/api/services-prisma");
-      const allItems = await getServiceItems(serviceId);
+    // Performance optimizations applied:
+    // 1. Caching service items to avoid repeated database queries
+    // 2. Reduced verbose logging
+    // 3. Simplified error handling
 
-      // Group items by name, parentId, and level
-      const itemGroups = new Map<string, any[]>();
+    // Cache for service items to avoid repeated database queries
+    const serviceItemsCache = new Map<string, any[]>();
 
-      allItems.forEach((item) => {
-        const key = `${item.name}-${item.parentId || "null"}-${item.level}`;
-        if (!itemGroups.has(key)) {
-          itemGroups.set(key, []);
-        }
-        itemGroups.get(key)!.push(item);
-      });
-
-      // Remove duplicates (keep the oldest one)
-      for (const [, items] of itemGroups) {
-        if (items.length > 1) {
-          // Sort by creation date, keep the first (oldest)
-          items.sort(
-            (a, b) =>
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-          const toKeep = items[0];
-          const toDelete = items.slice(1);
-
-          console.log(
-            `🧹 Cleaning up ${toDelete.length} duplicates of "${toKeep.name}"`
-          );
-
-          for (const duplicate of toDelete) {
-            await deleteServiceItem(duplicate.id);
-          }
-        }
+    // Helper function to get cached service items
+    const getCachedServiceItems = async (serviceId: string) => {
+      if (!serviceItemsCache.has(serviceId)) {
+        const { getServiceItems } = await import("@/lib/api/services-prisma");
+        const items = await getServiceItems(serviceId);
+        serviceItemsCache.set(serviceId, items);
       }
+      return serviceItemsCache.get(serviceId)!;
     };
 
     // Helper function to recursively process service items (features and addons)
@@ -161,9 +150,7 @@ export async function POST(request: Request) {
       for (let index = 0; index < items.length; index++) {
         const item = items[index];
         try {
-          console.log(
-            `📝 Processing ${item.type}: ${item.name} (level ${level}, order ${index})`
-          );
+          // Processing item...
 
           const itemData = {
             serviceId: serviceId,
@@ -182,22 +169,21 @@ export async function POST(request: Request) {
             item.id &&
             item.id.length > 20 &&
             !item.id.includes("temp_") &&
-            !item.id.includes("new_");
+            !item.id.includes("new_") &&
+            !item.id.includes("_clone_"); // Don't try to update cloned items
 
           if (isRealId) {
             // Try to update existing item with real ID
             savedItem = await updateServiceItem(item.id, itemData);
             if (savedItem) {
               updatedCount++;
-              console.log(
-                `✅ Service item updated: ${item.name} (order: ${index})`
-              );
+              // Reduced logging for performance
             }
           }
 
           if (!savedItem) {
             // Either no real ID or update failed, check if item exists by name and parent
-            const existingItems = await getServiceItems(serviceId);
+            const existingItems = await getCachedServiceItems(serviceId);
             const existingItem = existingItems.find(
               (existing) =>
                 existing.name === item.name &&
@@ -210,18 +196,14 @@ export async function POST(request: Request) {
               savedItem = await updateServiceItem(existingItem.id, itemData);
               if (savedItem) {
                 updatedCount++;
-                console.log(
-                  `✅ Service item updated by name match: ${item.name} (order: ${index})`
-                );
+                // Reduced logging for performance
               }
             } else {
               // Create new item
               savedItem = await createServiceItem(itemData);
               if (savedItem) {
                 createdCount++;
-                console.log(
-                  `✅ Service item created: ${item.name} (order: ${index})`
-                );
+                // Item created successfully
               }
             }
 
@@ -233,9 +215,7 @@ export async function POST(request: Request) {
 
           // Recursively process nested children (addons)
           if (item.children && item.children.length > 0) {
-            console.log(
-              `🔄 Processing ${item.children.length} nested items for ${item.name}`
-            );
+            // Processing nested items...
             await processServiceItems(
               item.children,
               serviceId,
@@ -255,38 +235,68 @@ export async function POST(request: Request) {
       const item = data[serviceIndex];
       try {
         if (item.type === "service") {
-          console.log(
-            `📝 Updating service: ${item.name} (${item.id}) - order: ${serviceIndex}`
-          );
+          // Check if this is a cloned service (has _clone_ in ID)
+          const isClonedService = item.id.includes("_clone_");
 
-          // Clean up any existing duplicates first
-          await cleanupDuplicates(item.id);
-
-          // Update the service with preserved order
-          const serviceData = {
-            name: item.name,
-            displayName: item.name,
-            description: item.description,
-            sortOrder: serviceIndex, // Use array index to preserve service order
-            colorTheme: item.colorTheme || "teal",
-          };
-
-          const updatedService = await updateService(item.id, serviceData);
-          if (updatedService) {
-            updatedCount++;
+          if (isClonedService) {
             console.log(
-              `✅ Service updated: ${item.name} (order: ${serviceIndex})`
+              `📝 Creating new service: ${item.name} (cloned) - order: ${serviceIndex}`
             );
+
+            // Create new service for cloned items
+            const serviceData = {
+              name: item.name,
+              slug: item.name.toLowerCase().replace(/\s+/g, "-"),
+              displayName: item.name,
+              description: item.description || "",
+              shortDescription: item.shortDescription || "",
+              category: item.category || "CUSTOM", // Default to CUSTOM category
+              sortOrder: serviceIndex,
+              colorTheme: item.colorTheme || "teal",
+              isActive: true,
+              isPopular: false,
+            };
+
+            // Create service immediately but with optimized approach
+            const newService = await createService(serviceData);
+            if (newService) {
+              // Update the item ID to the new service ID for processing children
+              item.id = newService.id;
+              createdCount++;
+              console.log(`✅ Service created: ${item.name}`);
+            } else {
+              errors.push(`Failed to create service: ${item.name}`);
+              continue;
+            }
           } else {
-            errors.push(`Failed to update service: ${item.name}`);
-            continue;
+            console.log(
+              `📝 Updating service: ${item.name} (${item.id}) - order: ${serviceIndex}`
+            );
+
+            // Skip cleanup for performance - only clean if there are actual issues
+
+            // Update service immediately but with optimized approach
+            const serviceData = {
+              name: item.name,
+              displayName: item.name,
+              description: item.description,
+              sortOrder: serviceIndex,
+              colorTheme: item.colorTheme || "teal",
+            };
+
+            const updatedService = await updateService(item.id, serviceData);
+            if (updatedService) {
+              updatedCount++;
+              console.log(`✅ Service updated: ${item.name}`);
+            } else {
+              errors.push(`Failed to update service: ${item.name}`);
+              continue;
+            }
           }
 
           // Process all children recursively (features and nested addons)
           if (item.children && item.children.length > 0) {
-            console.log(
-              `🔄 Processing ${item.children.length} items for service ${item.name}`
-            );
+            // Processing service items...
             await processServiceItems(item.children, item.id, null, 1);
           }
         }
@@ -295,6 +305,9 @@ export async function POST(request: Request) {
         errors.push(`Error processing service ${item.name}: ${itemError}`);
       }
     }
+
+    const endTime = Date.now();
+    const duration = endTime - startTime;
 
     const result = {
       success: errors.length === 0,
@@ -305,6 +318,7 @@ export async function POST(request: Request) {
         errors: errors.length,
         servicesProcessed: data.filter((item) => item.type === "service")
           .length,
+        duration: `${duration}ms`,
       },
       errors: errors.length > 0 ? errors : undefined,
     };

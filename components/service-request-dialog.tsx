@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth";
+import { authenticatedGet, authenticatedPost } from "@/lib/api/auth-headers";
 
 interface ServiceType {
   id: string;
@@ -39,6 +41,7 @@ export function ServiceRequestDialog({
   onSuccess,
   trigger,
 }: ServiceRequestDialogProps) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,8 +61,9 @@ export function ServiceRequestDialog({
   const fetchServiceTypes = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        "/api/service-types?isActive=true&popular=true"
+      const response = await authenticatedGet(
+        "/api/service-types?isActive=true&popular=true",
+        user
       );
       if (!response.ok) {
         throw new Error("Failed to fetch service types");
@@ -100,30 +104,31 @@ export function ServiceRequestDialog({
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/service-requests", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          serviceTypeId:
-            formData.serviceTypeId === "other" ? null : formData.serviceTypeId,
-          title:
-            formData.serviceTypeId === "other"
-              ? "Other Service Request"
-              : serviceTypes.find((type) => type.id === formData.serviceTypeId)
-                  ?.name || "Service Request",
-          description: formData.description,
-          priority: formData.priority,
-        }),
-      });
+      const requestData = {
+        serviceTypeId:
+          formData.serviceTypeId === "other" ? null : formData.serviceTypeId,
+        title:
+          formData.serviceTypeId === "other"
+            ? "Other Service Request"
+            : serviceTypes.find((type) => type.id === formData.serviceTypeId)
+                ?.name || "Service Request",
+        description: formData.description,
+        priority: formData.priority,
+      };
+
+      console.log("Service types available:", serviceTypes);
+      console.log("Selected service type ID:", formData.serviceTypeId);
+      console.log("Sending service request data:", requestData);
+      const response = await authenticatedPost(
+        "/api/service-requests",
+        user,
+        requestData
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to create service request");
       }
-
-      const data = await response.json();
 
       toast.success("Service request created successfully", {
         description: "Your caregiver will be notified about your request.",

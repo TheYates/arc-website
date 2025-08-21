@@ -40,10 +40,11 @@ import {
   EyeOff,
   GripVertical,
   Image as ImageIcon,
+  Megaphone,
 } from "lucide-react";
 import Image from "next/image";
 
-export default function LogosManagementPage() {
+export default function BannersManagementPage() {
   const { logos, isLoading, createLogo, updateLogo, deleteLogo, reorderLogos } =
     useLogos();
   const { toast } = useToast();
@@ -91,7 +92,7 @@ export default function LogosManagementPage() {
       if (result.success) {
         toast({
           title: "Success",
-          description: "Logo created successfully",
+          description: "Advert created successfully",
         });
         setIsCreateDialogOpen(false);
         setCreateForm({
@@ -105,7 +106,7 @@ export default function LogosManagementPage() {
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to create logo",
+          description: result.error || "Failed to create advert",
           variant: "destructive",
         });
       }
@@ -136,14 +137,14 @@ export default function LogosManagementPage() {
       if (result.success) {
         toast({
           title: "Success",
-          description: "Logo updated successfully",
+          description: "Advert updated successfully",
         });
         setIsEditDialogOpen(false);
         setSelectedLogo(null);
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to update logo",
+          description: result.error || "Failed to update advert",
           variant: "destructive",
         });
       }
@@ -167,14 +168,14 @@ export default function LogosManagementPage() {
       if (result.success) {
         toast({
           title: "Success",
-          description: "Logo deleted successfully",
+          description: "Advert deleted successfully",
         });
         setIsDeleteDialogOpen(false);
         setSelectedLogo(null);
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to delete logo",
+          description: result.error || "Failed to delete advert",
           variant: "destructive",
         });
       }
@@ -212,7 +213,7 @@ export default function LogosManagementPage() {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Logo Management</h1>
+          <h1 className="text-3xl font-bold">Scrolling Banners</h1>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -247,23 +248,23 @@ export default function LogosManagementPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Logo Management</h1>
+          <h1 className="text-3xl font-bold">Scrolling Banners</h1>
           <p className="text-muted-foreground">
-            Manage partner logos displayed in the scrolling section
+            Manage partner banners displayed in the scrolling section
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Add Logo
+              Add Advert
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add New Logo</DialogTitle>
+              <DialogTitle>Add New Advert</DialogTitle>
               <DialogDescription>
-                Add a new partner logo to the scrolling section.
+                Add a new partner advert to the scrolling section.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -286,7 +287,7 @@ export default function LogosManagementPage() {
                   onChange={(e) =>
                     setCreateForm({ ...createForm, alt: e.target.value })
                   }
-                  placeholder="Logo description for accessibility"
+                  placeholder="Advert description for accessibility"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -320,7 +321,7 @@ export default function LogosManagementPage() {
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="create-file">Logo File</Label>
+                <Label htmlFor="create-file">Advert Image</Label>
                 <Input
                   id="create-file"
                   type="file"
@@ -350,7 +351,7 @@ export default function LogosManagementPage() {
                 onClick={handleCreateLogo}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Creating..." : "Create Logo"}
+                {isSubmitting ? "Creating..." : "Create Advert"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -361,8 +362,8 @@ export default function LogosManagementPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Logos</CardTitle>
-            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Banners</CardTitle>
+            <Megaphone className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{logos.length}</div>
@@ -370,7 +371,9 @@ export default function LogosManagementPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Logos</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Banners
+            </CardTitle>
             <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -382,7 +385,7 @@ export default function LogosManagementPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Inactive Logos
+              Inactive Banners
             </CardTitle>
             <EyeOff className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -394,7 +397,7 @@ export default function LogosManagementPage() {
         </Card>
       </div>
 
-      {/* Logos Grid */}
+      {/* Banners Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {logos.map((logo) => (
           <Card key={logo.id} className="relative">
@@ -457,9 +460,9 @@ export default function LogosManagementPage() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit Logo</DialogTitle>
+            <DialogTitle>Edit Advert</DialogTitle>
             <DialogDescription>
-              Update the logo information and settings.
+              Update the advert information and settings.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -482,7 +485,7 @@ export default function LogosManagementPage() {
                 onChange={(e) =>
                   setEditForm({ ...editForm, alt: e.target.value })
                 }
-                placeholder="Logo description for accessibility"
+                placeholder="Advert description for accessibility"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -516,7 +519,7 @@ export default function LogosManagementPage() {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-file">Replace Logo File (optional)</Label>
+              <Label htmlFor="edit-file">Replace Advert Image (optional)</Label>
               <Input
                 id="edit-file"
                 type="file"
@@ -546,7 +549,7 @@ export default function LogosManagementPage() {
               onClick={handleEditLogo}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Updating..." : "Update Logo"}
+              {isSubmitting ? "Updating..." : "Update Advert"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -562,7 +565,7 @@ export default function LogosManagementPage() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the
-              logo "{selectedLogo?.name}" from the system.
+              advert "{selectedLogo?.name}" from the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

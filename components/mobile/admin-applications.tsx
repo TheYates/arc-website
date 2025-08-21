@@ -17,6 +17,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import { getApplications } from "@/lib/api/applications";
 import type { ApplicationData } from "@/lib/types/applications";
+import { useAuth } from "@/lib/auth";
 
 interface Props {
   title?: string;
@@ -32,12 +33,13 @@ export function AdminApplicationsMobile({
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
+  const { user } = useAuth();
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const data = await getApplications();
+        const data = await getApplications(user);
         setApps(data || []);
       } finally {
         setLoading(false);

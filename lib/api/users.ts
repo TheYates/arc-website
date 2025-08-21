@@ -125,7 +125,9 @@ export async function createAccountFromApplication(
           address: application.address || "",
           role: role,
           isEmailVerified: false, // They'll need to verify
+          isActive: true, // New users are active by default
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           lastLogin: "",
           profileComplete: false, // They'll need to complete their profile
         };

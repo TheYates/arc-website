@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { getApplications } from "@/lib/api/applications";
 import { ApplicationData } from "@/lib/types/applications";
 import { formatDate } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 import { Loader2, Search, Filter, Calendar, Clock, Plus } from "lucide-react";
 import { AdminApplicationsMobile } from "@/components/mobile/admin-applications";
 
@@ -40,12 +41,13 @@ export default function ApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchApplications = async () => {
       setIsLoading(true);
       try {
-        const data = await getApplications();
+        const data = await getApplications(user);
         setApplications(data);
       } catch (error) {
         console.error("Failed to fetch applications:", error);
@@ -110,9 +112,7 @@ export default function ApplicationsPage() {
       <div className="hidden md:flex justify-between items-center">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Applications
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight">Applications</h1>
             <p className="text-muted-foreground">
               Review and manage client service applications
             </p>
@@ -202,7 +202,8 @@ export default function ApplicationsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {application.selectedFeatures && application.selectedFeatures.length > 0 ? (
+                          {application.selectedFeatures &&
+                          application.selectedFeatures.length > 0 ? (
                             application.selectedFeatures.map((feature) => (
                               <Badge
                                 key={feature.id}
@@ -213,7 +214,9 @@ export default function ApplicationsPage() {
                               </Badge>
                             ))
                           ) : (
-                            <span className="text-sm text-muted-foreground">None</span>
+                            <span className="text-sm text-muted-foreground">
+                              None
+                            </span>
                           )}
                         </div>
                       </TableCell>

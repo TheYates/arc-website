@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   AudioWaveform,
   BookOpen,
@@ -25,22 +25,22 @@ import {
   Shield,
   UserPlus,
   Users,
-} from "lucide-react"
+} from "lucide-react";
 
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { NavMain } from "@/components/nav-main";
+import { NavProjects } from "@/components/nav-projects";
+import { NavSecondary } from "@/components/nav-secondary";
+import { NavUser } from "@/components/nav-user";
+import { TeamSwitcher } from "@/components/team-switcher";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
-import { useAuth } from "@/lib/auth"
-import { usePathname } from "next/navigation"
+} from "@/components/ui/sidebar";
+import { useAuth } from "@/lib/auth";
+import { usePathname } from "next/navigation";
 
 // Admin sidebar data
 const getAdminData = (user: any, pathname: string) => ({
@@ -88,10 +88,10 @@ const getAdminData = (user: any, pathname: string) => ({
       isActive: pathname.startsWith("/admin/services"),
     },
     {
-      title: "Logos",
-      url: "/admin/logos",
+      title: "Banners",
+      url: "/admin/banners",
       icon: Image,
-      isActive: pathname.startsWith("/admin/logos"),
+      isActive: pathname.startsWith("/admin/banners"),
     },
     {
       title: "Service Requests",
@@ -163,5 +163,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

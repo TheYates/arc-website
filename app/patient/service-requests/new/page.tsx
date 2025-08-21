@@ -2,15 +2,28 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth";
 import { RoleHeader } from "@/components/role-header";
+import { authenticatedGet, authenticatedPost } from "@/lib/api/auth-headers";
 import {
   ArrowLeft,
   Calendar,
@@ -59,7 +72,10 @@ export default function NewServiceRequestPage() {
 
   const fetchServiceTypes = async () => {
     try {
-      const response = await fetch("/api/service-types?isActive=true&popular=true");
+      const response = await authenticatedGet(
+        "/api/service-types?isActive=true&popular=true",
+        user
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch service types");
       }
@@ -78,8 +94,8 @@ export default function NewServiceRequestPage() {
   };
 
   const handleServiceTypeChange = (serviceTypeId: string) => {
-    const selectedType = serviceTypes.find(type => type.id === serviceTypeId);
-    setFormData(prev => ({
+    const selectedType = serviceTypes.find((type) => type.id === serviceTypeId);
+    setFormData((prev) => ({
       ...prev,
       serviceTypeId,
       title: selectedType ? selectedType.name : prev.title,
@@ -89,11 +105,11 @@ export default function NewServiceRequestPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.title.trim() || !formData.description.trim()) {
+
+    if (!formData.title.trim()) {
       toast({
         title: "Validation Error",
-        description: "Please fill in the title and description",
+        description: "Please fill in the title",
         variant: "destructive",
       });
       return;
@@ -102,16 +118,14 @@ export default function NewServiceRequestPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/service-requests", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          preferredDate: formData.preferredDate ? new Date(formData.preferredDate).toISOString() : null,
-          estimatedDuration: formData.estimatedDuration ? parseInt(formData.estimatedDuration) : null,
-        }),
+      const response = await authenticatedPost("/api/service-requests", user, {
+        ...formData,
+        preferredDate: formData.preferredDate
+          ? new Date(formData.preferredDate).toISOString()
+          : null,
+        estimatedDuration: formData.estimatedDuration
+          ? parseInt(formData.estimatedDuration)
+          : null,
       });
 
       if (!response.ok) {
@@ -120,7 +134,7 @@ export default function NewServiceRequestPage() {
       }
 
       const data = await response.json();
-      
+
       toast({
         title: "Success",
         description: "Service request created successfully",
@@ -171,7 +185,7 @@ export default function NewServiceRequestPage() {
   return (
     <div className="min-h-screen bg-background">
       <RoleHeader role="patient" />
-      
+
       <div className="container mx-auto px-4 py-6 max-w-2xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
@@ -207,14 +221,17 @@ export default function NewServiceRequestPage() {
                       <SelectItem key={type.id} value={type.id}>
                         <div>
                           <div className="font-medium">{type.name}</div>
-                          <div className="text-sm text-muted-foreground">{type.description}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {type.description}
+                          </div>
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
-                  Choose from common services or leave blank to create a custom request
+                  Choose from common services or leave blank to create a custom
+                  request
                 </p>
               </div>
 
@@ -224,7 +241,9 @@ export default function NewServiceRequestPage() {
                 <Input
                   id="title"
                   value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, title: e.target.value }))
+                  }
                   placeholder="e.g., Wound dressing change, Medication assistance"
                   required
                 />
@@ -236,7 +255,12 @@ export default function NewServiceRequestPage() {
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
                   placeholder="Describe what you need help with..."
                   rows={3}
                   required
@@ -249,7 +273,12 @@ export default function NewServiceRequestPage() {
                 <Textarea
                   id="customDescription"
                   value={formData.customDescription}
-                  onChange={(e) => setFormData(prev => ({ ...prev, customDescription: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      customDescription: e.target.value,
+                    }))
+                  }
                   placeholder="Any specific instructions or additional information..."
                   rows={2}
                 />
@@ -260,16 +289,26 @@ export default function NewServiceRequestPage() {
                 <Label htmlFor="priority">Priority</Label>
                 <Select
                   value={formData.priority}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value }))}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, priority: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="LOW">Low - Can wait a few days</SelectItem>
-                    <SelectItem value="MEDIUM">Medium - Within 24 hours</SelectItem>
-                    <SelectItem value="HIGH">High - Same day preferred</SelectItem>
-                    <SelectItem value="CRITICAL">Critical - Urgent attention needed</SelectItem>
+                    <SelectItem value="LOW">
+                      Low - Can wait a few days
+                    </SelectItem>
+                    <SelectItem value="MEDIUM">
+                      Medium - Within 24 hours
+                    </SelectItem>
+                    <SelectItem value="HIGH">
+                      High - Same day preferred
+                    </SelectItem>
+                    <SelectItem value="CRITICAL">
+                      Critical - Urgent attention needed
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -281,7 +320,12 @@ export default function NewServiceRequestPage() {
                   id="preferredDate"
                   type="datetime-local"
                   value={formData.preferredDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, preferredDate: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      preferredDate: e.target.value,
+                    }))
+                  }
                   min={new Date().toISOString().slice(0, 16)}
                 />
                 <p className="text-sm text-muted-foreground">
@@ -291,12 +335,19 @@ export default function NewServiceRequestPage() {
 
               {/* Estimated Duration */}
               <div className="space-y-2">
-                <Label htmlFor="estimatedDuration">Estimated Duration (minutes)</Label>
+                <Label htmlFor="estimatedDuration">
+                  Estimated Duration (minutes)
+                </Label>
                 <Input
                   id="estimatedDuration"
                   type="number"
                   value={formData.estimatedDuration}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedDuration: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      estimatedDuration: e.target.value,
+                    }))
+                  }
                   placeholder="e.g., 30"
                   min="1"
                   max="480"
@@ -312,7 +363,9 @@ export default function NewServiceRequestPage() {
                 <Textarea
                   id="notes"
                   value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, notes: e.target.value }))
+                  }
                   placeholder="Any other information your caregiver should know..."
                   rows={2}
                 />
@@ -320,7 +373,11 @@ export default function NewServiceRequestPage() {
 
               {/* Submit Button */}
               <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={isSubmitting} className="flex-1">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1"
+                >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />

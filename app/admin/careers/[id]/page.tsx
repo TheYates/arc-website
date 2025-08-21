@@ -35,6 +35,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import {
   getCareerApplicationById,
   updateCareerApplicationStatus,
@@ -90,6 +91,7 @@ export default function ApplicationDetailPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAccountCreationDialog, setShowAccountCreationDialog] =
     useState(false);
+  const [showStatusUpdateDialog, setShowStatusUpdateDialog] = useState(false);
   const [accountCreationData, setAccountCreationData] = useState<{
     user: any;
     password: string;
@@ -101,9 +103,11 @@ export default function ApplicationDetailPage({
 
   useEffect(() => {
     const fetchApplication = async () => {
+      if (!user) return; // Wait for user to be available
+
       setIsLoading(true);
       try {
-        const data = await getCareerApplicationById(id);
+        const data = await getCareerApplicationById(id, user);
         setApplication(data);
         if (data?.notes) {
           setNotes(data.notes);
@@ -133,7 +137,7 @@ export default function ApplicationDetailPage({
     };
 
     fetchApplication();
-  }, [id, toast]);
+  }, [id, user, toast]);
 
   const handleStatusUpdate = async () => {
     if (!application || !user) return;
@@ -145,17 +149,15 @@ export default function ApplicationDetailPage({
         newStatus,
         notes,
         user.email,
-        newStatus === "interview" ? interviewDate : undefined
+        newStatus === "interview" ? interviewDate : undefined,
+        user
       );
 
       if (updatedApplication) {
         setApplication(updatedApplication);
+        setShowStatusUpdateDialog(false);
 
-        toast({
-          title: "Application Updated",
-          description: `The application status has been updated to ${newStatus}.`,
-          variant: "default",
-        });
+        toast.success(`Application status updated to ${newStatus}`);
 
         // If status changed to "hired", show account creation option
         if (newStatus === "hired" && application.status !== "hired") {
@@ -164,11 +166,7 @@ export default function ApplicationDetailPage({
       }
     } catch (error) {
       console.error("Failed to update application:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update application",
-        variant: "destructive",
-      });
+      toast.error("Failed to update application");
     } finally {
       setIsSubmitting(false);
     }
@@ -290,7 +288,12 @@ export default function ApplicationDetailPage({
     <div className="space-y-6">
       {/* Mobile (distinct UI) */}
       <div className="md:hidden">
-        <AdminCareerApplicationDetailMobile id={id} />
+        <AdminCareerApplicationDetailMobile
+          id={id}
+          application={application}
+          jobPosition={jobPosition}
+          isLoading={isLoading}
+        />
       </div>
 
       <div className="hidden md:flex justify-between items-center">
@@ -588,7 +591,7 @@ export default function ApplicationDetailPage({
             </CardContent>
             <CardFooter>
               <Button
-                onClick={handleStatusUpdate}
+                onClick={() => setShowStatusUpdateDialog(true)}
                 disabled={isSubmitting}
                 className="w-full"
               >
@@ -820,6 +823,37 @@ export default function ApplicationDetailPage({
                 )}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Status Update Confirmation Dialog */}
+      <Dialog
+        open={showStatusUpdateDialog}
+        onOpenChange={setShowStatusUpdateDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Status Update</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to update the application status to "
+              {newStatus}"?
+              {newStatus === "hired" &&
+                " This will mark the candidate as hired."}
+              {newStatus === "rejected" && " This will reject the application."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={handleStatusUpdate}
+              disabled={isSubmitting}
+              variant={newStatus === "rejected" ? "destructive" : "default"}
+            >
+              {isSubmitting ? "Updating..." : "Confirm Update"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

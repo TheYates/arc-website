@@ -153,8 +153,7 @@ export default function CareersPage() {
         phone: applicationData.phone,
         resumeUrl: resumeUrl,
         coverLetter: coverLetterText,
-        positionId: selectedJob.id,
-        positionTitle: selectedJob.title,
+        jobPositionId: selectedJob.id,
       });
 
       // Reset form and close dialog
@@ -204,76 +203,8 @@ export default function CareersPage() {
             Make a difference in families' lives while building a rewarding
             career in healthcare and childcare.
           </p>
-          <Button
-            size="lg"
-            className="bg-teal-600 hover:bg-teal-700 text-white px-8"
-          >
-            Apply Now
-          </Button>
         </div>
       </section>
-
-      {/* Why Join Us */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              Why Work With Alpha Rescue Consult?
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Heart className="h-12 w-12 text-teal-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                  Meaningful Work
-                </h3>
-                <p className="text-slate-600">
-                  Make a real difference in families' lives every day
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Users className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                  Supportive Team
-                </h3>
-                <p className="text-slate-600">
-                  Work with experienced professionals who care
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Clock className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                  Flexible Schedule
-                </h3>
-                <p className="text-slate-600">
-                  Choose from full-time, part-time, or contract work
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Award className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                  Professional Growth
-                </h3>
-                <p className="text-slate-600">
-                  Continuous training and career development
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
       {/* Open Positions */}
       <section className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -421,6 +352,67 @@ export default function CareersPage() {
                 Submit General Application
               </Button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Join Us */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Why Work With Alpha Rescue Consult?
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Heart className="h-12 w-12 text-teal-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  Meaningful Work
+                </h3>
+                <p className="text-slate-600">
+                  Make a real difference in families' lives every day
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Users className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  Supportive Team
+                </h3>
+                <p className="text-slate-600">
+                  Work with experienced professionals who care
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Clock className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  Flexible Schedule
+                </h3>
+                <p className="text-slate-600">
+                  Choose from full-time, part-time, or contract work
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Award className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  Professional Growth
+                </h3>
+                <p className="text-slate-600">
+                  Continuous training and career development
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

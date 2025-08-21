@@ -34,6 +34,17 @@ export interface PatientWithUser extends Patient {
   user: User;
 }
 
+export interface PatientWithBasicUser extends Patient {
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+    address: string | null;
+  };
+}
+
 // Get all patients
 export async function getAllPatients(): Promise<PatientWithUser[]> {
   try {
@@ -56,7 +67,7 @@ export async function getAllPatients(): Promise<PatientWithUser[]> {
 // Get patient by ID - optimized for basic patient info only
 export async function getPatientById(
   id: string
-): Promise<PatientWithUser | null> {
+): Promise<PatientWithBasicUser | null> {
   try {
     return await prisma.patient.findUnique({
       where: { id },

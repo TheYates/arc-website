@@ -53,6 +53,13 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth";
 import {
+  authenticatedGet,
+  authenticatedPost,
+  authenticatedPut,
+  authenticatedPatch,
+  authenticatedDelete,
+} from "@/lib/api/auth-headers";
+import {
   Settings,
   Save,
   AlertCircle,
@@ -133,7 +140,7 @@ export default function AdminSettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch("/api/admin-settings");
+      const response = await authenticatedGet("/api/admin-settings", user);
       if (!response.ok) {
         throw new Error("Failed to fetch settings");
       }
@@ -186,12 +193,8 @@ export default function AdminSettingsPage() {
         })
       );
 
-      const response = await fetch("/api/admin-settings", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ settings: settingsToUpdate }),
+      const response = await authenticatedPatch("/api/admin-settings", user, {
+        settings: settingsToUpdate,
       });
 
       if (!response.ok) {
@@ -320,7 +323,7 @@ export default function AdminSettingsPage() {
   const fetchServiceTypes = async () => {
     setIsServiceTypesLoading(true);
     try {
-      const response = await fetch("/api/service-types");
+      const response = await authenticatedGet("/api/service-types", user);
       if (!response.ok) {
         throw new Error("Failed to fetch service types");
       }
@@ -366,13 +369,11 @@ export default function AdminSettingsPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/service-types", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(serviceTypeForm),
-      });
+      const response = await authenticatedPost(
+        "/api/service-types",
+        user,
+        serviceTypeForm
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -431,15 +432,10 @@ export default function AdminSettingsPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(
+      const response = await authenticatedPut(
         `/api/service-types/${editingServiceType.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(serviceTypeForm),
-        }
+        user,
+        serviceTypeForm
       );
 
       if (!response.ok) {
@@ -470,9 +466,10 @@ export default function AdminSettingsPage() {
 
   const handleDeleteServiceType = async (serviceType: ServiceType) => {
     try {
-      const response = await fetch(`/api/service-types/${serviceType.id}`, {
-        method: "DELETE",
-      });
+      const response = await authenticatedDelete(
+        `/api/service-types/${serviceType.id}`,
+        user
+      );
 
       if (!response.ok) {
         const errorData = await response.json();

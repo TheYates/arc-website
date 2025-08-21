@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const users = await prisma.user.findMany({
       where: {
         role: {
-          not: "PATIENT",
+          notIn: ["PATIENT", "SUPER_ADMIN"], // Hide super admin accounts
         },
       },
       select: {
@@ -127,6 +127,9 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash("password", 10);
 
     // Create user
+    const userRole = role.toUpperCase() as any;
+    const isAdminRole = userRole === "ADMIN" || userRole === "SUPER_ADMIN";
+
     const newUser = await prisma.user.create({
       data: {
         email,
@@ -136,9 +139,9 @@ export async function POST(request: NextRequest) {
         lastName,
         phone: phone || null,
         address: address || null,
-        role: role.toUpperCase() as any, // Convert to uppercase for Prisma enum
-        mustChangePassword: true, // Force password change on first login
-        isEmailVerified: false, // New users need to verify email
+        role: userRole, // Convert to uppercase for Prisma enum
+        mustChangePassword: !isAdminRole, // Admins don't need to change password
+        isEmailVerified: isAdminRole, // Auto-verify admin users
         isActive: true,
         profileComplete: true,
       },

@@ -70,6 +70,8 @@ import {
 } from "@/lib/api/careers";
 import { JobPosition, JobStatus, CareerApplication } from "@/lib/types/careers";
 import { formatDate } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 import {
   Loader2,
   Search,
@@ -94,13 +96,16 @@ import {
 import { AdminCareersMobile } from "@/components/mobile/admin-careers";
 
 export default function JobManagementPage() {
+  const { user } = useAuth();
+
   // State for jobs
   const [jobs, setJobs] = useState<JobPosition[]>([]);
   const [applications, setApplications] = useState<CareerApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [applicationsActiveTab, setApplicationsActiveTab] = useState("all");
+  const [applicationCategoryFilter, setApplicationCategoryFilter] =
+    useState("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -162,9 +167,9 @@ export default function JobManagementPage() {
       setIsLoading(true);
       try {
         const [jobsData, categoriesData, applicationsData] = await Promise.all([
-          getJobPositions(),
-          getJobCategories(),
-          getCareerApplications(),
+          getJobPositions(user),
+          getJobCategories(user),
+          getCareerApplications(user),
         ]);
         setJobs(jobsData);
         setCategories(categoriesData);
@@ -179,9 +184,21 @@ export default function JobManagementPage() {
     fetchData();
   }, []);
 
-  const formatJobDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return formatDate(date);
+  const formatJobDate = (dateString: string | undefined | null) => {
+    if (!dateString || dateString === "") {
+      return "No date";
+    }
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        console.log("Invalid date string:", dateString);
+        return "Invalid date";
+      }
+      return formatDate(date);
+    } catch (error) {
+      console.log("Error parsing date:", dateString, error);
+      return "Invalid date";
+    }
   };
 
   const getStatusBadge = (status: JobStatus) => {
@@ -222,20 +239,20 @@ export default function JobManagementPage() {
       return false;
     }
 
-    // Filter by tab
+    // Filter by category
     if (
-      (applicationsActiveTab === "healthcare" &&
+      (applicationCategoryFilter === "healthcare" &&
         (!app.positionTitle ||
           (!app.positionTitle.toLowerCase().includes("nurse") &&
             !app.positionTitle.toLowerCase().includes("care")))) ||
-      (applicationsActiveTab === "childcare" &&
+      (applicationCategoryFilter === "childcare" &&
         (!app.positionTitle ||
           (!app.positionTitle.toLowerCase().includes("nanny") &&
             !app.positionTitle.toLowerCase().includes("child")))) ||
-      (applicationsActiveTab === "event" &&
+      (applicationCategoryFilter === "event" &&
         (!app.positionTitle ||
           !app.positionTitle.toLowerCase().includes("event"))) ||
-      (applicationsActiveTab === "general" &&
+      (applicationCategoryFilter === "general" &&
         app.positionId &&
         app.positionTitle)
     ) {
@@ -296,8 +313,13 @@ export default function JobManagementPage() {
             : formData.benefits,
       };
 
-      const newJob = await createJobPosition(jobData);
-      setJobs([...jobs, newJob]);
+      const result = await createJobPosition(jobData, user);
+      if (result.success && result.position) {
+        setJobs([...jobs, result.position]);
+        toast.success("Job position created successfully!");
+      } else {
+        toast.error(result.error || "Failed to create job position");
+      }
       setShowCreateDialog(false);
       setFormData({
         title: "",
@@ -317,7 +339,7 @@ export default function JobManagementPage() {
       });
     } catch (error) {
       console.error("Failed to create job:", error);
-      alert("Failed to create job position");
+      toast.error("Failed to create job position");
     }
   };
 
@@ -365,11 +387,17 @@ export default function JobManagementPage() {
             : formData.benefits,
       };
 
-      const updatedJob = await updateJobPosition(editingJob.id, jobData);
-      if (updatedJob) {
+      const result = await updateJobPosition(
+        { ...editingJob, ...jobData },
+        user
+      );
+      if (result.success && result.position) {
         setJobs(
-          jobs.map((job) => (job.id === editingJob.id ? updatedJob : job))
+          jobs.map((job) => (job.id === editingJob.id ? result.position! : job))
         );
+        toast.success("Job position updated successfully!");
+      } else {
+        toast.error(result.error || "Failed to update job position");
       }
       setShowEditDialog(false);
       setEditingJob(null);
@@ -391,45 +419,60 @@ export default function JobManagementPage() {
       });
     } catch (error) {
       console.error("Failed to update job:", error);
-      alert("Failed to update job position");
+      toast.error("Failed to update job position");
     }
   };
 
   const handleDeleteJob = async (id: string) => {
     try {
-      await deleteJobPosition(id);
-      setJobs(jobs.filter((job) => job.id !== id));
+      const result = await deleteJobPosition(id, user);
+      if (result.success) {
+        setJobs(jobs.filter((job) => job.id !== id));
+        toast.success("Job position deleted successfully!");
+      } else {
+        toast.error(result.error || "Failed to delete job position");
+      }
     } catch (error) {
       console.error("Failed to delete job:", error);
-      alert("Failed to delete job position");
+      toast.error("Failed to delete job position");
     }
   };
 
   const handleCreateCategory = async () => {
     if (!newCategory.trim()) {
-      alert("Please enter a category name");
+      toast.error("Please enter a category name");
       return;
     }
 
     try {
-      await createJobCategory(newCategory.trim());
-      const updatedCategories = await getJobCategories();
-      setCategories(updatedCategories);
+      const result = await createJobCategory(newCategory.trim(), user);
+      if (result.success) {
+        const updatedCategories = await getJobCategories(user);
+        setCategories(updatedCategories);
+        toast.success("Category created successfully!");
+      } else {
+        toast.error(result.error || "Failed to create category");
+      }
       setNewCategory("");
     } catch (error) {
       console.error("Failed to create category:", error);
-      alert("Failed to create category");
+      toast.error("Failed to create category");
     }
   };
 
   const handleDeleteCategory = async (category: string) => {
     try {
-      await deleteJobCategory(category);
-      const updatedCategories = await getJobCategories();
-      setCategories(updatedCategories);
+      const result = await deleteJobCategory(category, user);
+      if (result.success) {
+        const updatedCategories = await getJobCategories(user);
+        setCategories(updatedCategories);
+        toast.success("Category deleted successfully!");
+      } else {
+        toast.error(result.error || "Failed to delete category");
+      }
     } catch (error) {
       console.error("Failed to delete category:", error);
-      alert("Failed to delete category");
+      toast.error("Failed to delete category");
     }
   };
 
@@ -532,7 +575,6 @@ export default function JobManagementPage() {
                       placeholder="e.g., Accra or Remote"
                     />
                   </div>
-
                 </div>
                 <div>
                   <Label htmlFor="m-description">Job Description</Label>
@@ -670,7 +712,6 @@ export default function JobManagementPage() {
                       }
                     />
                   </div>
-
                 </div>
                 <div>
                   <Label htmlFor="me-description">Job Description</Label>
@@ -1161,104 +1202,98 @@ export default function JobManagementPage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredJobs.map((job) => (
-                    <Card key={job.id} className="relative">
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="text-xl font-semibold mb-2">
-                              {job.title}
-                            </h3>
-                            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mb-3">
-                              <span className="flex items-center">
-                                <Briefcase className="h-4 w-4 mr-1" />
-                                {job.type}
-                              </span>
-                              <span className="flex items-center">
-                                <span className="h-4 w-4 mr-1">📍</span>
-                                {job.location}
-                              </span>
-                              <Badge variant="outline">
-                                <Tag className="h-3 w-3 mr-1" />
-                                {job.category}
-                              </Badge>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Position</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredJobs.map((job) => (
+                        <TableRow key={job.id}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{job.title}</div>
+                              <div className="text-sm text-muted-foreground line-clamp-2">
+                                {job.description}
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {getStatusBadge(job.status)}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditJob(job)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Delete Job Position
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete "{job.title}
-                                    "? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteJob(job.id)}
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </div>
-
-                        <div className="grid md:grid-cols-2 gap-4 text-sm">
-                          <div className="text-sm">
-                            <div className="font-medium">Requirements:</div>
-                            <ul className="text-muted-foreground list-disc list-inside space-y-1">
-                              {(Array.isArray(job.requirements)
-                                ? job.requirements
-                                : [job.requirements]
-                              ).map((req, index) => (
-                                <li key={index}>{req}</li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div className="text-sm">
-                            <div className="font-medium">
-                              Positions Available:
-                            </div>
-                            <div className="text-muted-foreground">
-                              {job.numberOfPositions || 1}
-                            </div>
-                          </div>
-                          <div className="text-sm">
-                            <div className="font-medium">Description:</div>
-                            <div className="text-muted-foreground line-clamp-3">
-                              {job.description}
-                            </div>
-                          </div>
-                          <div className="text-sm">
-                            <div className="font-medium">Created:</div>
-                            <div className="text-muted-foreground">
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              <Tag className="h-3 w-3 mr-1" />
+                              {job.category}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="flex items-center">
+                              <Briefcase className="h-4 w-4 mr-1" />
+                              {job.type}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="flex items-center">
+                              <span className="h-4 w-4 mr-1">📍</span>
+                              {job.location}
+                            </span>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(job.status)}</TableCell>
+                          <TableCell>
+                            <div className="text-sm">
                               {formatJobDate(job.createdAt)}
                             </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditJob(job)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete Job Position
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "
+                                      {job.title}
+                                      "? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteJob(job.id)}
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
@@ -1267,171 +1302,163 @@ export default function JobManagementPage() {
 
         {/* Applications Tab */}
         <TabsContent value="applications" className="mt-4 space-y-4">
-          <Tabs
-            defaultValue="all"
-            value={applicationsActiveTab}
-            onValueChange={setApplicationsActiveTab}
-            className="space-y-4"
-          >
-            <TabsList className="grid grid-cols-5 w-full">
-              <TabsTrigger value="all">All Applications</TabsTrigger>
-              <TabsTrigger value="healthcare">Healthcare</TabsTrigger>
-              <TabsTrigger value="childcare">Childcare</TabsTrigger>
-              <TabsTrigger value="event">Event Medical</TabsTrigger>
-              <TabsTrigger value="general">General</TabsTrigger>
-            </TabsList>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                  <div>
-                    <CardTitle>Job Applications</CardTitle>
-                    <CardDescription>
-                      Review job applications for specific positions and general
-                      applications from candidates
-                    </CardDescription>
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                <div>
+                  <CardTitle>Job Applications</CardTitle>
+                  <CardDescription>
+                    Review job applications for specific positions and general
+                    applications from candidates
+                  </CardDescription>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search applications..."
+                      className="pl-9 w-full sm:w-[250px]"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search applications..."
-                        className="pl-9 w-full sm:w-[250px]"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                    <Select
-                      value={statusFilter}
-                      onValueChange={setStatusFilter}
-                    >
-                      <SelectTrigger className="w-full sm:w-[150px]">
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="reviewing">Reviewing</SelectItem>
-                        <SelectItem value="interview">Interview</SelectItem>
-                        <SelectItem value="hired">Hired</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-[150px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="reviewing">Reviewing</SelectItem>
+                      <SelectItem value="interview">Interview</SelectItem>
+                      <SelectItem value="hired">Hired</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={applicationCategoryFilter}
+                    onValueChange={setApplicationCategoryFilter}
+                  >
+                    <SelectTrigger className="w-full sm:w-[150px]">
+                      <SelectValue placeholder="Filter by category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="healthcare">Healthcare</SelectItem>
+                      <SelectItem value="childcare">Childcare</SelectItem>
+                      <SelectItem value="event">Event Medical</SelectItem>
+                      <SelectItem value="general">General</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredApplications.length === 0 ? (
+                <div className="text-center py-10">
+                  <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <div className="text-muted-foreground">
+                    No applications found
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex justify-center items-center h-64">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                ) : filteredApplications.length === 0 ? (
-                  <div className="text-center py-10">
-                    <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <div className="text-muted-foreground">
-                      No applications found
-                    </div>
-                  </div>
-                ) : (
-                  <div className="overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Applicant</TableHead>
-                          <TableHead>Position</TableHead>
-                          <TableHead>Submitted</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sortedApplications.map((application) => (
-                          <TableRow
-                            key={application.id}
-                            role="link"
-                            tabIndex={0}
-                            className="cursor-pointer hover:bg-accent/50"
-                            onClick={() =>
-                              router.push(`/admin/careers/${application.id}`)
+              ) : (
+                <div className="overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Applicant</TableHead>
+                        <TableHead>Position</TableHead>
+                        <TableHead>Submitted</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedApplications.map((application) => (
+                        <TableRow
+                          key={application.id}
+                          role="link"
+                          tabIndex={0}
+                          className="cursor-pointer hover:bg-accent/50"
+                          onClick={() =>
+                            router.push(`/admin/careers/${application.id}`)
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              router.push(`/admin/careers/${application.id}`);
                             }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                router.push(`/admin/careers/${application.id}`);
-                              }
-                            }}
-                          >
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                  <User className="h-5 w-5 text-primary" />
-                                </div>
-                                <div>
-                                  <div className="font-medium">
-                                    {application.firstName}{" "}
-                                    {application.lastName}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground flex items-center">
-                                    <Mail className="h-3 w-3 mr-1" />
-                                    {application.email}
-                                  </div>
-                                </div>
+                          }}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <User className="h-5 w-5 text-primary" />
                               </div>
-                            </TableCell>
-                            <TableCell>
                               <div>
                                 <div className="font-medium">
-                                  {application.positionTitle ||
-                                    "General Application"}
+                                  {application.firstName} {application.lastName}
                                 </div>
-                                {application.education && (
-                                  <div className="text-sm text-muted-foreground flex items-center mt-1">
-                                    <GraduationCap className="h-3 w-3 mr-1" />
-                                    <span className="truncate max-w-[200px]">
-                                      {application.education}
-                                    </span>
-                                  </div>
-                                )}
+                                <div className="text-sm text-muted-foreground flex items-center">
+                                  <Mail className="h-3 w-3 mr-1" />
+                                  {application.email}
+                                </div>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                                <span>
-                                  {formatJobDate(application.submittedAt)}
-                                </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">
+                                {application.positionTitle ||
+                                  "General Application"}
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              {getApplicationStatusBadge(application.status)}
-                            </TableCell>
-                            <TableCell
-                              className="text-right"
-                              onClick={(e) => e.stopPropagation()}
+                              {application.education && (
+                                <div className="text-sm text-muted-foreground flex items-center mt-1">
+                                  <GraduationCap className="h-3 w-3 mr-1" />
+                                  <span className="truncate max-w-[200px]">
+                                    {application.education}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                              <span>
+                                {formatJobDate(application.submittedAt)}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {getApplicationStatusBadge(application.status)}
+                          </TableCell>
+                          <TableCell
+                            className="text-right"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                router.push(`/admin/careers/${application.id}`)
+                              }
                             >
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  router.push(
-                                    `/admin/careers/${application.id}`
-                                  )
-                                }
-                              >
-                                View Details
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </Tabs>
-
-          {/* Removed Application Statistics section for a cleaner view */}
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -1519,7 +1546,6 @@ export default function JobManagementPage() {
                     }
                   />
                 </div>
-
               </div>
 
               <div>

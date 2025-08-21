@@ -23,6 +23,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth";
 import { RoleHeader } from "@/components/role-header";
 import { ServiceRequestDialog } from "@/components/service-request-dialog";
+import { authenticatedGet } from "@/lib/api/auth-headers";
 import {
   Plus,
   Calendar,
@@ -81,11 +82,7 @@ export default function PatientServiceRequestsPage() {
 
   const fetchServiceRequests = async () => {
     try {
-      const response = await fetch("/api/service-requests", {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await authenticatedGet("/api/service-requests", user);
 
       if (!response.ok) {
         throw new Error("Failed to fetch service requests");

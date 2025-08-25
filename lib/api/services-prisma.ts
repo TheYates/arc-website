@@ -10,6 +10,7 @@ export interface CreateServiceData {
   category: ServiceCategory;
   isActive?: boolean;
   isPopular?: boolean;
+  comingSoon?: boolean;
   sortOrder?: number;
   colorTheme?: string;
   icon?: string;
@@ -146,6 +147,7 @@ export async function createService(
         category: data.category,
         isActive: data.isActive ?? true,
         isPopular: data.isPopular ?? false,
+        comingSoon: data.comingSoon ?? false,
         sortOrder: data.sortOrder ?? 0,
         colorTheme: data.colorTheme ?? "teal",
         icon: data.icon,

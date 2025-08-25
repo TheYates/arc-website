@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/collapsible";
 import { HeroImage } from "@/components/ui/optimized-image";
 import { IMAGES, ALT_TEXTS } from "@/lib/constants/images";
+import ComingSoonPage from "@/components/coming-soon-page";
 
 // Service structure types
 interface ServiceItem {
@@ -39,6 +40,7 @@ interface AhenefieService {
   id: string;
   name: string;
   description?: string;
+  comingSoon?: boolean;
   items: ServiceItem[];
 }
 
@@ -107,6 +109,16 @@ export default function AhenefiePage() {
 
     fetchServiceData();
   }, []);
+
+  // Show coming soon page if service is marked as coming soon
+  if (ahenefieService?.comingSoon) {
+    return (
+      <ComingSoonPage 
+        serviceName={ahenefieService.name}
+        description={ahenefieService.description}
+      />
+    );
+  }
 
   useEffect(() => {
     // Auto-expand items with children for better UX when service data is loaded
@@ -318,9 +330,17 @@ export default function AhenefiePage() {
                   {ahenefieService?.name}
                 </h1>
               </div>
-              <Badge className="bg-white/20 text-white border border-white/30 mb-4">
-                Home Care Service
-              </Badge>
+              <div className="flex items-center gap-2 mb-4">
+                <Badge className="bg-white/20 text-white border border-white/30">
+                  Home Care Service
+                </Badge>
+                {ahenefieService?.comingSoon && (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Coming Soon
+                  </Badge>
+                )}
+              </div>
               <p className="text-2xl text-teal-100 mb-4">
                 Live-in Home Care Package
               </p>

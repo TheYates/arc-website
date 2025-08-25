@@ -342,7 +342,7 @@ export function MedicationPrescriptionForm({
                   .map((medication) => (
                     <div
                       key={medication}
-                      className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-sm"
+                      className="px-3 py-2 cursor-pointer hover:text-sm"
                       onClick={() => {
                         handleInputChange("medicationName", medication);
                         setMedicationSearchOpen(false);

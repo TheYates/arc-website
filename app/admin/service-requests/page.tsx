@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,21 +19,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth";
 import { authenticatedGet } from "@/lib/api/auth-headers";
 import {
   Calendar,
-  Clock,
-  User,
   AlertCircle,
-  CheckCircle,
-  XCircle,
-  Loader2,
   Eye,
   Search,
-  Filter,
   Download,
+  ArrowUpDown,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -81,6 +84,9 @@ interface ServiceRequest {
   };
 }
 
+type SortField = "Requested Date" | "Scheduled Date" | "Status" | "Priority" | "Patient" | "Caregiver";
+type SortDirection = "asc" | "desc";
+
 export default function AdminServiceRequestsPage() {
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<ServiceRequest[]>(
@@ -91,6 +97,8 @@ export default function AdminServiceRequestsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [sortField, setSortField] = useState<SortField>("Requested Date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -107,8 +115,8 @@ export default function AdminServiceRequestsPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    filterRequests();
-  }, [serviceRequests, searchTerm, statusFilter, priorityFilter, activeTab]);
+    filterAndSortRequests();
+  }, [serviceRequests, searchTerm, statusFilter, priorityFilter, activeTab, sortField, sortDirection]);
 
   const fetchServiceRequests = async () => {
     try {
@@ -132,7 +140,7 @@ export default function AdminServiceRequestsPage() {
     }
   };
 
-  const filterRequests = () => {
+  const filterAndSortRequests = () => {
     let filtered = [...serviceRequests];
 
     // Filter by search term
@@ -166,7 +174,6 @@ export default function AdminServiceRequestsPage() {
 
     // Filter by tab
     if (activeTab !== "all") {
-      const now = new Date();
       switch (activeTab) {
         case "pending":
           filtered = filtered.filter((req) => req.status === "PENDING");
@@ -190,80 +197,96 @@ export default function AdminServiceRequestsPage() {
       }
     }
 
+    // Sort the filtered results
+    filtered.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case "Requested Date":
+          aValue = new Date(a.requestedDate);
+          bValue = new Date(b.requestedDate);
+          break;
+        case "Scheduled Date":
+          aValue = a.scheduledDate ? new Date(a.scheduledDate) : new Date(0);
+          bValue = b.scheduledDate ? new Date(b.scheduledDate) : new Date(0);
+          break;
+        case "Status":
+          aValue = a.status;
+          bValue = b.status;
+          break;
+        case "Priority":
+          const priorityOrder = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
+          aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 2;
+          bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 2;
+          break;
+        case "Patient":
+          aValue = `${a.patient.user.firstName} ${a.patient.user.lastName}`;
+          bValue = `${b.patient.user.firstName} ${b.patient.user.lastName}`;
+          break;
+        case "Caregiver":
+          aValue = `${a.caregiver.firstName} ${a.caregiver.lastName}`;
+          bValue = `${b.caregiver.firstName} ${b.caregiver.lastName}`;
+          break;
+        default:
+          aValue = a.requestedDate;
+          bValue = b.requestedDate;
+      }
+
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
     setFilteredRequests(filtered);
   };
 
-  const getStatusBadge = (status: string) => {
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const getStatusText = (status: string) => {
     const statusConfig = {
-      PENDING: { label: "Pending", variant: "secondary" as const, icon: Clock },
-      APPROVED: {
-        label: "Approved",
-        variant: "default" as const,
-        icon: CheckCircle,
-      },
-      SCHEDULED: {
-        label: "Scheduled",
-        variant: "default" as const,
-        icon: Calendar,
-      },
-      IN_PROGRESS: {
-        label: "In Progress",
-        variant: "default" as const,
-        icon: Loader2,
-      },
-      COMPLETED: {
-        label: "Completed",
-        variant: "default" as const,
-        icon: CheckCircle,
-      },
-      CANCELLED: {
-        label: "Cancelled",
-        variant: "destructive" as const,
-        icon: XCircle,
-      },
-      REJECTED: {
-        label: "Rejected",
-        variant: "destructive" as const,
-        icon: XCircle,
-      },
+      PENDING: { label: "Pending", className: "text-amber-600 font-medium" },
+      APPROVED: { label: "Approved", className: "text-blue-600 font-medium" },
+      SCHEDULED: { label: "Scheduled", className: "text-purple-600 font-medium" },
+      IN_PROGRESS: { label: "In Progress", className: "text-orange-600 font-medium" },
+      COMPLETED: { label: "Completed", className: "text-green-600 font-medium" },
+      CANCELLED: { label: "Cancelled", className: "text-gray-500 font-medium" },
+      REJECTED: { label: "Rejected", className: "text-red-600 font-medium" },
     };
 
     const config =
       statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
-    const Icon = config.icon;
 
     return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
+      <span className={config.className}>
         {config.label}
-      </Badge>
+      </span>
     );
   };
 
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityText = (priority: string) => {
     const priorityConfig = {
-      LOW: { label: "Low", className: "bg-green-100 text-green-800" },
-      MEDIUM: { label: "Medium", className: "bg-yellow-100 text-yellow-800" },
-      HIGH: { label: "High", className: "bg-orange-100 text-orange-800" },
-      CRITICAL: { label: "Critical", className: "bg-red-100 text-red-800" },
+      LOW: { label: "Low", className: "text-green-600 font-medium" },
+      MEDIUM: { label: "Medium", className: "text-yellow-600 font-medium" },
+      HIGH: { label: "High", className: "text-orange-600 font-medium" },
+      CRITICAL: { label: "Critical", className: "text-red-600 font-medium" },
     };
 
     const config =
       priorityConfig[priority as keyof typeof priorityConfig] ||
       priorityConfig.MEDIUM;
 
-    return <Badge className={config.className}>{config.label}</Badge>;
+    return <span className={config.className}>{config.label}</span>;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+
 
   const getTabCounts = () => {
     return {
@@ -402,74 +425,182 @@ export default function AdminServiceRequestsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
-              {filteredRequests.map((request) => (
-                <Card
-                  key={request.id}
-                  className="hover:shadow-md transition-shadow"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        <CardTitle className="text-lg">
-                          {request.title}
-                        </CardTitle>
-                        {getStatusBadge(request.status)}
-                        {getPriorityBadge(request.priority)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {formatDate(request.requestedDate)}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Patient:</span>
-                        <span>
-                          {request.patient.user.firstName}{" "}
-                          {request.patient.user.lastName}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Caregiver:</span>
-                        <span>
-                          {request.caregiver.firstName}{" "}
-                          {request.caregiver.lastName}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Description
-                      </p>
-                      <p className="text-sm">{request.description}</p>
-                    </div>
-
-                    {request.scheduledDate && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        <span>
-                          Scheduled: {formatDate(request.scheduledDate)}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex justify-end">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/admin/service-requests/${request.id}`}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-lg">
+                      Service Requests ({filteredRequests.length})
+                    </CardTitle>
+                    <CardDescription>
+                      {activeTab === "all"
+                        ? "All service requests in the system"
+                        : `Showing ${activeTab} service requests`}
+                    </CardDescription>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Sorted by {sortField} ({sortDirection ===  "asc" ? "Ascending" : "Descending"})
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="text-xs">
+                      <TableHead className="w-[140px] py-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("Requested Date")}
+                          className="h-auto p-0 font-semibold text-xs"
+                        >
+                          Requested
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="w-[140px] py-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("Scheduled Date")}
+                          className="h-auto p-0 font-semibold text-xs"
+                        >
+                          Scheduled
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="py-2">Title</TableHead>
+                      <TableHead className="w-[120px] py-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("Patient")}
+                          className="h-auto p-0 font-semibold text-xs"
+                        >
+                          Patient
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="w-[120px] py-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("Caregiver")}
+                          className="h-auto p-0 font-semibold text-xs"
+                        >
+                          Caregiver
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="w-[90px] py-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("Status")}
+                          className="h-auto p-0 font-semibold text-xs"
+                        >
+                          Status
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="w-[80px] py-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort("Priority")}
+                          className="h-auto p-0 font-semibold text-xs"
+                        >
+                          Priority
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="w-[60px] py-2"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRequests.map((request) => (
+                      <TableRow key={request.id} className="hover:bg-muted/50 h-12">
+                        <TableCell className="py-2">
+                          <div className="text-xs">
+                            <div className="font-medium">
+                              {new Date(request.requestedDate).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </div>
+                            <div className="text-muted-foreground">
+                              {new Date(request.requestedDate).toLocaleTimeString("en-US", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="text-xs">
+                            {request.scheduledDate ? (
+                              <>
+                                <div className="font-medium">
+                                  {new Date(request.scheduledDate).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {new Date(request.scheduledDate).toLocaleTimeString("en-US", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  })}
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">Not scheduled</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="text-sm">
+                            <div className="font-medium truncate max-w-[200px]">
+                              {request.title}
+                            </div>
+                            {request.serviceType && (
+                              <div className="text-xs text-blue-600 truncate">
+                                {request.serviceType.name}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="text-xs">
+                            <div className="font-medium">
+                              {request.patient.user.firstName} {request.patient.user.lastName}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="text-xs">
+                            <div className="font-medium">
+                              {request.caregiver.firstName} {request.caregiver.lastName}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2 text-xs">
+                          {getStatusText(request.status)}
+                        </TableCell>
+                        <TableCell className="py-2 text-xs">
+                          {getPriorityText(request.priority)}
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Button variant="ghost" size="sm" asChild className="h-6 w-6 p-0">
+                            <Link href={`/admin/service-requests/${request.id}`}>
+                              <Eye className="h-3 w-3" />
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
       </Tabs>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,12 +11,24 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
-import { Menu, X, Shield, LogIn } from "lucide-react";
+import { Menu, X, Shield, LogIn, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+interface ServiceItem {
+  name: string;
+  description: string;
+  href: string;
+  comingSoon?: boolean;
+}
+
+interface ServiceCategory {
+  category: string;
+  services: ServiceItem[];
+}
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const serviceCategories = [
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([
     {
       category: "Home Care Service",
       services: [
@@ -25,11 +37,13 @@ export default function Header() {
           description:
             "Live-in home care with 24/7 nursing & emergency response",
           href: "/services/ahenefie",
+          comingSoon: false,
         },
         {
           name: "Adamfo Pa",
           description: "Daily home visits with nursing & facility reviews",
           href: "/services/adamfo-pa",
+          comingSoon: false,
         },
       ],
     },
@@ -40,11 +54,13 @@ export default function Header() {
           name: "Fie Ne Fie",
           description: "Stay-in nanny service",
           href: "/services/fie-ne-fie",
+          comingSoon: false,
         },
         {
           name: "Yonko Pa",
           description: "Visit-on-request nanny service",
           href: "/services/yonko-pa",
+          comingSoon: false,
         },
       ],
     },
@@ -55,22 +71,58 @@ export default function Header() {
           name: "Event Medical Coverage",
           description: "Professional medical coverage for events & gatherings",
           href: "/services/event-medical-coverage",
+          comingSoon: false,
         },
         {
           name: "Conference Option",
           description:
             "Stay-in medical support for conferences & business events",
           href: "/services/conference-option",
+          comingSoon: false,
         },
         {
           name: "Rally Pack",
           description:
             "Specialized medical coverage for rallies & high-energy events",
           href: "/services/rally-pack",
+          comingSoon: false,
         },
       ],
     },
-  ];
+  ]);
+
+  // Load dynamic coming soon status from API
+  useEffect(() => {
+    const loadServiceStatuses = async () => {
+      try {
+        const response = await fetch('/api/services/pricing');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // Update services with coming soon status from database
+          setServiceCategories(prevCategories => 
+            prevCategories.map(category => ({
+              ...category,
+              services: category.services.map(service => {
+                const dbService = result.data.find((dbSvc: any) => 
+                  dbSvc.name.toLowerCase().includes(service.name.toLowerCase()) ||
+                  service.name.toLowerCase().includes(dbSvc.name.toLowerCase())
+                );
+                return {
+                  ...service,
+                  comingSoon: dbService?.comingSoon || false
+                };
+              })
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Error loading service statuses:', error);
+      }
+    };
+
+    loadServiceStatuses();
+  }, []);
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
@@ -116,18 +168,38 @@ export default function Header() {
                         </div>
                         <div className="space-y-2">
                           {serviceCategories[0].services.map((service) => (
-                            <Link
-                              key={service.name}
-                              href={service.href}
-                              className="block p-3 hover:bg-slate-50 transition-colors rounded-lg border border-transparent hover:border-teal-200"
-                            >
-                              <div className="font-medium  text-sm mb-1">
-                                {service.name}
+                            service.comingSoon ? (
+                              <div
+                                key={service.name}
+                                className="block p-3 opacity-60 cursor-not-allowed rounded-lg border border-transparent bg-gray-50"
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="font-medium text-sm">
+                                    {service.name}
+                                  </div>
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Coming Soon
+                                  </Badge>
+                                </div>
+                                <div className="text-xs leading-tight">
+                                  {service.description}
+                                </div>
                               </div>
-                              <div className="text-xs leading-tight">
-                                {service.description}
-                              </div>
-                            </Link>
+                            ) : (
+                              <Link
+                                key={service.name}
+                                href={service.href}
+                                className="block p-3 hover:bg-slate-50 transition-colors rounded-lg border border-transparent hover:border-teal-200"
+                              >
+                                <div className="font-medium text-sm mb-1">
+                                  {service.name}
+                                </div>
+                                <div className="text-xs leading-tight">
+                                  {service.description}
+                                </div>
+                              </Link>
+                            )
                           ))}
                         </div>
                       </div>
@@ -141,18 +213,38 @@ export default function Header() {
                         </div>
                         <div className="space-y-2">
                           {serviceCategories[1].services.map((service) => (
-                            <Link
-                              key={service.name}
-                              href={service.href}
-                              className="block p-3 hover:bg-slate-50 transition-colors rounded-lg border border-transparent hover:border-teal-200"
-                            >
-                              <div className="font-medium  text-sm mb-1">
-                                {service.name}
+                            service.comingSoon ? (
+                              <div
+                                key={service.name}
+                                className="block p-3 opacity-60 cursor-not-allowed rounded-lg border border-transparent bg-gray-50"
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="font-medium text-sm">
+                                    {service.name}
+                                  </div>
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Coming Soon
+                                  </Badge>
+                                </div>
+                                <div className="text-xs leading-tight">
+                                  {service.description}
+                                </div>
                               </div>
-                              <div className="text-xs  leading-tight">
-                                {service.description}
-                              </div>
-                            </Link>
+                            ) : (
+                              <Link
+                                key={service.name}
+                                href={service.href}
+                                className="block p-3 hover:bg-slate-50 transition-colors rounded-lg border border-transparent hover:border-teal-200"
+                              >
+                                <div className="font-medium text-sm mb-1">
+                                  {service.name}
+                                </div>
+                                <div className="text-xs leading-tight">
+                                  {service.description}
+                                </div>
+                              </Link>
+                            )
                           ))}
                         </div>
                       </div>
@@ -166,18 +258,38 @@ export default function Header() {
                         </div>
                         <div className="space-y-2">
                           {serviceCategories[2].services.map((service) => (
-                            <Link
-                              key={service.name}
-                              href={service.href}
-                              className="block p-3 hover:bg-slate-50 transition-colors rounded-lg border border-transparent hover:border-teal-200"
-                            >
-                              <div className="font-medium  text-sm mb-1">
-                                {service.name}
+                            service.comingSoon ? (
+                              <div
+                                key={service.name}
+                                className="block p-3 opacity-60 cursor-not-allowed rounded-lg border border-transparent bg-gray-50"
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="font-medium text-sm">
+                                    {service.name}
+                                  </div>
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Coming Soon
+                                  </Badge>
+                                </div>
+                                <div className="text-xs leading-tight">
+                                  {service.description}
+                                </div>
                               </div>
-                              <div className="text-xs  leading-tight">
-                                {service.description}
-                              </div>
-                            </Link>
+                            ) : (
+                              <Link
+                                key={service.name}
+                                href={service.href}
+                                className="block p-3 hover:bg-slate-50 transition-colors rounded-lg border border-transparent hover:border-teal-200"
+                              >
+                                <div className="font-medium text-sm mb-1">
+                                  {service.name}
+                                </div>
+                                <div className="text-xs leading-tight">
+                                  {service.description}
+                                </div>
+                              </Link>
+                            )
                           ))}
                         </div>
                       </div>
@@ -283,14 +395,27 @@ export default function Header() {
                       {category.category}
                     </div>
                     {category.services.map((service) => (
-                      <Link
-                        key={service.name}
-                        href={service.href}
-                        className="block pl-6 py-1 "
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        {service.name}
-                      </Link>
+                      service.comingSoon ? (
+                        <div
+                          key={service.name}
+                          className="flex items-center justify-between pl-6 py-1 opacity-60 cursor-not-allowed"
+                        >
+                          <span>{service.name}</span>
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs mr-4">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Coming Soon
+                          </Badge>
+                        </div>
+                      ) : (
+                        <Link
+                          key={service.name}
+                          href={service.href}
+                          className="block pl-6 py-1"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          {service.name}
+                        </Link>
+                      )
                     ))}
                   </div>
                 ))}

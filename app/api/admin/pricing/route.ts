@@ -45,6 +45,7 @@ const transformServiceToPricingItemUltraOptimized = (
     parentId: null,
     sortOrder: serviceWithItems.sortOrder,
     colorTheme: serviceWithItems.colorTheme,
+    comingSoon: serviceWithItems.comingSoon || false,
     children,
     createdAt: serviceWithItems.createdAt.toISOString(),
     updatedAt: serviceWithItems.updatedAt.toISOString(),
@@ -282,6 +283,7 @@ export async function POST(request: Request) {
               description: item.description,
               sortOrder: serviceIndex,
               colorTheme: item.colorTheme || "teal",
+              comingSoon: item.comingSoon || false,
             };
 
             const updatedService = await updateService(item.id, serviceData);

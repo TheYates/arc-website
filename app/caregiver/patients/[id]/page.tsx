@@ -64,6 +64,7 @@ import {
   X,
   ChevronDown,
   MoreVertical,
+  Edit,
 } from "lucide-react";
 import { RoleHeader } from "@/components/role-header";
 import { useToast } from "@/hooks/use-toast";
@@ -103,6 +104,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
   const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [showSymptomForm, setShowSymptomForm] = useState(false);
   const [showCaregiverNoteForm, setShowCaregiverNoteForm] = useState(false);
+  const [showPatientEditForm, setShowPatientEditForm] = useState(false);
   const [showReviewerNoteHistory, setShowReviewerNoteHistory] = useState(false);
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [selectedMedication, setSelectedMedication] =
@@ -349,6 +351,8 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
         dosageGiven: adminFormData.dosageGiven || undefined,
         notes: adminFormData.notes || undefined,
         patientResponse: "good" as any,
+        createdAt: currentTime,
+        updatedAt: currentTime,
       };
 
       await recordMedicationAdministrationClient(administrationData);
@@ -587,9 +591,20 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
               {/* Patient Information */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <User className="h-5 w-5 mr-2" />
-                    Patient Information
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <User className="h-5 w-5 mr-2" />
+                      Patient Information
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                      onClick={() => setShowPatientEditForm(true)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Profile
+                    </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -659,52 +674,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
               </Card>
 
               {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Activity className="h-5 w-5 mr-2" />
-                    Recent Activity
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {vitals.slice(0, 3).map((vital, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between py-2 border-b last:border-0"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">Vitals Recorded</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(new Date(vital.recordedAt))}
-                          </p>
-                        </div>
-                        <Badge variant="outline" className="text-green-600">
-                          <Activity className="h-3 w-3 mr-1" />
-                          Complete
-                        </Badge>
-                      </div>
-                    ))}
-                    {medicalReviews.slice(0, 2).map((review, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between py-2 border-b last:border-0"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">Medical Review</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(new Date(review.createdAt))}
-                          </p>
-                        </div>
-                        <Badge variant="outline" className="text-purple-600">
-                          <FileText className="h-3 w-3 mr-1" />
-                          {review.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              
             </div>
           </TabsContent>
 
@@ -764,7 +734,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                         {(vitals || []).map((vital) => (
                           <tr
                             key={vital.id}
-                            className="border-b hover:bg-gray-50"
+                            className="border-b"
                           >
                             <td className="py-3 px-2">
                               <div>
@@ -1103,7 +1073,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
             {selectedMedication && (
               <div className="space-y-3">
                 {/* Medication Info - Compact */}
-                <div className="bg-gray-50 p-2 rounded">
+                <div className="p-2 rounded">
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-medium text-sm">

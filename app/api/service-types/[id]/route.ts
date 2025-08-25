@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/database/postgresql";
-import { authenticateRequest } from "@/lib/auth-server";
+import { authenticateRequest } from "@/lib/api/auth";
 
 export async function PUT(
   request: NextRequest,

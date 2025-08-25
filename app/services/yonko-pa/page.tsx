@@ -58,6 +58,7 @@ interface YonkoPaService {
   name: string;
   description: string;
   basePrice?: number;
+  comingSoon?: boolean;
   items: ServiceItem[];
 }
 
@@ -93,6 +94,16 @@ export default function YonkoPaPage() {
 
     fetchServiceData();
   }, []);
+
+  // Show coming soon page if service is marked as coming soon
+  if (yonkoPaService?.comingSoon) {
+    return (
+      <ComingSoonPage 
+        serviceName={yonkoPaService.name}
+        description={yonkoPaService.description}
+      />
+    );
+  }
 
   // Auto-expand items with children for better UX when service data is loaded
   useEffect(() => {
@@ -310,9 +321,17 @@ export default function YonkoPaPage() {
                   {yonkoPaService?.name}
                 </h1>
               </div>
-              <Badge className="bg-white/20 text-white border border-white/30 mb-4">
-                Nanny Service
-              </Badge>
+              <div className="flex items-center gap-2 mb-4">
+                <Badge className="bg-white/20 text-white border border-white/30">
+                  Nanny Service
+                </Badge>
+                {yonkoPaService?.comingSoon && (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Coming Soon
+                  </Badge>
+                )}
+              </div>
               <p className="text-2xl text-indigo-100 mb-4">
                 Visit-on-Request Nanny Service
               </p>

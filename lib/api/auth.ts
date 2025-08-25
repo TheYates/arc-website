@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/database/postgresql";
+import { verifyToken, validateSessionInDatabase, type JWTPayload } from "@/lib/jwt";
 
 export interface AuthResult {
   success: boolean;
@@ -9,52 +10,75 @@ export interface AuthResult {
 
 /**
  * Authentication function for API routes
- * Validates user session from cookies/headers
+ * Validates user session using JWT tokens and fallback methods
  */
 export async function authenticateRequest(
   request: NextRequest
 ): Promise<AuthResult> {
   try {
-    // Try to get user ID from various sources
+    let tokenPayload: JWTPayload | null = null;
     let userId: string | null = null;
 
-    // 1. Check for Authorization header (JWT token)
+    // 1. Check for Authorization header (JWT token) - Primary method
     const authHeader = request.headers.get("authorization");
     if (authHeader && authHeader.startsWith("Bearer ")) {
-      // TODO: Implement JWT token validation
-      // const token = authHeader.substring(7);
-      // userId = validateJWT(token);
-    }
-
-    // 2. Check for session cookie
-    const cookies = request.headers.get("cookie");
-    if (cookies) {
-      const sessionMatch = cookies.match(/auth_user_id=([^;]+)/);
-      if (sessionMatch) {
-        userId = decodeURIComponent(sessionMatch[1]);
+      const token = authHeader.substring(7);
+      console.log("🔍 Validating JWT token from Authorization header");
+      
+      tokenPayload = verifyToken(token);
+      if (tokenPayload) {
+        // Validate session in database
+        const isValidSession = await validateSessionInDatabase(tokenPayload.sessionId, tokenPayload.userId);
+        if (isValidSession) {
+          userId = tokenPayload.userId;
+          console.log("✅ JWT token validation successful");
+        } else {
+          console.log("❌ Session not found or expired in database");
+          return {
+            success: false,
+            error: "Session expired or invalid",
+          };
+        }
+      } else {
+        console.log("❌ JWT token validation failed");
+        return {
+          success: false,
+          error: "Invalid or expired token",
+        };
       }
     }
 
-    // 3. Check for custom header (for client-side requests)
-    const userIdHeader = request.headers.get("x-user-id");
-    if (userIdHeader) {
-      userId = userIdHeader;
+    // 2. Fallback: Check for custom header (for client-side requests)
+    if (!userId) {
+      const userIdHeader = request.headers.get("x-user-id");
+      if (userIdHeader) {
+        console.log("🔍 Using x-user-id header fallback");
+        userId = userIdHeader;
+      }
     }
 
-    // 4. For development: Check referer and try to extract user info from localStorage
-    // This is a fallback for when cookies aren't working properly
+    // 3. Fallback: Check for session user header (development/migration support)
     if (!userId) {
-      const referer = request.headers.get("referer") || "";
-      const userAgent = request.headers.get("user-agent") || "";
-
-      // Try to get user from session storage via a special header
       const sessionUser = request.headers.get("x-session-user");
       if (sessionUser) {
         try {
+          console.log("🔍 Using x-session-user header fallback");
           const userData = JSON.parse(decodeURIComponent(sessionUser));
           userId = userData.id;
         } catch (e) {
           console.log("Failed to parse session user header");
+        }
+      }
+    }
+
+    // 4. Legacy fallback: Check for session cookie (to be phased out)
+    if (!userId) {
+      const cookies = request.headers.get("cookie");
+      if (cookies) {
+        const sessionMatch = cookies.match(/auth_user_id=([^;]+)/);
+        if (sessionMatch) {
+          console.log("🔍 Using legacy session cookie fallback");
+          userId = decodeURIComponent(sessionMatch[1]);
         }
       }
     }
@@ -100,10 +124,17 @@ export async function authenticateRequest(
       updatedAt: user.updatedAt,
     };
 
-    return {
+    // Include token info in result if we validated via JWT
+    const result: AuthResult = {
       success: true,
       user: userData,
     };
+
+    if (tokenPayload) {
+      (result as any).tokenPayload = tokenPayload;
+    }
+
+    return result;
   } catch (error) {
     console.error("Authentication error:", error);
     return {

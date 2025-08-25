@@ -104,7 +104,7 @@ export function CareNotesForm({
   return (
     <div className="space-y-6">
       {/* Patient Info */}
-      <div className="bg-gray-50 p-3 rounded-lg">
+      <div className="border p-3 rounded-lg">
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-medium text-sm">Creating Note for</h4>
@@ -113,9 +113,7 @@ export function CareNotesForm({
           <div className="text-right">
             <p className="text-xs text-muted-foreground">Author</p>
             <p className="text-sm font-medium">{authorName}</p>
-            <Badge variant="outline" className="text-xs capitalize">
-              {authorRole}
-            </Badge>
+            
           </div>
         </div>
       </div>

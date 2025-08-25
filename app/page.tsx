@@ -1,3 +1,5 @@
+"use client";
+
 import ResponsiveHeader from "@/components/responsive-header";
 import { Button } from "@/components/ui/button";
 import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";

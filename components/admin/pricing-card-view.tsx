@@ -14,6 +14,7 @@ import {
   Copy,
   GripVertical,
   MoreVertical,
+  Clock,
 } from "lucide-react";
 import {
   Collapsible,
@@ -208,6 +209,7 @@ interface PricingCardViewProps {
   onEdit: (item: PricingItem) => void;
   onDelete: (item: PricingItem) => void;
   onClone: (item: PricingItem) => void;
+  onToggleComingSoon?: (item: PricingItem) => void;
   onReorder: (items: PricingItem[]) => void;
 }
 
@@ -217,6 +219,7 @@ export function PricingCardView({
   onEdit,
   onDelete,
   onClone,
+  onToggleComingSoon,
   onReorder,
 }: PricingCardViewProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -392,7 +395,13 @@ export function PricingCardView({
                         className={`text-lg ${colors.text} flex items-center gap-2`}
                       >
                         {item.name}
-                        {/* Removed base price display */}
+                        {/* Coming Soon badge for services */}
+                        {item.comingSoon && (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Coming Soon
+                          </Badge>
+                        )}
                       </CardTitle>
                       {item.description && (
                         <p className="text-slate-600 mt-1 text-sm">
@@ -402,6 +411,25 @@ export function PricingCardView({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Coming Soon toggle button */}
+                    {onToggleComingSoon && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleComingSoon(item);
+                        }}
+                        className={`h-8 w-8 p-0 ${
+                          item.comingSoon 
+                            ? 'text-amber-600 hover:text-amber-700' 
+                            : 'text-gray-400 hover:text-amber-600'
+                        }`}
+                        title={item.comingSoon ? "Mark as available" : "Mark as coming soon"}
+                      >
+                        <Clock className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

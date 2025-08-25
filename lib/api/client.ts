@@ -77,7 +77,17 @@ function invalidateCache(pattern?: string): void {
 export async function authenticateUserClient(
   email: string,
   password: string
-): Promise<{ success: boolean; user?: User; error?: string }> {
+): Promise<{ 
+  success: boolean; 
+  user?: User; 
+  tokens?: {
+    accessToken: string;
+    refreshToken: string;
+    sessionId: string;
+    expiresAt: Date;
+  };
+  error?: string;
+}> {
   console.log("🌐 Client API authenticateUserClient called:", { email });
 
   try {
@@ -99,8 +109,17 @@ export async function authenticateUserClient(
       return { success: false, error: data.error || "Login failed" };
     }
 
-    console.log("✅ Client API success, returning user:", data.user);
-    return { success: true, user: data.user };
+    console.log("✅ Client API success, returning user and tokens");
+    return { 
+      success: true, 
+      user: data.user,
+      tokens: data.tokens ? {
+        accessToken: data.tokens.accessToken,
+        refreshToken: data.tokens.refreshToken,
+        sessionId: data.tokens.sessionId,
+        expiresAt: new Date(data.tokens.expiresAt),
+      } : undefined,
+    };
   } catch (error) {
     console.error("💥 Authentication error in client:", error);
     return { success: false, error: "Network error" };

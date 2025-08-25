@@ -16,13 +16,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // Redirect to login if not authenticated or not an admin/super_admin
   useEffect(() => {
-    // Don't redirect while auth is still loading
-    if (isLoading) return;
+    // Don't redirect while auth is still loading or not hydrated
+    if (isLoading || !isHydrated) return;
 
     if (!user) {
       router.push("/login");
     }
-  }, [user, router, isLoading]);
+  }, [user, router, isLoading, isHydrated]);
 
   // Show loading state only if auth is still loading or not hydrated yet
   if (isLoading || !isHydrated) {

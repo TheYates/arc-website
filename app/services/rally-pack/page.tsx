@@ -30,6 +30,7 @@ import Link from "next/link";
 import Testimonials from "@/components/testimonials";
 import { HeroImage } from "@/components/ui/optimized-image";
 import { IMAGES, ALT_TEXTS } from "@/lib/constants/images";
+import ComingSoonPage from "@/components/coming-soon-page";
 
 // Service structure types
 interface ServiceItem {
@@ -79,6 +80,16 @@ export default function RallyPackPage() {
 
     fetchServiceData();
   }, []);
+
+  // Show coming soon page if service is marked as coming soon
+  if (rallyPackService?.comingSoon) {
+    return (
+      <ComingSoonPage 
+        serviceName={rallyPackService.name}
+        description={rallyPackService.description}
+      />
+    );
+  }
 
   // Auto-expand items with children for better UX when service data is loaded
   useEffect(() => {

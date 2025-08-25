@@ -5,7 +5,7 @@ import { createScheduleCompletionCareNote } from "@/lib/integrations/care-notes-
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -14,7 +14,7 @@ export async function GET(
     }
 
     const { user } = authResult;
-    const { id } = params;
+    const { id } = await params;
 
     const schedule = await prisma.caregiverSchedule.findUnique({
       where: { id },
@@ -74,7 +74,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -83,7 +83,11 @@ export async function PATCH(
     }
 
     const { user } = authResult;
-    const { id } = params;
+    // Admins should not be able to edit schedules (read-only for admins)
+    if (user.role === "admin") {
+      return NextResponse.json({ error: "Admins cannot modify schedules" }, { status: 403 });
+    }
+    const { id } = await params;
     const body = await request.json();
 
     const existingSchedule = await prisma.caregiverSchedule.findUnique({
@@ -237,6 +241,93 @@ export async function PATCH(
     return NextResponse.json({ schedule: updatedSchedule });
   } catch (error) {
     console.error("Error updating schedule:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authResult = await authenticateRequest(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
+    }
+
+    const { user } = authResult;
+    // Admins should not be able to delete schedules (read-only for admins)
+    if (user.role === "admin") {
+      return NextResponse.json({ error: "Admins cannot modify schedules" }, { status: 403 });
+    }
+    const { id } = await params;
+
+    // Get existing schedule
+    const existingSchedule = await prisma.caregiverSchedule.findUnique({
+      where: { id },
+      include: {
+        patient: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+        caregiver: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!existingSchedule) {
+      return NextResponse.json(
+        { error: "Schedule not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check permissions
+    if (user.role === "caregiver") {
+      if (existingSchedule.caregiverId !== user.id) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
+    } else if (user.role !== "admin" && user.role !== "super_admin") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // Delete the schedule
+    await prisma.caregiverSchedule.delete({
+      where: { id },
+    });
+
+    // Create notification for patient
+    await prisma.inAppNotification.create({
+      data: {
+        userId: existingSchedule.patient.userId,
+        type: "SCHEDULE_CANCELLED",
+        title: "Visit Cancelled",
+        message: `Your scheduled visit "${existingSchedule.title}" has been cancelled`,
+        actionUrl: `/patient/schedules`,
+        scheduleId: id,
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting schedule:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

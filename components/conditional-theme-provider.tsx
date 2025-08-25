@@ -34,9 +34,10 @@ export function ConditionalThemeProvider({ children }: ConditionalThemeProviderP
     return (
       <ThemeProvider
         attribute="class"
-        defaultTheme="light"
+        defaultTheme="system"
         enableSystem
         disableTransitionOnChange
+        storageKey="arc-theme"
       >
         {children}
       </ThemeProvider>

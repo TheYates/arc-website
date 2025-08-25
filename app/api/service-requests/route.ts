@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
         type: "SERVICE_REQUEST_CREATED",
         title: "New Service Request",
         message: `${user.firstName} ${user.lastName} has requested: ${title}`,
-        actionUrl: `/caregiver/service-requests/${serviceRequest.id}`,
+        actionUrl: `/caregiver/service-requests`,
         actionLabel: "View Request",
         serviceRequestId: serviceRequest.id,
         priority,

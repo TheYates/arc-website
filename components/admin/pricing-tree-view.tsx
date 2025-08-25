@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronDown, ChevronRight, Plus, Edit, Trash2, Copy, Expand, Minimize2, GripVertical } from "lucide-react"
+import { ChevronDown, ChevronRight, Plus, Edit, Trash2, Copy, Expand, Minimize2, GripVertical, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -31,6 +31,7 @@ interface TreeViewProps {
   onEdit: (item: PricingItem) => void
   onDelete: (id: string) => void
   onClone: (item: PricingItem) => void
+  onToggleComingSoon?: (item: PricingItem) => void
   onReorder?: (items: PricingItem[]) => void
 }
 
@@ -41,6 +42,7 @@ interface TreeNodeProps {
   onEdit: (item: PricingItem) => void
   onDelete: (id: string) => void
   onClone: (item: PricingItem) => void
+  onToggleComingSoon?: (item: PricingItem) => void
   expandedNodes: Set<string>
   onToggleExpanded: (nodeId: string) => void
   isDragging?: boolean
@@ -50,7 +52,7 @@ interface SortableTreeNodeProps extends TreeNodeProps {
   id: string
 }
 
-const SortableTreeNode = ({ item, level, onAdd, onEdit, onDelete, onClone, expandedNodes, onToggleExpanded, id }: SortableTreeNodeProps) => {
+const SortableTreeNode = ({ item, level, onAdd, onEdit, onDelete, onClone, onToggleComingSoon, expandedNodes, onToggleExpanded, id }: SortableTreeNodeProps) => {
   const {
     attributes,
     listeners,
@@ -75,6 +77,7 @@ const SortableTreeNode = ({ item, level, onAdd, onEdit, onDelete, onClone, expan
         onEdit={onEdit}
         onDelete={onDelete}
         onClone={onClone}
+        onToggleComingSoon={onToggleComingSoon}
         expandedNodes={expandedNodes}
         onToggleExpanded={onToggleExpanded}
         isDragging={isDragging}
@@ -84,7 +87,7 @@ const SortableTreeNode = ({ item, level, onAdd, onEdit, onDelete, onClone, expan
   )
 }
 
-const TreeNode = ({ item, level, onAdd, onEdit, onDelete, onClone, expandedNodes, onToggleExpanded, isDragging, dragHandleProps }: TreeNodeProps & { dragHandleProps?: any }) => {
+const TreeNode = ({ item, level, onAdd, onEdit, onDelete, onClone, onToggleComingSoon, expandedNodes, onToggleExpanded, isDragging, dragHandleProps }: TreeNodeProps & { dragHandleProps?: any }) => {
   const [isHovered, setIsHovered] = useState(false)
   const isExpanded = expandedNodes.has(item.id)
 
@@ -169,7 +172,27 @@ const TreeNode = ({ item, level, onAdd, onEdit, onDelete, onClone, expandedNodes
           <Badge variant="secondary">Optional</Badge>
         )}
 
+        {/* Coming Soon badge for services */}
+        {item.type === "service" && item.comingSoon && (
+          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+            <Clock className="h-3 w-3 mr-1" />
+            Coming Soon
+          </Badge>
+        )}
+
         <div className={`ml-auto flex gap-1 transition-opacity ${isHovered ? "opacity-100" : "opacity-0"}`}>
+          {/* Coming Soon toggle button for services */}
+          {item.type === "service" && onToggleComingSoon && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-6 w-6 p-0 ${item.comingSoon ? 'text-amber-600 hover:text-amber-700' : 'text-gray-400 hover:text-amber-600'}`}
+              onClick={() => onToggleComingSoon(item)}
+              title={item.comingSoon ? "Mark as available" : "Mark as coming soon"}
+            >
+              <Clock className="h-3 w-3" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -220,6 +243,7 @@ const TreeNode = ({ item, level, onAdd, onEdit, onDelete, onClone, expandedNodes
               onEdit={onEdit}
               onDelete={onDelete}
               onClone={onClone}
+              onToggleComingSoon={onToggleComingSoon}
               expandedNodes={expandedNodes}
               onToggleExpanded={onToggleExpanded}
             />
@@ -230,7 +254,7 @@ const TreeNode = ({ item, level, onAdd, onEdit, onDelete, onClone, expandedNodes
   )
 }
 
-export const PricingTreeView = ({ items = [], onAdd, onEdit, onDelete, onClone, onReorder }: TreeViewProps) => {
+export const PricingTreeView = ({ items = [], onAdd, onEdit, onDelete, onClone, onToggleComingSoon, onReorder }: TreeViewProps) => {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
 
   const sensors = useSensors(
@@ -337,6 +361,7 @@ export const PricingTreeView = ({ items = [], onAdd, onEdit, onDelete, onClone, 
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onClone={onClone}
+                  onToggleComingSoon={onToggleComingSoon}
                   expandedNodes={expandedNodes}
                   onToggleExpanded={handleToggleExpanded}
                 />

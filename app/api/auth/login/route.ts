@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateUser } from "@/lib/api/auth-prisma";
+import { generateTokens } from "@/lib/jwt";
+import { prisma } from "@/lib/database/postgresql";
 
 export async function POST(request: NextRequest) {
   console.log("🚀 API route /api/auth/login called");
@@ -52,14 +54,33 @@ export async function POST(request: NextRequest) {
       lastLogin: result.user!.lastLogin?.toISOString(),
     };
 
-    console.log("✅ API route success, returning user:", {
+    // Generate JWT tokens for session management
+    console.log("🎟️ Generating JWT tokens...");
+    const tokens = await generateTokens(result.user!);
+
+    // Update user's last login timestamp
+    await prisma.user.update({
+      where: { id: result.user!.id },
+      data: { lastLogin: new Date() },
+    });
+
+    console.log("✅ API route success, returning user and tokens:", {
       email: user.email,
       role: user.role,
       mustChangePassword: user.mustChangePassword,
+      sessionId: tokens.sessionId,
+      expiresAt: tokens.expiresAt,
     });
+    
     return NextResponse.json({ 
       success: true, 
       user,
+      tokens: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        sessionId: tokens.sessionId,
+        expiresAt: tokens.expiresAt,
+      },
       requiresPasswordChange: user.mustChangePassword,
     });
   } catch (error) {

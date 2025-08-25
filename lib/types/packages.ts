@@ -13,6 +13,7 @@ export interface PricingItem {
   parentId?: string | null;
   sortOrder: number;
   colorTheme?: string; // Color theme for services
+  comingSoon?: boolean; // Whether the service is coming soon
   children?: PricingItem[];
   createdAt: string;
   updatedAt: string;

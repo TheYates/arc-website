@@ -89,6 +89,13 @@ export default function AdminPackagesPage() {
     type: "success" as "success" | "error",
   });
 
+  // Confirmation dialog state for coming soon toggle
+  const [confirmationDialog, setConfirmationDialog] = useState({
+    open: false,
+    item: null as PricingItem | null,
+    newStatus: false,
+  });
+
   // Helper function to show notifications
   const showNotification = (
     title: string,
@@ -454,6 +461,75 @@ export default function AdminPackagesPage() {
     setSelectedPricingItem(item);
     setPricingItemMode("edit");
     setIsPricingItemDialogOpen(true);
+  };
+
+  const handleToggleComingSoon = async (item: PricingItem) => {
+    const newComingSoonStatus = !item.comingSoon;
+    
+    // Show confirmation dialog
+    setConfirmationDialog({
+      open: true,
+      item,
+      newStatus: newComingSoonStatus,
+    });
+  };
+
+  const confirmToggleComingSoon = async () => {
+    const { item, newStatus } = confirmationDialog;
+    if (!item) return;
+
+    try {
+      // Close confirmation dialog first
+      setConfirmationDialog({ open: false, item: null, newStatus: false });
+
+      // Update the item locally first for immediate UI feedback
+      const updatedItems = pricingItems.map(pricingItem => 
+        pricingItem.id === item.id 
+          ? { ...pricingItem, comingSoon: newStatus }
+          : pricingItem
+      );
+      setPricingItems(updatedItems);
+
+      // Save to database immediately
+      const response = await fetch('/api/admin/pricing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: updatedItems
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        showNotification(
+          "Coming Soon Status Updated", 
+          `${item.name} is now ${newStatus ? 'marked as coming soon' : 'available'}`,
+          "success"
+        );
+        // Reload from database to ensure consistency
+        const loadResponse = await fetch("/api/admin/pricing");
+        const loadResult = await loadResponse.json();
+        if (loadResult.success && loadResult.data) {
+          setPricingItems(loadResult.data);
+        }
+      } else {
+        throw new Error(result.error || "Failed to save");
+      }
+    } catch (error) {
+      console.error("Error toggling coming soon status:", error);
+      showNotification("Error", "Failed to update coming soon status", "error");
+      
+      // Revert local state on error
+      const revertedItems = pricingItems.map(pricingItem => 
+        pricingItem.id === item.id 
+          ? { ...pricingItem, comingSoon: item.comingSoon }
+          : pricingItem
+      );
+      setPricingItems(revertedItems);
+    }
   };
 
   const handleDeletePricingItem = async (item: PricingItem) => {
@@ -954,6 +1030,7 @@ export default function AdminPackagesPage() {
                 onEdit={handleEditPricingItem}
                 onDelete={handleDeletePricingItem}
                 onClone={handleClonePricingItem}
+                onToggleComingSoon={handleToggleComingSoon}
                 onReorder={handleReorderPricingItems}
               />
             )}
@@ -983,6 +1060,47 @@ export default function AdminPackagesPage() {
           parentId={parentItemId}
           defaultType={defaultItemType}
         />
+
+        {/* Confirmation Dialog for Coming Soon Toggle */}
+        <Dialog
+          open={confirmationDialog.open}
+          onOpenChange={(open) => {
+            if (!open) {
+              setConfirmationDialog({ open: false, item: null, newStatus: false });
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-md z-[70]">
+            <DialogHeader>
+              <DialogTitle className="text-amber-600">
+                {confirmationDialog.newStatus ? 'Mark as Coming Soon' : 'Mark as Available'}
+              </DialogTitle>
+              <DialogDescription>
+                {confirmationDialog.newStatus 
+                  ? `Are you sure you want to mark "${confirmationDialog.item?.name}" as coming soon? Users will not be able to access this service page and it will show as unavailable in the navigation.`
+                  : `Are you sure you want to mark "${confirmationDialog.item?.name}" as available? Users will be able to access this service page and it will appear normally in the navigation.`
+                }
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setConfirmationDialog({ open: false, item: null, newStatus: false })}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmToggleComingSoon}
+                className={confirmationDialog.newStatus 
+                  ? "bg-amber-600 hover:bg-amber-700" 
+                  : "bg-green-600 hover:bg-green-700"
+                }
+              >
+                {confirmationDialog.newStatus ? 'Mark Coming Soon' : 'Mark Available'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Notification Dialog */}
         <Dialog

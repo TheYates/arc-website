@@ -14,6 +14,7 @@ import {
   SquareTerminal,
   BarChart3,
   Briefcase,
+  Calendar,
   ClipboardCheck,
   ClipboardList,
   FileText,
@@ -41,6 +42,9 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 // Admin sidebar data
 const getAdminData = (user: any, pathname: string) => ({
@@ -100,6 +104,12 @@ const getAdminData = (user: any, pathname: string) => ({
       isActive: pathname.startsWith("/admin/service-requests"),
     },
     {
+      title: "Schedules",
+      url: "/admin/schedules",
+      icon: Calendar,
+      isActive: pathname.startsWith("/admin/schedules"),
+    },
+    {
       title: "Users",
       url: "/admin/users",
       icon: UserPlus,
@@ -153,11 +163,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
-      </SidebarContent>
+              <SidebarContent>
+          <NavMain items={data.navMain} />
+          <NavProjects projects={data.projects} />
+          <NavSecondary items={data.navSecondary} className="mt-auto" />
+        </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
       </SidebarFooter>

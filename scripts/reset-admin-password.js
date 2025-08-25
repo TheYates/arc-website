@@ -5,15 +5,15 @@ const prisma = new PrismaClient();
 
 async function resetAdminPassword() {
   try {
-    console.log('🔧 Resetting password for admin@arc.com...');
+    console.log('🔧 Resetting password for admin@arccare.com...');
 
     // Find the admin user
     const adminUser = await prisma.user.findUnique({
-      where: { email: 'admin@arc.com' }
+      where: { email: 'admin@arccare.com' }
     });
 
     if (!adminUser) {
-      console.log('❌ Admin user with email admin@arc.com not found!');
+      console.log('❌ Admin user with email admin@arccare.com not found!');
       console.log('💡 You can create the admin user by running: npm run db:seed');
       return;
     }
@@ -42,7 +42,7 @@ async function resetAdminPassword() {
     });
 
     console.log('✅ Password reset successfully!');
-    console.log('📧 Email: admin@arc.com');
+    console.log('📧 Email: admin@arccare.com');
     console.log('🔑 New Password: password');
     console.log('🚀 You can now login with these credentials');
 

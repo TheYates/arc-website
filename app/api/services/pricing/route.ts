@@ -68,6 +68,7 @@ const transformToPublicServices = (
       name: service.name,
       description: service.description || undefined,
       colorTheme: service.colorTheme || "teal", // Include colorTheme with fallback
+      comingSoon: service.comingSoon || false,
       items,
     };
   });

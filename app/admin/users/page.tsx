@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -28,7 +27,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +34,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -51,7 +48,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth, User, UserRole, hasPermission } from "@/lib/auth";
-import { getUserAccount } from "@/lib/api/users";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { authenticatedGet, authenticatedPost } from "@/lib/api/auth-headers";
@@ -65,8 +61,6 @@ import {
   Eye,
   Edit,
   Mail,
-  Phone,
-  Calendar,
   Crown,
   Plus,
   Trash2,
@@ -87,8 +81,6 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState("all");
-  const [view, setView] = useState<"grid" | "table">("grid");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -108,22 +100,6 @@ export default function UsersPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-
-  // Persist view preference
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = localStorage.getItem("admin_users_view");
-    if (stored === "grid" || stored === "table") {
-      setView(stored);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem("admin_users_view", view);
-  }, [view]);
-
-  // Authentication is handled by admin layout - no need for individual checks
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -185,12 +161,12 @@ export default function UsersPage() {
 
   const getStatusBadge = (user: User) => {
     if (!user.isEmailVerified) {
-      return <Badge variant="secondary">Unverified</Badge>;
+      return <Badge variant="destructive">Unverified</Badge>;
     }
     if (!user.profileComplete) {
       return <Badge variant="outline">Incomplete</Badge>;
     }
-    return <Badge variant="default">Active</Badge>;
+    return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
   };
 
   const filteredUsers = users.filter((user) => {
@@ -202,21 +178,6 @@ export default function UsersPage() {
     // Filter by role
     if (roleFilter !== "all" && user.role !== roleFilter) {
       return false;
-    }
-
-    // Filter by tab
-    if (activeTab !== "all") {
-      if (
-        activeTab === "admins" &&
-        !["super_admin", "admin"].includes(user.role)
-      )
-        return false;
-      if (
-        activeTab === "staff" &&
-        !["reviewer", "caregiver"].includes(user.role)
-      )
-        return false;
-      if (activeTab === "unverified" && user.isEmailVerified) return false;
     }
 
     // Search term filtering
@@ -237,6 +198,18 @@ export default function UsersPage() {
     if (!dateString) return "Never";
     const date = new Date(dateString);
     return formatDate(date);
+  };
+
+  const formatUserDateTime = (dateString: string) => {
+    if (!dateString) return "Never";
+    const date = new Date(dateString);
+    const formattedDate = formatDate(date);
+    const time = date.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    return `${formattedDate} at ${time}`;
   };
 
   const resetForm = () => {
@@ -420,7 +393,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Mobile (distinct UI) */}
+      {/* Mobile View */}
       <div className="md:hidden">
         <AdminUsersMobile
           loader={loader}
@@ -429,73 +402,44 @@ export default function UsersPage() {
         />
       </div>
 
-      <div className="hidden md:flex items-center justify-between">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-4">
+      {/* Desktop View */}
+      <div className="hidden md:block space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              User Management
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
             <p className="text-muted-foreground">
               Manage platform users and their roles
             </p>
           </div>
-          <Button onClick={() => setShowAddDialog(true)}>
+          <Button onClick={() => setShowAddDialog(true)} size="lg">
             <Plus className="h-4 w-4 mr-2" />
             Add User
           </Button>
         </div>
-      </div>
 
-      <Card className="hidden md:block">
-        <CardHeader>
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-sm text-muted-foreground">
-              Search and filter platform users
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={view === "grid" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setView("grid")}
-              >
-                Grid
-              </Button>
-              <Button
-                variant={view === "table" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setView("table")}
-              >
-                Table
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        {/* Filters & Search */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Users Directory</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                📝 Verification emails are sent during account creation.
-                Patients are managed separately on the{" "}
-                <a
-                  href="/admin/patients"
-                  className="text-blue-600 hover:underline"
-                >
-                  Patients page
-                </a>
-                .
+                Total Users: <span className="font-medium">{filteredUsers.length}</span>
               </div>
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search users..."
-                    className="pl-9 w-full sm:w-[250px]"
+                    placeholder="Search by name, email, or username..."
+                    className="pl-10 w-full md:w-80"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Filter by role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -508,209 +452,172 @@ export default function UsersPage() {
                 </Select>
               </div>
             </div>
-          </div>
-        </CardContent>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Skeleton className="h-32 w-full rounded-lg" />
-                <Skeleton className="h-32 w-full rounded-lg" />
-                <Skeleton className="h-32 w-full rounded-lg" />
-                <Skeleton className="h-32 w-full rounded-lg" />
-                <Skeleton className="h-32 w-full rounded-lg" />
-                <Skeleton className="h-32 w-full rounded-lg" />
+          </CardContent>
+        </Card>
+
+        {/* Users Table */}
+        <Card>
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="p-6">
+                <div className="space-y-4">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-4">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                      <Skeleton className="h-6 w-20" />
+                      <Skeleton className="h-6 w-16" />
+                      <Skeleton className="h-8 w-8" />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : view === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredUsers.map((u) => (
-                <Card
-                  key={u.id}
-                  role="link"
-                  tabIndex={0}
-                  className="group cursor-pointer hover:border-primary/40"
-                  onClick={() => {
-                    if (!u.id) return;
-                    router.push(`/admin/users/${u.id}`);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      if (!u.id) return;
-                      router.push(`/admin/users/${u.id}`);
-                    }
-                  }}
-                >
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Users className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="font-medium">
-                          {u.firstName} {u.lastName}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          @{u.username}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {getRoleBadge(u.role)}
-                        {getStatusBadge(u)}
-                      </div>
-                    </div>
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      <div className="flex items-center truncate">
-                        <Mail className="mr-1 h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{u.email}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px]">
-                          Created {formatUserDate(u.createdAt || "")}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-[10px]"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!u.id) return;
-                            router.push(`/admin/users/${u.id}`);
-                          }}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Last Login</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((u) => (
-                    <TableRow
-                      key={u.id}
-                      role="link"
-                      tabIndex={0}
-                      className="cursor-pointer hover:bg-accent/50"
-                      onClick={() => {
-                        if (!u.id) return;
-                        router.push(`/admin/users/${u.id}`);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
+            ) : filteredUsers.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No users found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchTerm || roleFilter !== "all" 
+                    ? "Try adjusting your search or filter criteria."
+                    : "Get started by adding your first user."}
+                </p>
+                {(!searchTerm && roleFilter === "all") && (
+                  <Button onClick={() => setShowAddDialog(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add First User
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b border-border">
+                      <TableHead className="font-semibold text-foreground">User</TableHead>
+                      <TableHead className="font-semibold text-foreground">Role</TableHead>
+                      <TableHead className="font-semibold text-foreground">Status</TableHead>
+                      <TableHead className="font-semibold text-foreground">Contact</TableHead>
+                      <TableHead className="font-semibold text-foreground">Created</TableHead>
+                      <TableHead className="font-semibold text-foreground">Last Login</TableHead>
+                      <TableHead className="font-semibold text-foreground text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((u) => (
+                      <TableRow
+                        key={u.id}
+                        className="hover:bg-muted/50 transition-colors cursor-pointer border-b border-border/50"
+                        onClick={() => {
                           if (!u.id) return;
                           router.push(`/admin/users/${u.id}`);
-                        }
-                      }}
-                    >
-                      <TableCell className="max-w-[200px]">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <Users className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium truncate">
-                              {u.firstName} {u.lastName}
-                            </div>
-                            <div className="text-xs text-muted-foreground truncate">
-                              @{u.username}
-                            </div>
-                            <div className="text-xs text-muted-foreground flex items-center truncate">
-                              <Mail className="h-3 w-3 mr-1 flex-shrink-0" />
-                              <span className="truncate">{u.email}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getRoleBadge(u.role)}</TableCell>
-                      <TableCell>{getStatusBadge(u)}</TableCell>
-                      <TableCell className="text-sm">
-                        {formatUserDate(u.createdAt || "")}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {formatUserDate(u.lastLogin || "")}
-                      </TableCell>
-                      <TableCell
-                        className="text-right"
-                        onClick={(e) => e.stopPropagation()}
+                        }}
                       >
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                if (!u.id) return;
-                                router.push(`/admin/users/${u.id}`);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setEditingUser(u);
-                                setFormData({
-                                  firstName: u.firstName,
-                                  lastName: u.lastName,
-                                  email: u.email,
-                                  username: u.username,
-                                  phone: u.phone || "",
-                                  address: u.address || "",
-                                  role: u.role,
-                                });
-                              }}
-                            >
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit User
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setUserToResetPassword(u)}
-                              className="text-orange-600"
-                            >
-                              <KeyRound className="h-4 w-4 mr-2" />
-                              Reset Password
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setUserToDelete(u)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete User
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                              <Users className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-semibold text-foreground">
+                                {u.firstName} {u.lastName}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                @{u.username}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          {getRoleBadge(u.role)}
+                        </TableCell>
+                        <TableCell className="py-4">
+                          {getStatusBadge(u)}
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="text-sm">
+                            <div className="flex items-center text-muted-foreground mb-1">
+                              <Mail className="h-3 w-3 mr-2 flex-shrink-0" />
+                              <span className="truncate max-w-[180px]">{u.email}</span>
+                            </div>
+                            {u.phone && (
+                              <div className="text-xs text-muted-foreground">
+                                {u.phone}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4 text-sm text-muted-foreground">
+                          {formatUserDate(u.createdAt || "")}
+                        </TableCell>
+                        <TableCell className="py-4 text-sm text-muted-foreground">
+                          {formatUserDateTime(u.lastLogin || "")}
+                        </TableCell>
+                        <TableCell
+                          className="py-4 text-right"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  if (!u.id) return;
+                                  router.push(`/admin/users/${u.id}`);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setEditingUser(u);
+                                  setFormData({
+                                    firstName: u.firstName,
+                                    lastName: u.lastName,
+                                    email: u.email,
+                                    username: u.username,
+                                    phone: u.phone || "",
+                                    address: u.address || "",
+                                    role: u.role,
+                                  });
+                                }}
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit User
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setUserToResetPassword(u)}
+                                className="text-orange-600"
+                              >
+                                <KeyRound className="h-4 w-4 mr-2" />
+                                Reset Password
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setUserToDelete(u)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete User
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Add/Edit User Dialog */}
       <Dialog
@@ -719,9 +626,9 @@ export default function UsersPage() {
           if (!open) resetForm();
         }}
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-xl">
               {editingUser ? "Edit User" : "Add New User"}
             </DialogTitle>
             <DialogDescription>
@@ -733,7 +640,7 @@ export default function UsersPage() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="firstName">First Name *</Label>
                 <Input
                   id="firstName"
                   value={formData.firstName}
@@ -744,7 +651,7 @@ export default function UsersPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="lastName">Last Name *</Label>
                 <Input
                   id="lastName"
                   value={formData.lastName}
@@ -756,7 +663,7 @@ export default function UsersPage() {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
                 type="email"
@@ -768,7 +675,7 @@ export default function UsersPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Username *</Label>
               <Input
                 id="username"
                 value={formData.username}
@@ -790,7 +697,7 @@ export default function UsersPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">Role *</Label>
               <Select
                 value={formData.role}
                 onValueChange={(value: UserRole) =>

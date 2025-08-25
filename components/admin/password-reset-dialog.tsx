@@ -134,7 +134,7 @@ export function PasswordResetDialog({ open, onOpenChange, user }: PasswordResetD
 
               <div className="space-y-2">
                 <Label>User Details</Label>
-                <div className="p-3 bg-gray-50 rounded-lg space-y-1">
+                <div className="p-3 border rounded-lg space-y-1">
                   <p className="font-medium">{user.firstName} {user.lastName}</p>
                   <p className="text-sm text-gray-600">{user.email}</p>
                   <p className="text-xs text-gray-500 uppercase">{user.role}</p>
@@ -179,8 +179,8 @@ export function PasswordResetDialog({ open, onOpenChange, user }: PasswordResetD
             </DialogHeader>
 
             <div className="space-y-4">
-              <Alert className="border-green-200 bg-green-50">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+              <Alert className="border ">
+                <CheckCircle className="h-4 w-4 text-green-200" />
                 <AlertDescription className="text-green-800">
                   The password has been reset successfully. The user will be required to change this password on their next login.
                 </AlertDescription>
@@ -212,8 +212,8 @@ export function PasswordResetDialog({ open, onOpenChange, user }: PasswordResetD
                 </div>
               </div>
 
-              <Alert className="border-blue-200 bg-blue-50">
-                <AlertDescription className="text-blue-800">
+              <Alert className="">
+                <AlertDescription >
                   <strong>Important:</strong> Share this password securely with the user. They must change it on their next login.
                 </AlertDescription>
               </Alert>

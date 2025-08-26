@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/database/postgresql";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,11 +16,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`🚀 Starting import of ${services.length} services...`);
+
     let importedCount = 0;
     let updatedCount = 0;
     let errors: string[] = [];
 
-    // Use a transaction to ensure data consistency
+    // Use a transaction with increased timeout to ensure data consistency
     await prisma.$transaction(async (tx) => {
       // Clear existing services if requested
       if (clearExisting) {
@@ -29,7 +31,10 @@ export async function POST(request: NextRequest) {
       }
 
       // Import each service
-      for (const serviceData of services) {
+      for (let i = 0; i < services.length; i++) {
+        const serviceData = services[i];
+        console.log(`📦 Processing service ${i + 1}/${services.length}: ${serviceData.name}`);
+
         try {
           // Check if service already exists
           const existingService = await tx.service.findUnique({
@@ -84,10 +89,10 @@ export async function POST(request: NextRequest) {
               where: { serviceId: service.id }
             });
 
-            // Create new items
-            for (const itemData of serviceData.serviceItems) {
-              await tx.serviceItem.create({
-                data: {
+            // Batch create service items for better performance
+            if (serviceData.serviceItems.length > 0) {
+              await tx.serviceItem.createMany({
+                data: serviceData.serviceItems.map((itemData: any) => ({
                   id: itemData.id,
                   name: itemData.name,
                   description: itemData.description,
@@ -96,7 +101,7 @@ export async function POST(request: NextRequest) {
                   level: itemData.level,
                   parentId: itemData.parentId,
                   serviceId: service.id,
-                }
+                }))
               });
             }
           }
@@ -106,7 +111,11 @@ export async function POST(request: NextRequest) {
           errors.push(`Failed to import service: ${serviceData.name}`);
         }
       }
+    }, {
+      timeout: 30000, // 30 seconds timeout
     });
+
+    console.log(`✅ Import completed! Created: ${importedCount}, Updated: ${updatedCount}, Errors: ${errors.length}`);
 
     return NextResponse.json({
       success: true,

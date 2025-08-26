@@ -46,6 +46,7 @@ interface ConferenceOptionService {
   id: string;
   name: string;
   description?: string;
+  comingSoon?: boolean;
   items: ServiceItem[];
 }
 
@@ -82,11 +83,11 @@ export default function ConferenceOptionPage() {
   }, []);
 
   // Show coming soon page if service is marked as coming soon
-  if (conferenceOptionService?.comingSoon) {
+  if (conferenceService?.comingSoon) {
     return (
-      <ComingSoonPage 
-        serviceName={conferenceOptionService.name}
-        description={conferenceOptionService.description}
+      <ComingSoonPage
+        serviceName={conferenceService.name}
+        description={conferenceService.description}
       />
     );
   }

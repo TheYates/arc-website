@@ -56,7 +56,13 @@ const getAdminData = (user: any, pathname: string) => ({
   teams: [
     {
       name: "Alpha Rescue Consult",
-      logo: Shield,
+      logo: () => (
+        <img
+          src="/images/logos/arc_logo.svg"
+          alt="ARC Logo"
+          className="size-4"
+        />
+      ),
       plan: "Admin Panel",
     },
   ],

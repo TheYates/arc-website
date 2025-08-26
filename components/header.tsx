@@ -11,7 +11,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
-import { Menu, X, Shield, LogIn, Clock } from "lucide-react";
+import { Menu, X, LogIn, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface ServiceItem {
@@ -129,15 +129,17 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo - Responsive sizing */}
-          <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
-            <div className="flex items-center space-x-2">
-              <div className="bg-teal-600 p-2 rounded-lg">
-                <Shield className="h-5 w-5 text-white" />
-              </div>
+          <Link href="/" className="flex items-center space-x-3 flex-shrink-0">
+            <div className="flex items-center space-x-3">
+              <img
+                src="/images/logos/arc_logo.svg"
+                alt="Alpha Rescue Consult"
+                className="h-8 w-auto"
+              />
               <span className="text-lg md:text-xl font-bold hidden sm:block">
                 Alpha Rescue Consult
               </span>
-              <span className="text-lg font-bold sm:hidden">Alpha</span>
+              <span className="text-lg font-bold sm:hidden">ARC</span>
             </div>
           </Link>
 

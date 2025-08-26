@@ -92,7 +92,6 @@ export default function UsersPage() {
     firstName: "",
     lastName: "",
     email: "",
-    username: "",
     phone: "",
     address: "",
     role: "caregiver" as UserRole,
@@ -186,8 +185,7 @@ export default function UsersPage() {
       return (
         user.firstName.toLowerCase().includes(searchTermLower) ||
         user.lastName.toLowerCase().includes(searchTermLower) ||
-        user.email.toLowerCase().includes(searchTermLower) ||
-        user.username.toLowerCase().includes(searchTermLower)
+        user.email.toLowerCase().includes(searchTermLower)
       );
     }
 
@@ -217,7 +215,6 @@ export default function UsersPage() {
       firstName: "",
       lastName: "",
       email: "",
-      username: "",
       phone: "",
       address: "",
       role: "caregiver",
@@ -230,8 +227,7 @@ export default function UsersPage() {
     if (
       !formData.firstName ||
       !formData.lastName ||
-      !formData.email ||
-      !formData.username
+      !formData.email
     ) {
       return; // Basic validation
     }
@@ -279,8 +275,7 @@ export default function UsersPage() {
       !editingUser ||
       !formData.firstName ||
       !formData.lastName ||
-      !formData.email ||
-      !formData.username
+      !formData.email
     ) {
       return;
     }
@@ -432,7 +427,7 @@ export default function UsersPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by name, email, or username..."
+                    placeholder="Search by name or email..."
                     className="pl-10 w-full md:w-80"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -525,7 +520,7 @@ export default function UsersPage() {
                                 {u.firstName} {u.lastName}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                @{u.username}
+                                {u.email}
                               </div>
                             </div>
                           </div>
@@ -582,7 +577,6 @@ export default function UsersPage() {
                                     firstName: u.firstName,
                                     lastName: u.lastName,
                                     email: u.email,
-                                    username: u.username,
                                     phone: u.phone || "",
                                     address: u.address || "",
                                     role: u.role,
@@ -674,17 +668,7 @@ export default function UsersPage() {
                 placeholder="Enter email address"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="username">Username *</Label>
-              <Input
-                id="username"
-                value={formData.username}
-                onChange={(e) =>
-                  setFormData({ ...formData, username: e.target.value })
-                }
-                placeholder="Enter username"
-              />
-            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="phone">Phone</Label>
               <Input

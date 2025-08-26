@@ -15,7 +15,6 @@ export async function GET(
       select: {
         id: true,
         email: true,
-        username: true,
         firstName: true,
         lastName: true,
         phone: true,
@@ -50,7 +49,6 @@ export async function GET(
     const clientUser = {
       id: user.id,
       email: user.email,
-      username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,

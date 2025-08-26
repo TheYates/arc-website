@@ -40,6 +40,7 @@ interface DynamicService {
   name: string;
   description?: string;
   colorTheme?: string; // Add colorTheme property
+  comingSoon?: boolean; // Add comingSoon property
   items: ServiceItem[];
 }
 
@@ -286,13 +287,18 @@ function GetStartedContent() {
         const result = await response.json();
 
         if (result.success && result.data) {
-          setDynamicServices(result.data);
+          // Filter out "coming soon" services from the get-started page
+          // Only show services that are available for booking
+          const availableServices = result.data.filter((service: DynamicService) => !service.comingSoon);
+
+          console.log(`Loaded ${result.data.length} total services, ${availableServices.length} available for booking`);
+          setDynamicServices(availableServices);
 
           // Handle service pre-selection from URL parameters
           const serviceParam = searchParams.get("service");
-          if (serviceParam && result.data.length > 0) {
-            // Try to find service by slug, name, or ID
-            const preSelectedService = result.data.find(
+          if (serviceParam && availableServices.length > 0) {
+            // Try to find service by slug, name, or ID (only from available services)
+            const preSelectedService = availableServices.find(
               (service: DynamicService) =>
                 service.name.toLowerCase().replace(/\s+/g, "-") ===
                   serviceParam.toLowerCase() ||

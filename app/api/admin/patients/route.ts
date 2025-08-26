@@ -220,7 +220,6 @@ export async function POST(request: NextRequest) {
       const user = await tx.user.create({
         data: {
           email,
-          username: email.split('@')[0] + '_patient', // Simple username generation
           passwordHash: hashedPassword,
           mustChangePassword: true, // Force password change on first login
           firstName,

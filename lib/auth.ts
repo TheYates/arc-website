@@ -21,7 +21,6 @@ export type UserRole =
 export interface User {
   id: string;
   email: string;
-  username: string;
   firstName: string;
   lastName: string;
   phone?: string;
@@ -52,7 +51,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   sessionExpiresAt: Date | null;
   login: (
-    emailOrUsername: string,
+    email: string,
     password: string
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -365,13 +364,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, session, refreshSession]);
 
   // Login function
-  const loginUser = useCallback(async (emailOrUsername: string, password: string) => {
-    console.log("🔐 Auth context loginUser called:", { emailOrUsername });
+  const loginUser = useCallback(async (email: string, password: string) => {
+    console.log("🔐 Auth context loginUser called:", { email });
     setIsLoading(true);
 
     try {
       console.log("📡 Calling authenticateUserClient...");
-      const result = await authenticateUserClient(emailOrUsername, password);
+      const result = await authenticateUserClient(email, password);
       console.log("📥 authenticateUserClient result:", result);
 
       if (!result.success || !result.user || !result.tokens) {
@@ -379,7 +378,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
         return {
           success: false,
-          error: result.error || "Invalid email/username or password",
+          error: result.error || "Invalid email or password",
         };
       }
 

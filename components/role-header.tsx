@@ -233,10 +233,12 @@ export function RoleHeader({ role }: RoleHeaderProps) {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Left side - Logo and Navigation */}
         <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-2">
-            <div className={`${config.bgColor} p-2 rounded-lg`}>
-              {config.icon}
-            </div>
+          <div className="flex items-center space-x-3">
+            <img
+              src="/images/logos/arc_logo.svg"
+              alt="Alpha Rescue Consult"
+              className="h-8 w-auto"
+            />
             <span className="text-xl font-bold">{config.title}</span>
           </div>
 

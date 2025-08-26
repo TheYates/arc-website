@@ -46,6 +46,7 @@ interface RallyPackService {
   id: string;
   name: string;
   description?: string;
+  comingSoon?: boolean;
   items: ServiceItem[];
 }
 

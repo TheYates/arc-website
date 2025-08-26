@@ -14,7 +14,7 @@ import { Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 export default function LoginPage() {
-  const [emailOrUsername, setEmailOrUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -94,9 +94,9 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
 
-    console.log("🚀 Login form submitted:", { emailOrUsername });
+    console.log("🚀 Login form submitted:", { email });
 
-    if (!emailOrUsername || !password) {
+    if (!email || !password) {
       console.log("❌ Missing fields");
       setError("Please fill in all fields");
       setIsLoading(false);
@@ -105,7 +105,7 @@ export default function LoginPage() {
 
     try {
       console.log("📡 Calling login function...");
-      const result = await login(emailOrUsername, password);
+      const result = await login(email, password);
       console.log("📥 Login result:", {
         success: result.success,
         error: result.error,
@@ -143,10 +143,12 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="bg-teal-600 p-3 rounded-lg">
-              <Shield className="h-8 w-8 text-white" />
-            </div>
+          <div className="flex items-center justify-center space-x-3 mb-4">
+            <img
+              src="/images/logos/arc_logo.svg"
+              alt="Alpha Rescue Consult"
+              className="h-12 w-auto"
+            />
             <span className="text-2xl font-bold">Alpha Rescue Consult</span>
           </div>
           <p>Sign in to your account</p>
@@ -168,17 +170,17 @@ export default function LoginPage() {
 
               <div>
                 <label
-                  htmlFor="emailOrUsername"
+                  htmlFor="email"
                   className="block text-sm font-medium mb-2"
                 >
-                  Email or Username
+                  Email
                 </label>
                 <Input
-                  id="emailOrUsername"
-                  type="text"
-                  value={emailOrUsername}
-                  onChange={(e) => setEmailOrUsername(e.target.value)}
-                  placeholder="Enter your email or username"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
                   className="w-full"
                   disabled={isLoading}
                 />

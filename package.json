@@ -18,6 +18,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
+    "seed:admins": "tsx scripts/create-admin-accounts.ts",
+    "seed:medications": "tsx scripts/seed-common-medications.ts",
     "db:test": "node scripts/test-database.js",
     "test:api": "node scripts/test-api-endpoints.js",
     "test:quick": "node scripts/quick-db-test.js",

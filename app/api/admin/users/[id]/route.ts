@@ -14,7 +14,6 @@ export async function GET(
       select: {
         id: true,
         email: true,
-        username: true,
         firstName: true,
         lastName: true,
         phone: true,
@@ -72,10 +71,10 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { firstName, lastName, email, username, phone, address, role } = body;
+    const { firstName, lastName, email, phone, address, role } = body;
 
     // Validate required fields
-    if (!firstName || !lastName || !email || !username || !role) {
+    if (!firstName || !lastName || !email || !role) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -94,24 +93,17 @@ export async function PUT(
       );
     }
 
-    // Check if email/username is taken by another user
+    // Check if email is taken by another user
     const duplicateUser = await prisma.user.findFirst({
       where: {
-        AND: [
-          { id: { not: id } }, // Exclude current user
-          {
-            OR: [
-              { email: email },
-              { username: username }
-            ]
-          }
-        ]
+        email: email,
+        id: { not: id } // Exclude current user
       }
     });
 
     if (duplicateUser) {
       return NextResponse.json(
-        { error: duplicateUser.email === email ? 'Email already exists' : 'Username already exists' },
+        { error: 'Email already exists' },
         { status: 400 }
       );
     }
@@ -123,7 +115,6 @@ export async function PUT(
         firstName,
         lastName,
         email,
-        username,
         phone: phone || null,
         address: address || null,
         role: role.toUpperCase() as any, // Convert to uppercase for Prisma enum
@@ -132,7 +123,6 @@ export async function PUT(
       select: {
         id: true,
         email: true,
-        username: true,
         firstName: true,
         lastName: true,
         phone: true,

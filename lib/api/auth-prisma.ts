@@ -4,7 +4,6 @@ import { User, UserRole } from '@prisma/client'
 
 export interface CreateUserData {
   email: string
-  username: string
   password: string
   firstName: string
   lastName: string
@@ -58,17 +57,14 @@ export async function createUser(userData: CreateUserData): Promise<AuthResult> 
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: userData.email },
-          { username: userData.username },
-        ],
+        email: userData.email,
       },
     })
 
     if (existingUser) {
-      return { 
-        success: false, 
-        error: existingUser.email === userData.email ? 'Email already exists' : 'Username already exists' 
+      return {
+        success: false,
+        error: 'Email already exists'
       }
     }
 
@@ -79,7 +75,6 @@ export async function createUser(userData: CreateUserData): Promise<AuthResult> 
     const user = await prisma.user.create({
       data: {
         email: userData.email,
-        username: userData.username,
         passwordHash: hashedPassword,
         firstName: userData.firstName,
         lastName: userData.lastName,

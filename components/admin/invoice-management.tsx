@@ -295,8 +295,8 @@ export function InvoiceManagement({
               {/* Total Preview */}
               <div className="p-4 rounded-lg">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-green-700">Total Amount:</span>
-                  <span className="text-xl font-bold text-green-500">
+                  <span className="font-medium ">Total Amount:</span>
+                  <span className="text-xl font-bold ">
                     ₵{invoiceForm.items.reduce((sum, item) =>
                       sum + (parseFloat(item.unitPrice) || 0), 0
                     ).toFixed(2)}

@@ -38,7 +38,6 @@ export async function POST(request: NextRequest) {
     const user = {
       id: result.user!.id,
       email: result.user!.email,
-      username: result.user!.username,
       firstName: result.user!.firstName,
       lastName: result.user!.lastName,
       phone: result.user!.phone,

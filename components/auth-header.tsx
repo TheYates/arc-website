@@ -53,10 +53,12 @@ export default function AuthHeader() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">ARC</span>
-            </div>
+          <Link href="/" className="flex items-center space-x-3">
+            <img
+              src="/images/logos/arc_logo.svg"
+              alt="Alpha Rescue Consult"
+              className="h-8 w-auto"
+            />
             <span className="font-bold text-xl">Alpha Rescue Consult</span>
           </Link>
 

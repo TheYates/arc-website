@@ -46,6 +46,7 @@ interface EventMedicalService {
   id: string;
   name: string;
   description?: string;
+  comingSoon?: boolean;
   items: ServiceItem[];
 }
 
@@ -82,11 +83,11 @@ export default function EventMedicalCoveragePage() {
   }, []);
 
   // Show coming soon page if service is marked as coming soon
-  if (eventService?.comingSoon) {
+  if (eventMedicalService?.comingSoon) {
     return (
-      <ComingSoonPage 
-        serviceName={eventService.name}
-        description={eventService.description}
+      <ComingSoonPage
+        serviceName={eventMedicalService.name}
+        description={eventMedicalService.description}
       />
     );
   }

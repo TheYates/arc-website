@@ -39,6 +39,7 @@ export default function AdminPackagesPage() {
 
   // Services data state - loaded from PostgreSQL database
   const [pricingItems, setPricingItems] = useState<PricingItem[]>([]);
+  const [originalPricingItems, setOriginalPricingItems] = useState<PricingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load services from database
@@ -51,6 +52,7 @@ export default function AdminPackagesPage() {
 
         if (result.success && result.data) {
           setPricingItems(result.data);
+          setOriginalPricingItems([...result.data]); // Store original data for change detection
         } else {
           console.error("Failed to load services:", result.error);
           setPricingItems([]);
@@ -110,7 +112,46 @@ export default function AdminPackagesPage() {
     });
   };
 
-  // Save function - now actually saves to PostgreSQL database
+  // Function to detect changes between original and current data
+  const detectChanges = useCallback(() => {
+    const changedServices: Array<{
+      id: string;
+      updates: {
+        name?: string;
+        displayName?: string;
+        description?: string;
+        sortOrder?: number;
+        colorTheme?: string;
+        comingSoon?: boolean;
+      };
+    }> = [];
+
+    // Compare services for changes
+    pricingItems.forEach((currentItem, index) => {
+      if (currentItem.type === "service") {
+        const originalItem = originalPricingItems.find(orig => orig.id === currentItem.id);
+
+        if (originalItem) {
+          const updates: any = {};
+
+          if (currentItem.name !== originalItem.name) updates.name = currentItem.name;
+          if (currentItem.name !== originalItem.name) updates.displayName = currentItem.name;
+          if (currentItem.description !== originalItem.description) updates.description = currentItem.description;
+          if (index !== originalPricingItems.findIndex(orig => orig.id === currentItem.id)) updates.sortOrder = index;
+          if (currentItem.colorTheme !== originalItem.colorTheme) updates.colorTheme = currentItem.colorTheme;
+          if (currentItem.comingSoon !== originalItem.comingSoon) updates.comingSoon = currentItem.comingSoon;
+
+          if (Object.keys(updates).length > 0) {
+            changedServices.push({ id: currentItem.id, updates });
+          }
+        }
+      }
+    });
+
+    return { services: changedServices, serviceItems: [] }; // TODO: Add service items change detection
+  }, [pricingItems, originalPricingItems]);
+
+  // Optimized save function - only saves changed items
   const handleSavePricingData = useCallback(async () => {
     try {
       console.log("💾 handleSavePricingData called", {
@@ -121,15 +162,25 @@ export default function AdminPackagesPage() {
 
       setIsSaving(true);
 
-      // Save all pricing data to PostgreSQL database
-      const response = await fetch("/api/admin/pricing", {
+      // Detect what has actually changed
+      const changes = detectChanges();
+
+      if (changes.services.length === 0 && changes.serviceItems.length === 0) {
+        console.log("No changes detected, skipping save");
+        setHasUnsavedChanges(false);
+        setLastSaved(new Date());
+        return;
+      }
+
+      console.log("🔄 Detected changes:", changes);
+
+      // Use optimized batch update endpoint
+      const response = await fetch("/api/admin/services/batch-update", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          data: pricingItems,
-        }),
+        body: JSON.stringify(changes),
       });
 
       const result = await response.json();
@@ -138,28 +189,39 @@ export default function AdminPackagesPage() {
       if (result.success) {
         setLastSaved(new Date());
         setHasUnsavedChanges(false);
-        console.log("✅ Save successful - data saved to PostgreSQL database");
+        // Update original data to current state
+        setOriginalPricingItems([...pricingItems]);
+        console.log("✅ Save successful - optimized batch update completed");
 
-        // Log success message but don't show dialog
-        if (
-          result.details &&
-          (result.details.updated > 0 || result.details.created > 0)
-        ) {
+        if (result.details && (result.details.updatedServices > 0 || result.details.updatedServiceItems > 0)) {
           console.log(
-            `✅ Save successful! Updated: ${result.details.updated}, Created: ${result.details.created}`
+            `✅ Save successful! Services: ${result.details.updatedServices}, Items: ${result.details.updatedServiceItems}`
           );
         }
       } else {
-        console.error("❌ Save failed:", result.error);
-        showNotification(
-          "Save Failed",
-          `Failed to save changes: ${result.error}`,
-          "error"
-        );
+        console.error("❌ Batch save failed:", result.error);
+        console.log("🔄 Falling back to bulk save method...");
 
-        // Show detailed errors if available
-        if (result.errors && result.errors.length > 0) {
-          console.error("Detailed errors:", result.errors);
+        // Fallback to the old bulk save method
+        const fallbackResponse = await fetch("/api/admin/pricing", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            data: pricingItems,
+          }),
+        });
+
+        const fallbackResult = await fallbackResponse.json();
+
+        if (fallbackResult.success) {
+          setLastSaved(new Date());
+          setHasUnsavedChanges(false);
+          setOriginalPricingItems([...pricingItems]);
+          console.log("✅ Fallback save successful");
+        } else {
+          throw new Error(fallbackResult.error || "Both batch and bulk save failed");
         }
       }
     } catch (error) {
@@ -173,7 +235,7 @@ export default function AdminPackagesPage() {
       setIsSaving(false);
       console.log("Save process completed");
     }
-  }, [hasUnsavedChanges, isSaving, pricingItems]);
+  }, [hasUnsavedChanges, isSaving, pricingItems, detectChanges]);
 
   // Export services data to JSON file (using server-side API)
   const handleExportServices = useCallback(async () => {
@@ -260,6 +322,7 @@ export default function AdminPackagesPage() {
 
           if (loadResult.success && loadResult.data) {
             setPricingItems(loadResult.data);
+            setOriginalPricingItems([...loadResult.data]);
           }
 
           showNotification("Import Successful", result.message, "success");
@@ -483,38 +546,34 @@ export default function AdminPackagesPage() {
       setConfirmationDialog({ open: false, item: null, newStatus: false });
 
       // Update the item locally first for immediate UI feedback
-      const updatedItems = pricingItems.map(pricingItem => 
-        pricingItem.id === item.id 
+      const updatedItems = pricingItems.map(pricingItem =>
+        pricingItem.id === item.id
           ? { ...pricingItem, comingSoon: newStatus }
           : pricingItem
       );
       setPricingItems(updatedItems);
 
-      // Save to database immediately
-      const response = await fetch('/api/admin/pricing', {
-        method: 'POST',
+      // Use the optimized single service update endpoint
+      const response = await fetch(`/api/services/${item.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          data: updatedItems
+          comingSoon: newStatus
         }),
       });
 
       const result = await response.json();
-      
-      if (result.success) {
+
+      if (result.service) {
         showNotification(
-          "Coming Soon Status Updated", 
+          "Coming Soon Status Updated",
           `${item.name} is now ${newStatus ? 'marked as coming soon' : 'available'}`,
           "success"
         );
-        // Reload from database to ensure consistency
-        const loadResponse = await fetch("/api/admin/pricing");
-        const loadResult = await loadResponse.json();
-        if (loadResult.success && loadResult.data) {
-          setPricingItems(loadResult.data);
-        }
+        // No need to reload all data - the local update is sufficient
+        // and the single service update is much faster
       } else {
         throw new Error(result.error || "Failed to save");
       }
@@ -564,6 +623,7 @@ export default function AdminPackagesPage() {
         const loadResult = await loadResponse.json();
         if (loadResult.success) {
           setPricingItems(loadResult.data);
+          setOriginalPricingItems([...loadResult.data]);
 
           // Show success notification after a small delay
           setTimeout(() => {
@@ -678,6 +738,7 @@ export default function AdminPackagesPage() {
             const loadResult = await loadResponse.json();
             if (loadResult.success) {
               setPricingItems(loadResult.data);
+              setOriginalPricingItems([...loadResult.data]);
             }
           } else {
             // For features/addons, add to local state (would be service items in full implementation)

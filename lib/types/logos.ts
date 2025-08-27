@@ -3,6 +3,7 @@ export interface Logo {
   name: string;
   src: string;
   alt: string;
+  url?: string;
   width?: number;
   height?: number;
   isActive: boolean;
@@ -14,6 +15,7 @@ export interface Logo {
 export interface CreateLogoRequest {
   name: string;
   alt: string;
+  url?: string;
   width?: number;
   height?: number;
   isActive?: boolean;
@@ -25,6 +27,7 @@ export interface UpdateLogoRequest {
   id: string;
   name?: string;
   alt?: string;
+  url?: string;
   width?: number;
   height?: number;
   isActive?: boolean;

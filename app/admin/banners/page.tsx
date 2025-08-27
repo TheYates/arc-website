@@ -60,6 +60,7 @@ export default function BannersManagementPage() {
   const [createForm, setCreateForm] = useState<CreateLogoRequest>({
     name: "",
     alt: "",
+    url: "",
     width: 120,
     height: 60,
     isActive: true,
@@ -70,6 +71,7 @@ export default function BannersManagementPage() {
     id: "",
     name: "",
     alt: "",
+    url: "",
     width: 120,
     height: 60,
     isActive: true,
@@ -98,6 +100,7 @@ export default function BannersManagementPage() {
         setCreateForm({
           name: "",
           alt: "",
+          url: "",
           width: 120,
           height: 60,
           isActive: true,
@@ -196,6 +199,7 @@ export default function BannersManagementPage() {
       id: logo.id!,
       name: logo.name,
       alt: logo.alt,
+      url: logo.url || "",
       width: logo.width,
       height: logo.height,
       isActive: logo.isActive,
@@ -288,6 +292,17 @@ export default function BannersManagementPage() {
                     setCreateForm({ ...createForm, alt: e.target.value })
                   }
                   placeholder="Advert description for accessibility"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="create-url">URL (Optional)</Label>
+                <Input
+                  id="create-url"
+                  value={createForm.url}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, url: e.target.value })
+                  }
+                  placeholder="https://example.com"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -428,6 +443,18 @@ export default function BannersManagementPage() {
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">{logo.alt}</p>
+                {logo.url && (
+                  <p className="text-sm text-blue-600 hover:text-blue-800 truncate">
+                    <a
+                      href={logo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      {logo.url}
+                    </a>
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   Size: {logo.width}x{logo.height} | Order: {logo.sortOrder}
                 </p>
@@ -486,6 +513,17 @@ export default function BannersManagementPage() {
                   setEditForm({ ...editForm, alt: e.target.value })
                 }
                 placeholder="Advert description for accessibility"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-url">URL (Optional)</Label>
+              <Input
+                id="edit-url"
+                value={editForm.url}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, url: e.target.value })
+                }
+                placeholder="https://example.com"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">

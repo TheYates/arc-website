@@ -8,6 +8,7 @@ let logos: Logo[] = [
     name: "UTB",
     src: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgMTIwIDYwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMGQ5NDg4Ii8+Cjx0ZXh0IHg9IjYwIiB5PSIzNSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VVRCPC90ZXh0Pgo8L3N2Zz4K",
     alt: "UTB Logo",
+    url: "https://utbghana.com",
     width: 120,
     height: 60,
     isActive: true,
@@ -20,6 +21,7 @@ let logos: Logo[] = [
     name: "NOVA",
     src: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgMTIwIDYwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMGQ5NDg4Ii8+Cjx0ZXh0IHg9IjYwIiB5PSIzNSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Tk9WQTwvdGV4dD4KPHN2Zz4K",
     alt: "NOVA Logo",
+    url: "https://novaghana.com",
     width: 120,
     height: 60,
     isActive: true,
@@ -32,6 +34,7 @@ let logos: Logo[] = [
     name: "Pastosa",
     src: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgMTIwIDYwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMGQ5NDg4Ci8+Cjx0ZXh0IHg9IjYwIiB5PSIzNSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UEFTVD9TQTwvdGV4dD4KPHN2Zz4K",
     alt: "Pastosa Logo",
+    url: "https://pastosa.com",
     width: 120,
     height: 60,
     isActive: true,
@@ -46,20 +49,20 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get("active") === "true";
-    
+
     let filteredLogos = logos;
     if (activeOnly) {
-      filteredLogos = logos.filter(logo => logo.isActive);
+      filteredLogos = logos.filter((logo) => logo.isActive);
     }
-    
+
     // Sort by sortOrder
     filteredLogos.sort((a, b) => a.sortOrder - b.sortOrder);
-    
+
     const response: LogoResponse = {
       success: true,
       data: filteredLogos,
     };
-    
+
     return NextResponse.json(response);
   } catch (error) {
     const response: LogoResponse = {
@@ -74,8 +77,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, alt, width = 120, height = 60, isActive = true, sortOrder } = body;
-    
+    const {
+      name,
+      alt,
+      url,
+      width = 120,
+      height = 60,
+      isActive = true,
+      sortOrder,
+    } = body;
+
     if (!name || !alt) {
       const response: LogoResponse = {
         success: false,
@@ -83,12 +94,13 @@ export async function POST(request: NextRequest) {
       };
       return NextResponse.json(response, { status: 400 });
     }
-    
+
     const newLogo: Logo = {
       id: Date.now().toString(),
       name,
       src: body.src || "", // Will be updated after file upload
       alt,
+      url,
       width,
       height,
       isActive,
@@ -96,15 +108,15 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    
+
     logos.push(newLogo);
-    
+
     const response: LogoResponse = {
       success: true,
       data: newLogo,
       message: "Logo created successfully",
     };
-    
+
     return NextResponse.json(response);
   } catch (error) {
     const response: LogoResponse = {
@@ -119,8 +131,9 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, name, alt, width, height, isActive, sortOrder, src } = body;
-    
+    const { id, name, alt, url, width, height, isActive, sortOrder, src } =
+      body;
+
     if (!id) {
       const response: LogoResponse = {
         success: false,
@@ -128,8 +141,8 @@ export async function PUT(request: NextRequest) {
       };
       return NextResponse.json(response, { status: 400 });
     }
-    
-    const logoIndex = logos.findIndex(logo => logo.id === id);
+
+    const logoIndex = logos.findIndex((logo) => logo.id === id);
     if (logoIndex === -1) {
       const response: LogoResponse = {
         success: false,
@@ -137,12 +150,13 @@ export async function PUT(request: NextRequest) {
       };
       return NextResponse.json(response, { status: 404 });
     }
-    
+
     // Update logo
     const updatedLogo = {
       ...logos[logoIndex],
       ...(name && { name }),
       ...(alt && { alt }),
+      ...(url !== undefined && { url }),
       ...(width && { width }),
       ...(height && { height }),
       ...(isActive !== undefined && { isActive }),
@@ -150,15 +164,15 @@ export async function PUT(request: NextRequest) {
       ...(src && { src }),
       updatedAt: new Date().toISOString(),
     };
-    
+
     logos[logoIndex] = updatedLogo;
-    
+
     const response: LogoResponse = {
       success: true,
       data: updatedLogo,
       message: "Logo updated successfully",
     };
-    
+
     return NextResponse.json(response);
   } catch (error) {
     const response: LogoResponse = {
@@ -174,7 +188,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    
+
     if (!id) {
       const response: LogoResponse = {
         success: false,
@@ -182,8 +196,8 @@ export async function DELETE(request: NextRequest) {
       };
       return NextResponse.json(response, { status: 400 });
     }
-    
-    const logoIndex = logos.findIndex(logo => logo.id === id);
+
+    const logoIndex = logos.findIndex((logo) => logo.id === id);
     if (logoIndex === -1) {
       const response: LogoResponse = {
         success: false,
@@ -191,14 +205,14 @@ export async function DELETE(request: NextRequest) {
       };
       return NextResponse.json(response, { status: 404 });
     }
-    
+
     logos.splice(logoIndex, 1);
-    
+
     const response: LogoResponse = {
       success: true,
       message: "Logo deleted successfully",
     };
-    
+
     return NextResponse.json(response);
   } catch (error) {
     const response: LogoResponse = {

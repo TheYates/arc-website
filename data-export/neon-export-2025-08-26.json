@@ -1,0 +1,21 @@
+{
+  "users": [],
+  "patients": [],
+  "applications": [],
+  "services": [],
+  "serviceItems": [],
+  "medications": [],
+  "prescriptions": [],
+  "medicationAdministrations": [],
+  "careNotes": [],
+  "vitalSigns": [],
+  "caregiverAssignments": [],
+  "reviewerAssignments": [],
+  "serviceRequests": [],
+  "caregiverSchedules": [],
+  "medicalReviews": [],
+  "jobPositions": [],
+  "careerApplications": [],
+  "invoices": [],
+  "adminSettings": []
+}

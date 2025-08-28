@@ -117,10 +117,6 @@ export async function POST(request: NextRequest) {
       title,
       description,
       scheduledDate,
-      estimatedDuration,
-      priority = "MEDIUM",
-      isRecurring = false,
-      recurringPattern,
       notes,
     } = body;
 
@@ -187,10 +183,6 @@ export async function POST(request: NextRequest) {
         title,
         description,
         scheduledDate: new Date(scheduledDate),
-        estimatedDuration,
-        priority,
-        isRecurring,
-        recurringPattern,
         notes,
         requiresApproval,
         status: requiresApproval ? "SCHEDULED" : "SCHEDULED", // Always scheduled for now
@@ -235,7 +227,6 @@ export async function POST(request: NextRequest) {
           actionUrl: `/patient/schedules/${schedule.id}`,
           actionLabel: "View Schedule",
           scheduleId: schedule.id,
-          priority,
         },
       });
     }
@@ -256,7 +247,6 @@ export async function POST(request: NextRequest) {
             actionUrl: `/reviewer/schedules/${schedule.id}`,
             actionLabel: "Review Schedule",
             scheduleId: schedule.id,
-            priority,
           },
         });
       }

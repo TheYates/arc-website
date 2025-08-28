@@ -172,7 +172,7 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
     try {
       // Fetch patient data first (needed for header) - this shows immediately
       const patientStart = performance.now();
-      const patientData = await getPatientByIdClient(resolvedParams.id);
+      const patientData = await getPatientByIdClient(resolvedParams.id, user);
       const patientEnd = performance.now();
       console.log(
         `👤 Patient data fetched in ${(patientEnd - patientStart).toFixed(2)}ms`
@@ -212,8 +212,8 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
           caregiverNotesData,
           reviewerNotesData,
         ] = await Promise.all([
-          getMedicationsClient(patientId),
-          getMedicationAdministrationsClient(patientId),
+          getMedicationsClient(patientId, user),
+          getMedicationAdministrationsClient(patientId, user),
           Promise.resolve(getVitalSigns(patientId)), // Wrap sync function
           getMedicalReviews(patientId),
           getCareNotes(patientId, "caregiver"),

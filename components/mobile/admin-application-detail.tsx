@@ -36,7 +36,7 @@ export function AdminApplicationDetailMobile({ id }: { id: string }) {
     (async () => {
       setLoading(true);
       try {
-        const data = await getApplicationById(id);
+        const data = await getApplicationById(id, user);
         setApp(data || null);
         if (data?.adminNotes) setAdminNotes(data.adminNotes);
       } finally {
@@ -62,7 +62,8 @@ export function AdminApplicationDetailMobile({ id }: { id: string }) {
         app.id,
         status,
         adminNotes,
-        user.email
+        user.email,
+        user
       );
       setApp(updated);
       if (status === "approved") {

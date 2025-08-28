@@ -87,7 +87,7 @@ export default function ApplicationDetailPage({
     const fetchApplication = async () => {
       setIsLoading(true);
       try {
-        const data = await getApplicationById(id);
+        const data = await getApplicationById(id, user);
         console.log("Application data:", data); // Debug log
         setApplication(data);
         if (data?.adminNotes) {
@@ -117,7 +117,8 @@ export default function ApplicationDetailPage({
         application.id,
         status,
         adminNotes,
-        user.email
+        user.email,
+        user
       );
 
       if (updatedApplication) {

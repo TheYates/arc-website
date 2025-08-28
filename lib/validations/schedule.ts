@@ -38,14 +38,7 @@ export const createScheduleSchema = z.object({
   notes: z
     .string()
     .max(500, "Notes must be 500 characters or less")
-    .optional(),
-    
-  duration: z
-    .number()
-    .min(15, "Duration must be at least 15 minutes")
-    .max(480, "Duration cannot exceed 8 hours")
     .optional()
-    .default(60)
 })
 
 export const updateScheduleSchema = createScheduleSchema.partial()

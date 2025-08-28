@@ -129,49 +129,19 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
       return;
     }
 
-    const fetchPatientData = async () => {
+    const fetchAllData = async () => {
       const startTime = performance.now();
       console.log(
-        "🚀 Starting caregiver patient data fetch for ID:",
+        "🚀 Starting optimized parallel data fetch for ID:",
         resolvedParams.id
       );
 
       try {
-        // Fetch patient data first (needed for header) - this shows immediately
-        const patientStart = performance.now();
-        const patientData = await getPatientByIdClient(resolvedParams.id);
-        const patientEnd = performance.now();
-        console.log(
-          `👤 Patient data fetched in ${(patientEnd - patientStart).toFixed(
-            2
-          )}ms`
-        );
-
-        setPatient(patientData);
-        setIsLoading(false); // Show patient info immediately
-
-        if (patientData) {
-          // Fetch medical data in background
-          fetchMedicalData(resolvedParams.id, startTime);
-        }
-      } catch (error) {
-        console.error("Error fetching patient:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load patient data",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-      }
-    };
-
-    const fetchMedicalData = async (patientId: string, startTime: number) => {
-      try {
-        // Fetch all medical data in parallel for better performance
+        // Fetch patient and medical data in parallel for maximum performance
         const parallelStart = performance.now();
-        console.log("📊 Starting parallel medical data fetch...");
-
+        
         const [
+          patientData,
           medicationsData,
           administrationsData,
           vitalsData,
@@ -179,22 +149,24 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
           caregiverNotesData,
           reviewerNotesData,
         ] = await Promise.all([
-          getMedicationsClient(patientId),
-          getMedicationAdministrationsClient(patientId),
-          Promise.resolve(getVitalSigns(patientId)), // Wrap sync function
-          getMedicalReviews(patientId),
-          getCareNotes(patientId, "caregiver"),
-          getCareNotes(patientId, "reviewer"),
+          getPatientByIdClient(resolvedParams.id, user),
+          getMedicationsClient(resolvedParams.id, user),
+          getMedicationAdministrationsClient(resolvedParams.id, user),
+          Promise.resolve(getVitalSigns(resolvedParams.id)),
+          getMedicalReviews(resolvedParams.id),
+          getCareNotes(resolvedParams.id, "caregiver"),
+          getCareNotes(resolvedParams.id, "reviewer"),
         ]);
 
         const parallelEnd = performance.now();
         console.log(
-          `📊 All parallel medical data fetched in ${(
+          `📊 All data fetched in parallel: ${(
             parallelEnd - parallelStart
           ).toFixed(2)}ms`
         );
 
         // Set all data at once to minimize re-renders
+        setPatient(patientData);
         setMedications(medicationsData);
         setAdministrations(administrationsData);
         setVitals(vitalsData);
@@ -202,25 +174,29 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
         setCaregiverNotes(caregiverNotesData);
         setReviewerNotes(reviewerNotesData);
 
+        // Both loading states complete together
+        setIsLoading(false);
+        setIsMedicalDataLoading(false);
+
         const totalEnd = performance.now();
         console.log(
-          `✅ Total caregiver page load time: ${(totalEnd - startTime).toFixed(
+          `✅ Total optimized page load time: ${(totalEnd - startTime).toFixed(
             2
           )}ms`
         );
       } catch (error) {
-        console.error("Error fetching medical data:", error);
+        console.error("Error fetching data:", error);
         toast({
-          title: "Warning",
-          description: "Some medical data failed to load",
+          title: "Error",
+          description: "Failed to load patient data",
           variant: "destructive",
         });
-      } finally {
+        setIsLoading(false);
         setIsMedicalDataLoading(false);
       }
     };
 
-    fetchPatientData();
+    fetchAllData();
   }, [resolvedParams.id, user, router, toast]);
 
   // Memoized computed values for better performance
@@ -359,7 +335,8 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
 
       // Refresh administrations data
       const updatedAdministrations = await getMedicationAdministrationsClient(
-        patient.id
+        patient.id,
+        user
       );
       setAdministrations(updatedAdministrations);
 
@@ -387,33 +364,14 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
     }
   };
 
-  // Show loading while auth is loading or data is loading
-  if (authLoading || isLoading) {
+  // Show loading only while auth is loading
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-96 w-full" />
         </div>
-      </div>
-    );
-  }
-
-  if (!patient) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-96">
-          <CardContent className="p-6 text-center">
-            <h2 className="text-xl font-semibold mb-2">Patient Not Found</h2>
-            <p className="text-muted-foreground mb-4">
-              The patient you're looking for doesn't exist or you don't have
-              access to view them.
-            </p>
-            <Button onClick={() => router.push("/caregiver/patients")}>
-              Back to My Patients
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -442,62 +400,91 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
           </Button>
         </div>
 
-        {/* Patient Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-16 w-16">
-              <AvatarFallback className="bg-purple-100 text-purple-600 text-xl">
-                {patient.firstName?.charAt(0)}
-                {patient.lastName?.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-3xl font-bold">
-                {patient.firstName} {patient.lastName}
-              </h1>
-              <div className="flex items-center space-x-4 mt-2">
-                <Badge variant="outline" className="capitalize">
-                  {patient.careLevel || "Standard"} Care
-                </Badge>
-                <Badge className="bg-purple-100 text-purple-800 capitalize">
-                  {patient.status || "Active"}
-                </Badge>
+        {/* Show loading skeleton for patient header while data is loading */}
+        {isLoading ? (
+          <>
+            <div className="flex items-center space-x-4 mb-8">
+              <Skeleton className="h-16 w-16 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-32" />
               </div>
             </div>
+            <Skeleton className="h-96 w-full" />
+          </>
+        ) : !patient ? (
+          <div className="flex items-center justify-center py-32">
+            <Card className="w-96">
+              <CardContent className="p-6 text-center">
+                <h2 className="text-xl font-semibold mb-2">Patient Not Found</h2>
+                <p className="text-muted-foreground mb-4">
+                  The patient you're looking for doesn't exist or you don't have
+                  access to view them.
+                </p>
+                <Button onClick={() => router.push("/caregiver/patients")}>
+                  Back to My Patients
+                </Button>
+              </CardContent>
+            </Card>
           </div>
+        ) : (
+          <>
+            {/* Patient Header */}
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback className="bg-purple-100 text-purple-600 text-xl">
+                    {patient.firstName?.charAt(0)}
+                    {patient.lastName?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h1 className="text-3xl font-bold">
+                    {patient.firstName} {patient.lastName}
+                  </h1>
+                  <div className="flex items-center space-x-4 mt-2">
+                    <Badge variant="outline" className="capitalize">
+                      {patient.careLevel || "Standard"} Care
+                    </Badge>
+                    <Badge className="bg-purple-100 text-purple-800 capitalize">
+                      {patient.status || "Active"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
 
-          {/* Quick Assessment Info */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div className=" p-3 rounded-lg">
-              <p className="text-lg font-bold">
-                {patient.dateOfBirth
-                  ? Math.floor(
-                      (new Date().getTime() -
-                        new Date(patient.dateOfBirth).getTime()) /
-                        (1000 * 60 * 60 * 24 * 365.25)
-                    )
-                  : "N/A"}
-              </p>
-              <p className="text-xs text-muted-foreground">Age (Years)</p>
+              {/* Quick Assessment Info */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div className=" p-3 rounded-lg">
+                  <p className="text-lg font-bold">
+                    {patient.dateOfBirth
+                      ? Math.floor(
+                          (new Date().getTime() -
+                            new Date(patient.dateOfBirth).getTime()) /
+                            (1000 * 60 * 60 * 24 * 365.25)
+                        )
+                      : "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Age (Years)</p>
+                </div>
+                <div className=" p-3 rounded-lg">
+                  <p className="text-lg font-bold">{patient.bloodType || "N/A"}</p>
+                  <p className="text-xs text-muted-foreground">Blood Type</p>
+                </div>
+                <div className=" p-3 rounded-lg">
+                  <p className="text-lg font-bold">{patient.gender || "N/A"}</p>
+                  <p className="text-xs text-muted-foreground">Gender</p>
+                </div>
+                <div className=" p-3 rounded-lg">
+                  <p className="text-lg font-bold">
+                    {patient.heightCm && patient.weightKg
+                      ? `${patient.heightCm}cm / ${patient.weightKg}kg`
+                      : "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Height / Weight</p>
+                </div>
+              </div>
             </div>
-            <div className=" p-3 rounded-lg">
-              <p className="text-lg font-bold">{patient.bloodType || "N/A"}</p>
-              <p className="text-xs text-muted-foreground">Blood Type</p>
-            </div>
-            <div className=" p-3 rounded-lg">
-              <p className="text-lg font-bold">{patient.gender || "N/A"}</p>
-              <p className="text-xs text-muted-foreground">Gender</p>
-            </div>
-            <div className=" p-3 rounded-lg">
-              <p className="text-lg font-bold">
-                {patient.heightCm && patient.weightKg
-                  ? `${patient.heightCm}cm / ${patient.weightKg}kg`
-                  : "N/A"}
-              </p>
-              <p className="text-xs text-muted-foreground">Height / Weight</p>
-            </div>
-          </div>
-        </div>
 
         {/* Content Tabs */}
         <Tabs
@@ -1199,6 +1186,8 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </>
+        )}
       </div>
     </div>
   );
@@ -1282,6 +1271,7 @@ function QuickVitalsEntry({
       });
       onSave();
     } catch (error) {
+      console.error("Error saving vitals:", error);
       toast({
         title: "Error",
         description: "Failed to record vital signs. Please try again.",

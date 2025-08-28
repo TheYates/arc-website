@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,6 +38,18 @@ interface AdminCareersMobileProps {
   subtitle?: string;
 }
 
+// Enhanced cache with TTL (30 seconds) - shared with main page
+let jobsCacheMobile: { data: JobPosition[]; timestamp: number } | null = null;
+let categoriesCacheMobile: { data: string[]; timestamp: number } | null = null;
+let applicationsCacheMobile: { data: CareerApplication[]; timestamp: number } | null = null;
+const CACHE_TTL = 30 * 1000; // 30 seconds
+
+// Helper function to check if cache is valid
+const isCacheValid = (cache: { timestamp: number } | null): boolean => {
+  if (!cache) return false;
+  return Date.now() - cache.timestamp < CACHE_TTL;
+};
+
 export function AdminCareersMobile({
   onOpenCreate,
   onOpenCategories,
@@ -58,20 +70,62 @@ export function AdminCareersMobile({
   const [appQuery, setAppQuery] = useState("");
   const [appStatus, setAppStatus] = useState<string>("all");
 
+  // Debounced search for better performance
+  const [debouncedAppQuery, setDebouncedAppQuery] = useState("");
+  
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedAppQuery(appQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [appQuery]);
+
   useEffect(() => {
     if (!user) return; // Wait for user to be available
 
     (async () => {
       setLoading(true);
       try {
+        console.log("📱 Mobile: Starting optimized careers data fetch");
+        const startTime = performance.now();
+        
+        // Use cached data when available
         const [jobsData, categoriesData, applicationsData] = await Promise.all([
-          getJobPositions(user),
-          getJobCategories(user),
-          getCareerApplications(user),
+          (async () => {
+            if (isCacheValid(jobsCacheMobile)) {
+              console.log("📱 Mobile: Using cached jobs data");
+              return jobsCacheMobile!.data;
+            }
+            const data = await getJobPositions(user);
+            jobsCacheMobile = { data, timestamp: Date.now() };
+            return data;
+          })(),
+          (async () => {
+            if (isCacheValid(categoriesCacheMobile)) {
+              console.log("📱 Mobile: Using cached categories data");
+              return categoriesCacheMobile!.data;
+            }
+            const data = await getJobCategories(user);
+            categoriesCacheMobile = { data, timestamp: Date.now() };
+            return data;
+          })(),
+          (async () => {
+            if (isCacheValid(applicationsCacheMobile)) {
+              console.log("📱 Mobile: Using cached applications data");
+              return applicationsCacheMobile!.data;
+            }
+            const data = await getCareerApplications(user);
+            applicationsCacheMobile = { data, timestamp: Date.now() };
+            return data;
+          })()
         ]);
+        
         setJobs(jobsData || []);
         setCategories(categoriesData || []);
         setApplications(applicationsData || []);
+        
+        const endTime = performance.now();
+        console.log(`📱 Mobile careers data loaded in ${(endTime - startTime).toFixed(2)}ms`);
       } finally {
         setLoading(false);
       }
@@ -85,7 +139,7 @@ export function AdminCareersMobile({
   }, [jobs, jobCategory]);
 
   const appList = useMemo(() => {
-    const term = appQuery.trim().toLowerCase();
+    const term = debouncedAppQuery.trim().toLowerCase();
     return applications.filter((a) => {
       const statusOk = appStatus === "all" || a.status === appStatus;
       const textOk =
@@ -95,7 +149,7 @@ export function AdminCareersMobile({
           .some((v) => v!.toLowerCase().includes(term));
       return statusOk && textOk;
     });
-  }, [applications, appQuery, appStatus]);
+  }, [applications, debouncedAppQuery, appStatus]);
 
   const statusBadge = (s: string) => {
     const map: Record<string, string> = {

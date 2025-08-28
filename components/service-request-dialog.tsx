@@ -101,6 +101,11 @@ export function ServiceRequestDialog({
       return;
     }
 
+    if (formData.serviceTypeId === "other" && !formData.description.trim()) {
+      toast.error("Please describe the service you need");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -174,27 +179,17 @@ export function ServiceRequestDialog({
               onValueChange={handleServiceTypeChange}
               disabled={isLoading}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-auto min-h-[40px]">
                 <SelectValue placeholder="Select a service type" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-w-md">
                 {serviceTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
-                    <div>
-                      <div className="font-medium">{type.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {type.description}
-                      </div>
-                    </div>
+                    {type.name}
                   </SelectItem>
                 ))}
                 <SelectItem value="other">
-                  <div>
-                    <div className="font-medium">Other</div>
-                    <div className="text-sm text-muted-foreground">
-                      Custom service request
-                    </div>
-                  </div>
+                  Other
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -202,7 +197,9 @@ export function ServiceRequestDialog({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Description (Optional)</Label>
+            <Label htmlFor="description">
+              Description {formData.serviceTypeId === "other" ? "*" : "(Optional)"}
+            </Label>
             <Textarea
               id="description"
               value={formData.description}
@@ -212,32 +209,12 @@ export function ServiceRequestDialog({
                   description: e.target.value,
                 }))
               }
-              placeholder="Describe what you need help with..."
+              placeholder={formData.serviceTypeId === "other" 
+                ? "Please describe the service you need..."
+                : "Describe what you need help with..."
+              }
               rows={3}
             />
-          </div>
-
-          {/* Priority */}
-          <div className="space-y-2">
-            <Label htmlFor="priority">Priority</Label>
-            <Select
-              value={formData.priority}
-              onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, priority: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="LOW">Low - Can wait a few days</SelectItem>
-                <SelectItem value="MEDIUM">Medium - Within 24 hours</SelectItem>
-                <SelectItem value="HIGH">High - Same day preferred</SelectItem>
-                <SelectItem value="CRITICAL">
-                  Critical - Urgent attention needed
-                </SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Submit Button */}

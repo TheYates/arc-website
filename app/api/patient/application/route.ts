@@ -320,3 +320,121 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// POST /api/patient/application - Create new application (public endpoint)
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      address,
+      serviceId,
+      serviceName,
+      startDate,
+      duration,
+      careNeeds,
+      preferredContact,
+      selectedOptionalFeatures,
+    } = body;
+
+    // Validate required fields
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !phone ||
+      !serviceId ||
+      !serviceName
+    ) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // Create application
+    const newApplication = await prisma.application.create({
+      data: {
+        firstName,
+        lastName,
+        email,
+        phone,
+        address: address || null,
+        serviceId,
+        serviceName,
+        startDate: startDate || null,
+        duration: duration || null,
+        careNeeds: careNeeds || null,
+        preferredContact: preferredContact || null,
+        status: "PENDING",
+        submittedAt: new Date(),
+      },
+    });
+
+    // Create selected optional features if any
+    if (
+      selectedOptionalFeatures &&
+      Array.isArray(selectedOptionalFeatures) &&
+      selectedOptionalFeatures.length > 0
+    ) {
+      // First, get the feature details from the pricing items
+      const pricingItems = await prisma.serviceItem.findMany({
+        where: {
+          id: {
+            in: selectedOptionalFeatures,
+          },
+        },
+      });
+
+      // Create application features
+      const applicationFeatures = pricingItems.map((item) => ({
+        applicationId: newApplication.id,
+        featureId: item.id,
+        featureName: item.name,
+        featureType: "feature", // Default to 'feature' since ServiceItem doesn't have type field
+        isSelected: true,
+      }));
+
+      if (applicationFeatures.length > 0) {
+        await prisma.applicationFeature.createMany({
+          data: applicationFeatures,
+        });
+      }
+    }
+
+    // Transform the response
+    const transformedApplication = {
+      id: newApplication.id,
+      firstName: newApplication.firstName,
+      lastName: newApplication.lastName,
+      email: newApplication.email,
+      phone: newApplication.phone,
+      address: newApplication.address,
+      serviceId: newApplication.serviceId,
+      serviceName: newApplication.serviceName,
+      startDate: newApplication.startDate,
+      duration: newApplication.duration,
+      careNeeds: newApplication.careNeeds,
+      preferredContact: newApplication.preferredContact,
+      submittedAt: newApplication.submittedAt.toISOString(),
+      status: newApplication.status.toLowerCase(),
+      adminNotes: newApplication.adminNotes,
+      processedBy: newApplication.processedBy,
+      processedAt: newApplication.processedAt?.toISOString(),
+    };
+
+    return NextResponse.json(
+      { application: transformedApplication },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Failed to create application:", error);
+    return NextResponse.json(
+      { error: "Failed to create application" },
+      { status: 500 }
+    );
+  }
+}

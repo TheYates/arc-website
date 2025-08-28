@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 import { getPatientByIdClient } from "@/lib/api/client";
 import { getVitalSigns } from "@/lib/api/vitals";
 import { getMedicationsClient } from "@/lib/api/client";
@@ -19,6 +20,7 @@ import { ArrowLeft, Activity, Pill, FileText } from "lucide-react";
 
 export function ReviewerPatientMobile({ patientId }: { patientId: string }) {
   const router = useRouter();
+  const { user } = useAuth();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [vitals, setVitals] = useState<VitalSigns[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
@@ -29,9 +31,9 @@ export function ReviewerPatientMobile({ patientId }: { patientId: string }) {
     let mounted = true;
     (async () => {
       try {
-        const p = await getPatientByIdClient(patientId);
+        const p = await getPatientByIdClient(patientId, user);
         const v = getVitalSigns(patientId);
-        const m = await getMedicationsClient(patientId);
+        const m = await getMedicationsClient(patientId, user);
         const r = await getMedicalReviews(patientId);
         if (!mounted) return;
         setPatient(p);

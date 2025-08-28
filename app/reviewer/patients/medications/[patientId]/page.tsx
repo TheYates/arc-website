@@ -31,11 +31,12 @@ export default function ReviewerMedicationsPage({ params }: PageProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const patientData = await getPatientByIdClient(resolvedParams.patientId);
+        const patientData = await getPatientByIdClient(resolvedParams.patientId, user);
         if (patientData) {
           setPatient(patientData);
           const medicationsData = await getMedicationsClient(
-            resolvedParams.patientId
+            resolvedParams.patientId,
+            user
           );
           setMedications(medicationsData);
         }

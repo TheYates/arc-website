@@ -35,13 +35,8 @@ interface CaregiverSchedule {
   title: string;
   description?: string;
   scheduledDate: string;
-  estimatedDuration?: number;
   status: string;
-  priority: string;
   notes?: string;
-  completionNotes?: string;
-  outcome?: string;
-  completedDate?: string;
   createdAt: string;
   updatedAt: string;
   patient: {
@@ -130,22 +125,6 @@ export default function AdminScheduleDetailPage() {
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.SCHEDULED;
 
-    return (
-      <Badge className={config.className}>
-        {config.label}
-      </Badge>
-    );
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    const priorityConfig = {
-      LOW: { label: "Low", className: "bg-green-100 text-green-800" },
-      MEDIUM: { label: "Medium", className: "bg-yellow-100 text-yellow-800" },
-      HIGH: { label: "High", className: "bg-orange-100 text-orange-800" },
-      CRITICAL: { label: "Critical", className: "bg-red-100 text-red-800" },
-    };
-
-    const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.MEDIUM;
     return (
       <Badge className={config.className}>
         {config.label}
@@ -269,11 +248,10 @@ export default function AdminScheduleDetailPage() {
                 Schedule Details • {formatDateTime(schedule.scheduledDate)}
               </p>
             </div>
-            {/* <div className="flex gap-2">
+            <div className="flex gap-2">
               {getStatusBadge(schedule.status)}
-              {getPriorityBadge(schedule.priority)}
               {getScheduleTypeBadge(schedule.scheduleType)}
-            </div> */}
+            </div>
           </div>
         </div>
 
@@ -337,17 +315,9 @@ export default function AdminScheduleDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Scheduled Date</p>
-                  <p className="font-medium">{formatDateTime(schedule.scheduledDate)}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Duration</p>
-                  <p className="font-medium">
-                    {schedule.estimatedDuration ? `${schedule.estimatedDuration} minutes` : "Not specified"}
-                  </p>
-                </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Scheduled Date</p>
+                <p className="font-medium">{formatDateTime(schedule.scheduledDate)}</p>
               </div>
 
               <Separator />
@@ -355,11 +325,6 @@ export default function AdminScheduleDetailPage() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Status</p>
                 <div className="mt-1">{getStatusBadge(schedule.status)}</div>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Priority</p>
-                <div className="mt-1">{getPriorityBadge(schedule.priority)}</div>
               </div>
 
               <div>
@@ -378,29 +343,6 @@ export default function AdminScheduleDetailPage() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Notes</p>
                   <p className="mt-1">{schedule.notes}</p>
-                </div>
-              )}
-
-              {schedule.completedDate && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Completed Date</p>
-                  <p className="font-medium">{formatDateTime(schedule.completedDate)}</p>
-                </div>
-              )}
-
-              {schedule.completionNotes && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Completion Notes</p>
-                  <p className="mt-1 bg-muted p-3 rounded-md">{schedule.completionNotes}</p>
-                </div>
-              )}
-
-              {schedule.outcome && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Outcome</p>
-                  <p className="mt-1 bg-green-50 p-3 rounded-md border border-green-200">
-                    {schedule.outcome}
-                  </p>
                 </div>
               )}
             </CardContent>

@@ -142,22 +142,22 @@ export default function CaregiverPage() {
       {/* Desktop */}
       <main className="hidden md:block container mx-auto px-4 py-6 w-full max-w-7xl space-y-6">
         {/* Welcome Header */}
-        <Card className="bg-gradient-to-r from-teal-50 to-green-50 border-teal-200">
+        <Card className="bg-gradient-to-r from-teal-50 to-green-50 dark:from-teal-900/20 dark:to-green-900/20 border-teal-200 dark:border-teal-700">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-teal-900">
+                <h1 className="text-3xl font-bold text-teal-900 dark:text-teal-100">
                   Welcome back, {user.firstName}! 👋
                 </h1>
-                <p className="text-teal-700 mt-1 text-lg">
+                <p className="text-teal-700 dark:text-teal-300 mt-1 text-lg">
                   {formatFullDate(currentTime)} • {formatTime(currentTime)}
                 </p>
-                <p className="text-teal-600 mt-2">
+                <p className="text-teal-600 dark:text-teal-400 mt-2">
                   Ready to provide exceptional care today
                 </p>
               </div>
               <div className="flex flex-col gap-2">
-                <div className="text-right text-sm text-teal-700">
+                <div className="text-right text-sm text-teal-700 dark:text-teal-300">
                   <div>🌡️ Today: 24°C, Sunny</div>
                   <div>📍 Accra, Ghana</div>
                 </div>
@@ -168,15 +168,15 @@ export default function CaregiverPage() {
 
         {/* Profile Completion Notice */}
         {!user.profileComplete && (
-          <Card className="border-amber-200 bg-amber-50">
+          <Card className="border-amber-200 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20">
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 <div className="flex-1">
-                  <p className="font-medium text-amber-800">
+                  <p className="font-medium text-amber-800 dark:text-amber-200">
                     Complete Your Profile
                   </p>
-                  <p className="text-sm text-amber-700">
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
                     Please complete your profile to access all caregiver
                     features and receive patient assignments.
                   </p>
@@ -184,7 +184,7 @@ export default function CaregiverPage() {
                 <Button
                   size="sm"
                   onClick={() => router.push("/profile")}
-                  className="bg-amber-600 hover:bg-amber-700"
+                  className="bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
                 >
                   Complete Now
                 </Button>
@@ -449,42 +449,42 @@ export default function CaregiverPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center text-lg">
-                  <Bell className="h-5 w-5 mr-2 text-purple-600" />
+                  <Bell className="h-5 w-5 mr-2 text-teal-600 dark:text-teal-400" />
                   Recent Updates
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-700">
                     <div className="flex items-start gap-3">
-                      <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <CheckCircle className="h-5 w-5 text-teal-700 dark:text-teal-400 mt-0.5" />
                       <div className="flex-1">
-                        <p className="font-medium text-blue-900">
+                        <p className="font-medium text-teal-900 dark:text-teal-100">
                           Welcome to Alpha Rescue!
                         </p>
-                        <p className="text-sm text-blue-700 mt-1">
+                        <p className="text-sm text-teal-800 dark:text-teal-300 mt-1">
                           Complete your profile to get started with patient
                           assignments.
                         </p>
-                        <p className="text-xs text-blue-600 mt-2">
+                        <p className="text-xs text-teal-700 dark:text-teal-400 mt-2">
                           {formatDate(new Date())}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
                     <div className="flex items-start gap-3">
-                      <Activity className="h-5 w-5 text-green-600 mt-0.5" />
+                      <Activity className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
                       <div className="flex-1">
-                        <p className="font-medium text-green-900">
+                        <p className="font-medium text-green-900 dark:text-green-100">
                           Training Available
                         </p>
-                        <p className="text-sm text-green-700 mt-1">
+                        <p className="text-sm text-green-700 dark:text-green-300 mt-1">
                           New care protocols training is now available in your
                           learning portal.
                         </p>
-                        <p className="text-xs text-green-600 mt-2">
+                        <p className="text-xs text-green-600 dark:text-green-400 mt-2">
                           2 hours ago
                         </p>
                       </div>

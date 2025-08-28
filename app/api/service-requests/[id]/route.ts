@@ -193,9 +193,6 @@ export async function PATCH(
               },
               data: {
                 status: "COMPLETED",
-                completedDate: completedDate ? new Date(completedDate) : new Date(),
-                completionNotes: caregiverNotes,
-                outcome,
               },
             });
           } catch (error) {

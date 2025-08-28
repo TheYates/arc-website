@@ -281,8 +281,6 @@ export default function CaregiverServiceRequestsPage() {
           title: scheduleDialog.request.title,
           description: scheduleDialog.request.description,
           scheduledDate: scheduleDialog.selectedDate.toISOString(),
-          estimatedDuration: 60, // Default 60 minutes
-          priority: scheduleDialog.request.priority,
           notes: scheduleDialog.notes || undefined,
         });
       } catch (scheduleError) {
@@ -355,9 +353,18 @@ export default function CaregiverServiceRequestsPage() {
     const statusConfig = {
       PENDING: { label: "Pending", className: "text-amber-600 font-medium" },
       APPROVED: { label: "Approved", className: "text-blue-600 font-medium" },
-      SCHEDULED: { label: "Scheduled", className: "text-purple-600 font-medium" },
-      IN_PROGRESS: { label: "In Progress", className: "text-orange-600 font-medium" },
-      COMPLETED: { label: "Completed", className: "text-green-600 font-medium" },
+      SCHEDULED: {
+        label: "Scheduled",
+        className: "text-purple-600 font-medium",
+      },
+      IN_PROGRESS: {
+        label: "In Progress",
+        className: "text-orange-600 font-medium",
+      },
+      COMPLETED: {
+        label: "Completed",
+        className: "text-green-600 font-medium",
+      },
       CANCELLED: { label: "Cancelled", className: "text-gray-500 font-medium" },
       REJECTED: { label: "Rejected", className: "text-red-600 font-medium" },
     };
@@ -365,11 +372,7 @@ export default function CaregiverServiceRequestsPage() {
     const config =
       statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
 
-    return (
-      <span className={config.className}>
-        {config.label}
-      </span>
-    );
+    return <span className={config.className}>{config.label}</span>;
   };
 
   const getPriorityText = (priority: string) => {
@@ -387,38 +390,38 @@ export default function CaregiverServiceRequestsPage() {
     return <span className={config.className}>{config.label}</span>;
   };
 
-
-
   const getFilteredAndSortedRequests = () => {
     let filtered = serviceRequests;
 
     // Filter by status
     if (statusFilter !== "all") {
       switch (statusFilter) {
-      case "pending":
+        case "pending":
           filtered = filtered.filter(
-          (req) => req.status === "PENDING" || req.status === "APPROVED"
-        );
+            (req) => req.status === "PENDING" || req.status === "APPROVED"
+          );
           break;
-      case "scheduled":
+        case "scheduled":
           filtered = filtered.filter(
-          (req) => req.status === "SCHEDULED" || req.status === "IN_PROGRESS"
-        );
+            (req) => req.status === "SCHEDULED" || req.status === "IN_PROGRESS"
+          );
           break;
-      case "completed":
+        case "completed":
           filtered = filtered.filter((req) => req.status === "COMPLETED");
           break;
-      case "cancelled":
+        case "cancelled":
           filtered = filtered.filter(
-          (req) => req.status === "CANCELLED" || req.status === "REJECTED"
-        );
+            (req) => req.status === "CANCELLED" || req.status === "REJECTED"
+          );
           break;
       }
     }
 
     // Filter by priority
     if (priorityFilter !== "all") {
-      filtered = filtered.filter((req) => req.priority === priorityFilter.toUpperCase());
+      filtered = filtered.filter(
+        (req) => req.priority === priorityFilter.toUpperCase()
+      );
     }
 
     // Filter by search query
@@ -460,7 +463,7 @@ export default function CaregiverServiceRequestsPage() {
           aValue = a.serviceType?.name || "";
           bValue = b.serviceType?.name || "";
           break;
-      default:
+        default:
           aValue = a.requestedDate;
           bValue = b.requestedDate;
       }
@@ -528,29 +531,53 @@ export default function CaregiverServiceRequestsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="text-xs">
-                    <TableHead className="w-[180px] py-2"><Skeleton className="h-4 w-16" /></TableHead>
-                    <TableHead className="w-[120px] py-2"><Skeleton className="h-4 w-12" /></TableHead>
-                    <TableHead className="w-[90px] py-2"><Skeleton className="h-4 w-12" /></TableHead>
-                    <TableHead className="w-[80px] py-2"><Skeleton className="h-4 w-12" /></TableHead>
-                    <TableHead className="w-[140px] py-2"><Skeleton className="h-4 w-16" /></TableHead>
-                    <TableHead className="w-[140px] py-2"><Skeleton className="h-4 w-16" /></TableHead>
-                    <TableHead className="w-[100px] py-2 text-center"><Skeleton className="h-4 w-12 mx-auto" /></TableHead>
+                    <TableHead className="w-[180px] py-2">
+                      <Skeleton className="h-4 w-16" />
+                    </TableHead>
+                    <TableHead className="w-[120px] py-2">
+                      <Skeleton className="h-4 w-12" />
+                    </TableHead>
+                    <TableHead className="w-[90px] py-2">
+                      <Skeleton className="h-4 w-12" />
+                    </TableHead>
+                    <TableHead className="w-[80px] py-2">
+                      <Skeleton className="h-4 w-12" />
+                    </TableHead>
+                    <TableHead className="w-[140px] py-2">
+                      <Skeleton className="h-4 w-16" />
+                    </TableHead>
+                    <TableHead className="w-[140px] py-2">
+                      <Skeleton className="h-4 w-16" />
+                    </TableHead>
+                    <TableHead className="w-[100px] py-2 text-center">
+                      <Skeleton className="h-4 w-12 mx-auto" />
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {[...Array(5)].map((_, i) => (
                     <TableRow key={i} className="h-12">
-                      <TableCell className="py-2"><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell className="py-2"><Skeleton className="h-4 w-24" /></TableCell>
-                      <TableCell className="py-2"><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell className="py-2"><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell className="py-2">
+                        <Skeleton className="h-4 w-32" />
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <Skeleton className="h-4 w-24" />
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <Skeleton className="h-4 w-16" />
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <Skeleton className="h-4 w-12" />
+                      </TableCell>
                       <TableCell className="py-2">
                         <div className="space-y-1">
                           <Skeleton className="h-3 w-20" />
                           <Skeleton className="h-3 w-16" />
                         </div>
                       </TableCell>
-                      <TableCell className="py-2"><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell className="py-2">
+                        <Skeleton className="h-4 w-24" />
+                      </TableCell>
                       <TableCell className="py-2">
                         <div className="flex justify-center gap-1">
                           <Skeleton className="h-7 w-7" />
@@ -610,7 +637,12 @@ export default function CaregiverServiceRequestsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-orange-600">
-                {serviceRequests.filter(req => req.status === "PENDING" || req.status === "APPROVED").length}
+                {
+                  serviceRequests.filter(
+                    (req) =>
+                      req.status === "PENDING" || req.status === "APPROVED"
+                  ).length
+                }
               </div>
               <p className="text-xs text-muted-foreground">Pending</p>
             </CardContent>
@@ -618,7 +650,12 @@ export default function CaregiverServiceRequestsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-blue-600">
-                {serviceRequests.filter(req => req.status === "SCHEDULED" || req.status === "IN_PROGRESS").length}
+                {
+                  serviceRequests.filter(
+                    (req) =>
+                      req.status === "SCHEDULED" || req.status === "IN_PROGRESS"
+                  ).length
+                }
               </div>
               <p className="text-xs text-muted-foreground">Scheduled</p>
             </CardContent>
@@ -626,7 +663,10 @@ export default function CaregiverServiceRequestsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-green-600">
-                {serviceRequests.filter(req => req.status === "COMPLETED").length}
+                {
+                  serviceRequests.filter((req) => req.status === "COMPLETED")
+                    .length
+                }
               </div>
               <p className="text-xs text-muted-foreground">Completed</p>
             </CardContent>
@@ -634,7 +674,12 @@ export default function CaregiverServiceRequestsPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-gray-600">
-                {serviceRequests.filter(req => req.status === "CANCELLED" || req.status === "REJECTED").length}
+                {
+                  serviceRequests.filter(
+                    (req) =>
+                      req.status === "CANCELLED" || req.status === "REJECTED"
+                  ).length
+                }
               </div>
               <p className="text-xs text-muted-foreground">Cancelled</p>
             </CardContent>
@@ -668,7 +713,10 @@ export default function CaregiverServiceRequestsPage() {
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <Select
+                  value={priorityFilter}
+                  onValueChange={setPriorityFilter}
+                >
                   <SelectTrigger className="w-[120px]">
                     <SelectValue placeholder="Priority" />
                   </SelectTrigger>
@@ -684,7 +732,9 @@ export default function CaregiverServiceRequestsPage() {
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="requestedDate">Date Requested</SelectItem>
+                    <SelectItem value="requestedDate">
+                      Date Requested
+                    </SelectItem>
                     <SelectItem value="priority">Priority</SelectItem>
                     <SelectItem value="status">Status</SelectItem>
                     <SelectItem value="patient">Patient</SelectItem>
@@ -694,11 +744,15 @@ export default function CaregiverServiceRequestsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  onClick={() =>
+                    setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                  }
                 >
                   {sortOrder === "asc" ? "↑" : "↓"}
                 </Button>
-                {(statusFilter !== "all" || priorityFilter !== "all" || searchQuery) && (
+                {(statusFilter !== "all" ||
+                  priorityFilter !== "all" ||
+                  searchQuery) && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -718,26 +772,29 @@ export default function CaregiverServiceRequestsPage() {
 
         {/* Service Requests Table */}
         <div className="space-y-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">Service Requests</CardTitle>
-                  <div className="text-sm text-muted-foreground">
-                    Showing {filteredRequests.length} of {serviceRequests.length} requests
-                  </div>
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg">Service Requests</CardTitle>
+                <div className="text-sm text-muted-foreground">
+                  Showing {filteredRequests.length} of {serviceRequests.length}{" "}
+                  requests
                 </div>
-              </CardHeader>
-              <CardContent className="p-0">
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                    <TableRow className="text-xs">
-                      <TableHead className="w-[180px] py-2">Service</TableHead>
-                      <TableHead className="w-[120px] py-2">Patient</TableHead>
-                      <TableHead className="w-[90px] py-2">Status</TableHead>
-                      <TableHead className="w-[80px] py-2">Priority</TableHead>
-                      <TableHead className="w-[140px] py-2">Requested</TableHead>
-                      <TableHead className="w-[140px] py-2">Scheduled</TableHead>
-                      <TableHead className="w-[100px] py-2 text-center">Actions</TableHead>
+                  <TableRow className="text-xs">
+                    <TableHead className="w-[120px] py-2">Patient</TableHead>
+                    <TableHead className="w-[180px] py-2">Service</TableHead>
+                    <TableHead className="w-[90px] py-2">Status</TableHead>
+                    <TableHead className="w-[80px] py-2">Priority</TableHead>
+                    <TableHead className="w-[140px] py-2">Requested</TableHead>
+                    <TableHead className="w-[140px] py-2">Scheduled</TableHead>
+                    <TableHead className="w-[100px] py-2 text-center">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -750,111 +807,124 @@ export default function CaregiverServiceRequestsPage() {
                             No Service Requests
                           </h3>
                           <p className="text-muted-foreground">
-                              No service requests found matching your criteria.
+                            No service requests found matching your criteria.
                           </p>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredRequests.map((request) => (
-                        <TableRow
-                          key={request.id}
-                          className="hover:bg-muted/50 h-12"
-                        >
-                          <TableCell className="py-2">
-                            <div className="text-sm">
-                              <div className="font-medium truncate max-w-[200px]">
-                                {request.title}
+                      <TableRow
+                        key={request.id}
+                        className="hover:bg-muted/50 h-12"
+                      >
+                        <TableCell className="py-2">
+                          <div className="text-sm">
+                            <div className="font-medium">
+                              {request.patient.user.firstName}{" "}
+                              {request.patient.user.lastName}
                             </div>
-                              {request.serviceType && (
-                                <div className="text-sm text-blue-600 truncate">
-                                  {request.serviceType.name}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="text-sm">
+                            <div className="font-medium truncate max-w-[200px]">
+                              {request.title}
+                            </div>
+                            {request.serviceType && (
+                              <div className="text-sm text-blue-600 truncate">
+                                {request.serviceType.name}
                               </div>
                             )}
                           </div>
                         </TableCell>
-                          <TableCell className="py-2">
-                            <div className="text-sm">
+
+                        <TableCell className="py-2 text-xs">
+                          {getStatusText(request.status)}
+                        </TableCell>
+                        <TableCell className="py-2 text-xs">
+                          {getPriorityText(request.priority)}
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="text-xs">
                             <div className="font-medium">
-                                {request.patient.user.firstName} {request.patient.user.lastName}
+                              {new Date(
+                                request.requestedDate
+                              ).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </div>
+                            <div className="text-muted-foreground  relative -top-0">
+                              {new Date(
+                                request.requestedDate
+                              ).toLocaleTimeString("en-US", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}
                             </div>
                           </div>
                         </TableCell>
-                          <TableCell className="py-2 text-xs">
-                            {getStatusText(request.status)}
-                          </TableCell>
-                          <TableCell className="py-2 text-xs">
-                            {getPriorityText(request.priority)}
-                        </TableCell>
-                          <TableCell className="py-2">
-                            <div className="text-xs">
-                              <div className="font-medium">
-                                {new Date(request.requestedDate).toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })}
-                              </div>
-                              <div className="text-muted-foreground  relative -top-0">
-                                {new Date(request.requestedDate).toLocaleTimeString("en-US", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                })}
-                              </div>
+                        <TableCell className="py-2">
+                          <div className="text-xs">
+                            {request.scheduledDate ? (
+                              <>
+                                <div className="font-medium">
+                                  {new Date(
+                                    request.scheduledDate
+                                  ).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {new Date(
+                                    request.scheduledDate
+                                  ).toLocaleTimeString("en-US", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  })}
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Not scheduled
+                              </span>
+                            )}
                           </div>
                         </TableCell>
-                          <TableCell className="py-2">
-                            <div className="text-xs">
-                              {request.scheduledDate ? (
-                                <>
-                                  <div className="font-medium">
-                                    {new Date(request.scheduledDate).toLocaleDateString("en-US", {
-                                      month: "short",
-                                      day: "numeric",
-                                      year: "numeric",
-                                    })}
-                          </div>
-                                  <div className="text-muted-foreground">
-                                    {new Date(request.scheduledDate).toLocaleTimeString("en-US", {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      hour12: true,
-                                    })}
-                            </div>
-                                </>
-                              ) : (
-                                <span className="text-muted-foreground">Not scheduled</span>
-                          )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-2">
-                            <div className="flex justify-center items-center gap-1">
-                              {(request.status === "APPROVED" || request.status === "PENDING") && (
-                                <Button
-                                  variant="link"
-                                  size="lg"
+                        <TableCell className="py-2">
+                          <div className="flex justify-center items-center gap-1">
+                            {(request.status === "APPROVED" ||
+                              request.status === "PENDING") && (
+                              <Button
+                                variant="link"
+                                size="lg"
                                 onClick={() => handleScheduleRequest(request)}
                                 title="Schedule this service request"
-                                  className="h-7 w-auto p-2"
-                                >
-                                  <CalendarPlus className="h-3 w-3" />
-                                  Schedule
-                                </Button>
-                              )}
-                              {(request.status === "SCHEDULED" || request.status === "IN_PROGRESS") && (
-                                <Button
-                                  variant="link"
-                                  size="lg"
-                                  onClick={() => handleCompleteRequest(request)}
-                                  title="Mark as completed"
-                                  className="h-7 w-7 p-0 text-green-600 hover:text-green-700"
-                                >
-                                  <Check className="h-3 w-3" />
-                                  Mark Complete
+                                className="h-7 w-auto p-2"
+                              >
+                                <CalendarPlus className="h-3 w-3" />
+                                Schedule
                               </Button>
                             )}
-
+                            {(request.status === "SCHEDULED" ||
+                              request.status === "IN_PROGRESS") && (
+                              <Button
+                                variant="link"
+                                size="lg"
+                                onClick={() => handleCompleteRequest(request)}
+                                title="Mark as completed"
+                                className="h-7 w-7 p-0 text-green-600 hover:text-green-700"
+                              >
+                                <Check className="h-3 w-3" />
+                                Mark Complete
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -862,8 +932,8 @@ export default function CaregiverServiceRequestsPage() {
                   )}
                 </TableBody>
               </Table>
-              </CardContent>
-            </Card>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -900,27 +970,27 @@ export default function CaregiverServiceRequestsPage() {
             {/* Date Picker */}
             <div className="relative">
               <Label htmlFor="schedule-date">Select Date</Label>
-                  <Button
+              <Button
                 type="button"
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal mt-2",
-                      !scheduleDialog.selectedDate && "text-muted-foreground"
-                    )}
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal mt-2",
+                  !scheduleDialog.selectedDate && "text-muted-foreground"
+                )}
                 onClick={() =>
                   setScheduleDialog((prev) => ({
                     ...prev,
                     isCalendarOpen: !prev.isCalendarOpen,
                   }))
                 }
-                  >
-                    <CalendarDays className="mr-2 h-4 w-4" />
-                    {scheduleDialog.selectedDate ? (
-                      format(scheduleDialog.selectedDate, "PPP")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
+              >
+                <CalendarDays className="mr-2 h-4 w-4" />
+                {scheduleDialog.selectedDate ? (
+                  format(scheduleDialog.selectedDate, "PPP")
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
 
               {scheduleDialog.isCalendarOpen && (
                 <div
@@ -936,11 +1006,11 @@ export default function CaregiverServiceRequestsPage() {
                     selected={scheduleDialog.selectedDate}
                     onSelect={(date) => {
                       if (date) {
-                      setScheduleDialog((prev) => ({
-                        ...prev,
-                        selectedDate: date,
+                        setScheduleDialog((prev) => ({
+                          ...prev,
+                          selectedDate: date,
                           isCalendarOpen: false, // Close calendar after selection
-                      }));
+                        }));
                       }
                     }}
                     disabled={(date) => {
@@ -954,7 +1024,6 @@ export default function CaregiverServiceRequestsPage() {
                     defaultMonth={scheduleDialog.selectedDate || new Date()}
                     className="border-0 text-base "
                   />
-                  
                 </div>
               )}
             </div>
@@ -1039,7 +1108,9 @@ export default function CaregiverServiceRequestsPage() {
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="completion-notes">Completion Notes (Optional)</Label>
+              <Label htmlFor="completion-notes">
+                Completion Notes (Optional)
+              </Label>
               <Textarea
                 id="completion-notes"
                 placeholder="Add any notes about the service completion..."
@@ -1087,7 +1158,10 @@ export default function CaregiverServiceRequestsPage() {
             >
               Cancel
             </Button>
-            <Button onClick={confirmCompletion} className="bg-green-600 hover:bg-green-700">
+            <Button
+              onClick={confirmCompletion}
+              className="bg-green-600 hover:bg-green-700"
+            >
               <Check className="h-4 w-4 mr-2" />
               Mark Complete
             </Button>

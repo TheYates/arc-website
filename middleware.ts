@@ -119,7 +119,8 @@ export function middleware(request: NextRequest) {
     if (payload) {
       isAuthenticated = true
       userRole = payload.role.toLowerCase() // Convert to lowercase for consistent role checking
-      console.log(`✅ Middleware: Valid token format for user ${payload.email} (${payload.role} -> ${userRole})`)
+      // Only log on first access or role changes for cleaner logs
+      // console.log(`✅ Middleware: Valid token format for user ${payload.email} (${payload.role} -> ${userRole})`)
     } else {
       console.log('❌ Middleware: Invalid or expired token format')
     }

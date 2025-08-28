@@ -30,13 +30,13 @@ export function decodeTokenUnsafe(token: string): JWTPayloadEdge | null {
     
     // Check if token is expired
     if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-      console.log('🕒 Edge: Token is expired');
+      // console.log('🕒 Edge: Token is expired'); // Reduce console spam
       return null;
     }
 
     // Check if it has required fields
     if (!decoded.userId || !decoded.email || !decoded.role) {
-      console.log('❌ Edge: Token missing required fields');
+      // console.log('❌ Edge: Token missing required fields'); // Reduce console spam
       return null;
     }
 
@@ -49,7 +49,7 @@ export function decodeTokenUnsafe(token: string): JWTPayloadEdge | null {
       exp: decoded.exp,
     };
   } catch (error) {
-    console.log('❌ Edge: Failed to decode token:', error);
+    // console.log('❌ Edge: Failed to decode token:', error); // Reduce console spam
     return null;
   }
 }

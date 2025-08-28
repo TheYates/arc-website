@@ -36,13 +36,8 @@ interface CaregiverSchedule {
   title: string;
   description?: string;
   scheduledDate: string;
-  estimatedDuration?: number;
   status: string;
-  priority: string;
   notes?: string;
-  completionNotes?: string;
-  outcome?: string;
-  completedDate?: string;
   patient: {
     id: string;
     user: {
@@ -66,7 +61,6 @@ export default function AdminSchedulesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
   const [caregiverFilter, setCaregiverFilter] = useState("all");
   const [sortField, setSortField] = useState("scheduledDate");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -86,7 +80,7 @@ export default function AdminSchedulesPage() {
 
   useEffect(() => {
     filterAndSortSchedules();
-  }, [schedules, searchTerm, statusFilter, priorityFilter, caregiverFilter, sortField, sortDirection]);
+  }, [schedules, searchTerm, statusFilter, caregiverFilter, sortField, sortDirection]);
 
   const fetchSchedules = async () => {
     try {
@@ -130,11 +124,6 @@ export default function AdminSchedulesPage() {
       filtered = filtered.filter(schedule => schedule.status === statusFilter.toUpperCase());
     }
 
-    // Filter by priority
-    if (priorityFilter !== "all") {
-      filtered = filtered.filter(schedule => schedule.priority === priorityFilter.toUpperCase());
-    }
-
     // Filter by caregiver
     if (caregiverFilter !== "all") {
       filtered = filtered.filter(schedule => schedule.caregiver.id === caregiverFilter);
@@ -161,10 +150,6 @@ export default function AdminSchedulesPage() {
         case "status":
           aValue = a.status;
           bValue = b.status;
-          break;
-        case "priority":
-          aValue = a.priority;
-          bValue = b.priority;
           break;
         default:
           aValue = a[sortField as keyof CaregiverSchedule];
@@ -199,18 +184,6 @@ export default function AdminSchedulesPage() {
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.SCHEDULED;
-    return <span className={config.color}>{config.label}</span>;
-  };
-
-  const getPriorityText = (priority: string) => {
-    const priorityConfig = {
-      LOW: { label: "Low", color: "text-green-600" },
-      MEDIUM: { label: "Medium", color: "text-yellow-600" },
-      HIGH: { label: "High", color: "text-orange-600" },
-      CRITICAL: { label: "Critical", color: "text-red-600" },
-    };
-
-    const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.MEDIUM;
     return <span className={config.color}>{config.label}</span>;
   };
 
@@ -399,18 +372,6 @@ export default function AdminSchedulesPage() {
                   <SelectItem value="no_show">No Show</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="All Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                </SelectContent>
-              </Select>
               <Select value={caregiverFilter} onValueChange={setCaregiverFilter}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="All Caregivers" />
@@ -483,23 +444,13 @@ export default function AdminSchedulesPage() {
                       <ArrowUpDown className="ml-1 h-3 w-3" />
                     </Button>
                   </TableHead>
-                  <TableHead className="w-[80px] py-2">
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort("priority")}
-                      className="h-auto p-0 font-semibold text-xs"
-                    >
-                      Priority
-                      <ArrowUpDown className="ml-1 h-3 w-3" />
-                    </Button>
-                  </TableHead>
                   <TableHead className="w-[120px] py-2 text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSchedules.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12">
+                    <TableCell colSpan={6} className="text-center py-12">
                       <div className="flex flex-col items-center">
                         <CalendarDays className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-semibold mb-2">
@@ -552,9 +503,6 @@ export default function AdminSchedulesPage() {
                       </TableCell>
                       <TableCell className="py-2 text-xs">
                         {getStatusText(schedule.status)}
-                      </TableCell>
-                      <TableCell className="py-2 text-xs">
-                        {getPriorityText(schedule.priority)}
                       </TableCell>
                       <TableCell className="py-2">
                         <div className="flex justify-center items-center gap-1">

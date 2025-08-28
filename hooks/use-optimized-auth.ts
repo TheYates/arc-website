@@ -28,7 +28,6 @@ export function useOptimizedAuth() {
     return {
       id: memoizedUser.id,
       email: memoizedUser.email,
-      username: memoizedUser.username,
       firstName: memoizedUser.firstName,
       lastName: memoizedUser.lastName,
       fullName: `${memoizedUser.firstName} ${memoizedUser.lastName}`,

@@ -599,16 +599,8 @@ model CaregiverSchedule {
   title             String
   description       String?
   scheduledDate     DateTime                @map("scheduled_date")
-  estimatedDuration Int?                    @map("estimated_duration")
   status            CaregiverScheduleStatus @default(SCHEDULED)
-  priority          Priority                @default(MEDIUM)
-  isRecurring       Boolean                 @default(false) @map("is_recurring")
-  recurringPattern  String?                 @map("recurring_pattern")
   notes             String?
-  completionNotes   String?                 @map("completion_notes")
-  outcome           String?
-  completedDate     DateTime?               @map("completed_date")
-  cancelledReason   String?                 @map("cancelled_reason")
   requiresApproval  Boolean                 @default(false) @map("requires_approval")
   approvedById      String?                 @map("approved_by_id")
   approvedDate      DateTime?               @map("approved_date")

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth";
 import { getPatientByIdClient } from "@/lib/api/client";
 import { getMedicationsClient } from "@/lib/api/client";
 import { Patient } from "@/lib/types/patients";
@@ -17,6 +18,7 @@ export function ReviewerMedicationsMobile({
 }: {
   patientId: string;
 }) {
+  const { user } = useAuth();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,8 +27,8 @@ export function ReviewerMedicationsMobile({
     let mounted = true;
     (async () => {
       try {
-        const p = await getPatientByIdClient(patientId);
-        const meds = await getMedicationsClient(patientId);
+        const p = await getPatientByIdClient(patientId, user);
+        const meds = await getMedicationsClient(patientId, user);
         if (!mounted) return;
         setPatient(p || null);
         setMedications(meds || []);

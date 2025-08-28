@@ -18,6 +18,8 @@ export default function NotificationBell() {
   useEffect(() => {
     if (user) {
       loadNotifications();
+      // Note: Removed automatic polling to prevent duplicate calls with main notification bell
+      // This legacy component should only load on mount or manual refresh
     }
   }, [user]);
 
@@ -82,31 +84,119 @@ export default function NotificationBell() {
     }
   };
 
+  const getRoleBasedNotificationStyles = () => {
+    switch (user?.role) {
+      case "reviewer":
+        return {
+          unreadBg: "bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 dark:border-purple-400",
+          readBg: "bg-white dark:bg-gray-800",
+          hoverBg: "hover:bg-purple-100 dark:hover:bg-purple-900/30",
+          unreadIndicator: "bg-purple-600 dark:bg-purple-400",
+          typeColors: {
+            success: "text-green-600 dark:text-green-400",
+            warning: "text-orange-600 dark:text-orange-400",
+            error: "text-red-600 dark:text-red-400",
+            info: "text-purple-600 dark:text-purple-400"
+          },
+          typeBgColors: {
+            success: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700",
+            warning: "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700",
+            error: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700",
+            info: "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700"
+          },
+          titleColor: "text-gray-900 dark:text-gray-100",
+          messageColor: "text-gray-600 dark:text-gray-300",
+          timeColor: "text-gray-500 dark:text-gray-400"
+        };
+      case "caregiver":
+        return {
+          unreadBg: "bg-teal-50 dark:bg-teal-900/20 border-l-4 border-teal-500 dark:border-teal-400",
+          readBg: "bg-white dark:bg-gray-800",
+          hoverBg: "hover:bg-teal-100 dark:hover:bg-teal-900/30",
+          unreadIndicator: "bg-teal-600 dark:bg-teal-400",
+          typeColors: {
+            success: "text-green-600 dark:text-green-400",
+            warning: "text-orange-600 dark:text-orange-400",
+            error: "text-red-600 dark:text-red-400",
+            info: "text-teal-600 dark:text-teal-400"
+          },
+          typeBgColors: {
+            success: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700",
+            warning: "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700",
+            error: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700",
+            info: "bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-700"
+          },
+          titleColor: "text-gray-900 dark:text-gray-100",
+          messageColor: "text-gray-600 dark:text-gray-300",
+          timeColor: "text-gray-500 dark:text-gray-400"
+        };
+      case "patient":
+        return {
+          unreadBg: "bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 dark:border-green-400",
+          readBg: "bg-white dark:bg-gray-800",
+          hoverBg: "hover:bg-green-100 dark:hover:bg-green-900/30",
+          unreadIndicator: "bg-green-600 dark:bg-green-400",
+          typeColors: {
+            success: "text-green-600 dark:text-green-400",
+            warning: "text-orange-600 dark:text-orange-400",
+            error: "text-red-600 dark:text-red-400",
+            info: "text-green-600 dark:text-green-400"
+          },
+          typeBgColors: {
+            success: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700",
+            warning: "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700",
+            error: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700",
+            info: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
+          },
+          titleColor: "text-gray-900 dark:text-gray-100",
+          messageColor: "text-gray-600 dark:text-gray-300",
+          timeColor: "text-gray-500 dark:text-gray-400"
+        };
+      default:
+        return {
+          unreadBg: "bg-blue-50 dark:bg-blue-900/20",
+          readBg: "bg-white dark:bg-gray-800",
+          hoverBg: "hover:bg-gray-50 dark:hover:bg-gray-700",
+          unreadIndicator: "bg-blue-600 dark:bg-blue-400",
+          typeColors: {
+            success: "text-green-500 dark:text-green-400",
+            warning: "text-yellow-500 dark:text-yellow-400",
+            error: "text-red-500 dark:text-red-400",
+            info: "text-blue-500 dark:text-blue-400"
+          },
+          typeBgColors: {
+            success: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700",
+            warning: "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700",
+            error: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700",
+            info: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700"
+          },
+          titleColor: "text-gray-900 dark:text-gray-100",
+          messageColor: "text-gray-600 dark:text-gray-300",
+          timeColor: "text-gray-500 dark:text-gray-400"
+        };
+    }
+  };
+
   const getNotificationIcon = (type: Notification["type"]) => {
     const iconClasses = "h-4 w-4";
+    const styles = getRoleBasedNotificationStyles();
+    const colorClass = styles.typeColors[type] || styles.typeColors.info;
+    
     switch (type) {
       case "success":
-        return <Check className={`${iconClasses} text-green-500`} />;
+        return <Check className={`${iconClasses} ${colorClass}`} />;
       case "warning":
-        return <Bell className={`${iconClasses} text-yellow-500`} />;
+        return <Bell className={`${iconClasses} ${colorClass}`} />;
       case "error":
-        return <X className={`${iconClasses} text-red-500`} />;
+        return <X className={`${iconClasses} ${colorClass}`} />;
       default:
-        return <Bell className={`${iconClasses} text-blue-500`} />;
+        return <Bell className={`${iconClasses} ${colorClass}`} />;
     }
   };
 
   const getNotificationBgColor = (type: Notification["type"]) => {
-    switch (type) {
-      case "success":
-        return "bg-green-50 border-green-200";
-      case "warning":
-        return "bg-yellow-50 border-yellow-200";
-      case "error":
-        return "bg-red-50 border-red-200";
-      default:
-        return "bg-blue-50 border-blue-200";
-    }
+    const styles = getRoleBasedNotificationStyles();
+    return styles.typeBgColors[type] || styles.typeBgColors.info;
   };
 
   if (!user) return null;
@@ -117,7 +207,7 @@ export default function NotificationBell() {
         variant="outline"
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative bg-transparent border-slate-300 hover:bg-slate-50"
+        className="relative bg-transparent border-slate-300 dark:border-gray-600 hover:bg-slate-50 dark:hover:bg-gray-700"
       >
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
@@ -128,10 +218,10 @@ export default function NotificationBell() {
       </Button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-96  rounded-lg shadow-lg border border-slate-200 z-50">
-          <div className="p-4 border-b border-slate-200">
+        <div className="absolute top-full right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-slate-200 dark:border-gray-600 z-50">
+          <div className="p-4 border-b border-slate-200 dark:border-gray-600">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold ">Notifications</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Notifications</h3>
               <div className="flex items-center space-x-2">
                 {unreadCount > 0 && (
                   <Button
@@ -157,25 +247,27 @@ export default function NotificationBell() {
 
           <div className="max-h-96 overflow-y-auto">
             {isLoading ? (
-              <div className="p-4 text-center text-slate-500">
+              <div className="p-4 text-center text-slate-500 dark:text-gray-400">
                 <div className="space-y-2">
-                  <div className="h-3 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded animate-pulse"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded animate-pulse w-2/3"></div>
                 </div>
                 Loading notifications...
               </div>
             ) : notifications.length === 0 ? (
-              <div className="p-4 text-center text-slate-500">
-                <Bell className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+              <div className="p-4 text-center text-slate-500 dark:text-gray-400">
+                <Bell className="h-8 w-8 mx-auto mb-2 text-slate-300 dark:text-gray-500" />
                 No notifications
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100 dark:divide-gray-700">
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-slate-50 transition-colors ${
-                      !notification.read ? "bg-slate-50" : ""
+                    className={`p-4 transition-colors ${
+                      !notification.read 
+                        ? `${getRoleBasedNotificationStyles().unreadBg} ${getRoleBasedNotificationStyles().hoverBg}` 
+                        : `${getRoleBasedNotificationStyles().readBg} ${getRoleBasedNotificationStyles().hoverBg}`
                     }`}
                   >
                     <div className="flex items-start space-x-3">
@@ -186,16 +278,16 @@ export default function NotificationBell() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <p
-                              className={`text-sm font-medium text-slate-900 ${
+                              className={`text-sm font-medium ${getRoleBasedNotificationStyles().titleColor} ${
                                 !notification.read ? "font-semibold" : ""
                               }`}
                             >
                               {notification.title}
                             </p>
-                            <p className="text-sm text-slate-600 mt-1">
+                            <p className={`text-sm mt-1 ${getRoleBasedNotificationStyles().messageColor}`}>
                               {notification.message}
                             </p>
-                            <p className="text-xs text-slate-400 mt-2">
+                            <p className={`text-xs mt-2 ${getRoleBasedNotificationStyles().timeColor}`}>
                               {new Date(
                                 notification.createdAt
                               ).toLocaleString()}

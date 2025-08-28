@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -72,6 +72,72 @@ import { JobPosition, JobStatus, CareerApplication } from "@/lib/types/careers";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
+
+// Enhanced multi-level cache with TTL (30 seconds)
+let jobsCache: { data: JobPosition[]; timestamp: number } | null = null;
+let categoriesCache: { data: string[]; timestamp: number } | null = null;
+let applicationsCache: { data: CareerApplication[]; timestamp: number } | null = null;
+const CACHE_TTL = 30 * 1000; // 30 seconds
+
+// Helper function to check if cache is valid
+const isCacheValid = (cache: { timestamp: number } | null): boolean => {
+  if (!cache) return false;
+  return Date.now() - cache.timestamp < CACHE_TTL;
+};
+
+// Helper functions for cached data
+const getCachedJobs = async (user: any): Promise<JobPosition[]> => {
+  if (isCacheValid(jobsCache)) {
+    console.log("📋 Using cached jobs data");
+    return jobsCache!.data;
+  }
+
+  console.log("🔄 Fetching fresh jobs data");
+  const data = await getJobPositions(user);
+  jobsCache = { data, timestamp: Date.now() };
+  return data;
+};
+
+const getCachedCategories = async (user: any): Promise<string[]> => {
+  if (isCacheValid(categoriesCache)) {
+    console.log("📋 Using cached categories data");
+    return categoriesCache!.data;
+  }
+
+  console.log("🔄 Fetching fresh categories data");
+  const data = await getJobCategories(user);
+  categoriesCache = { data, timestamp: Date.now() };
+  return data;
+};
+
+const getCachedApplications = async (user: any): Promise<CareerApplication[]> => {
+  if (isCacheValid(applicationsCache)) {
+    console.log("📋 Using cached applications data");
+    return applicationsCache!.data;
+  }
+
+  console.log("🔄 Fetching fresh applications data");
+  const data = await getCareerApplications(user);
+  applicationsCache = { data, timestamp: Date.now() };
+  return data;
+};
+
+// Debounced search hook
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 import {
   Loader2,
   Search,
@@ -108,6 +174,9 @@ export default function JobManagementPage() {
     useState("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Use debounced search with 300ms delay for better performance
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   // State for dialogs
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -161,30 +230,52 @@ export default function JobManagementPage() {
       );
   }, []);
 
-  // Fetch data on component mount
+  // Fetch data on component mount with enhanced caching
   useEffect(() => {
     const fetchData = async () => {
+      if (!user) return; // Wait for user authentication
+      
+      const startTime = performance.now();
+      console.log("🚀 Starting optimized parallel careers data fetch");
+      
       setIsLoading(true);
       try {
+        // Check cache status for intelligent loading
+        const hasValidJobsCache = isCacheValid(jobsCache);
+        const hasValidCategoriesCache = isCacheValid(categoriesCache);
+        const hasValidApplicationsCache = isCacheValid(applicationsCache);
+        
+        console.log(`📋 Cache status - Jobs: ${hasValidJobsCache ? '✅' : '❌'}, Categories: ${hasValidCategoriesCache ? '✅' : '❌'}, Applications: ${hasValidApplicationsCache ? '✅' : '❌'}`);
+        
+        const parallelStart = performance.now();
+        
+        // Use cached data with conditional parallel fetching
         const [jobsData, categoriesData, applicationsData] = await Promise.all([
-          getJobPositions(user),
-          getJobCategories(user),
-          getCareerApplications(user),
+          getCachedJobs(user),
+          getCachedCategories(user),
+          getCachedApplications(user),
         ]);
+        
+        const parallelEnd = performance.now();
+        console.log(`📋 All careers data loaded in ${(parallelEnd - parallelStart).toFixed(2)}ms`);
+        
         setJobs(jobsData);
         setCategories(categoriesData);
         setApplications(applicationsData);
+        
+        const totalEnd = performance.now();
+        console.log(`✅ Careers page fully loaded in ${(totalEnd - startTime).toFixed(2)}ms`);
       } catch (error) {
-        console.error("Failed to fetch data:", error);
+        console.error("Failed to fetch careers data:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [user]); // Depend on user instead of empty array
 
-  const formatJobDate = (dateString: string | undefined | null) => {
+  const formatJobDate = useCallback((dateString: string | undefined | null) => {
     if (!dateString || dateString === "") {
       return "No date";
     }
@@ -199,7 +290,7 @@ export default function JobManagementPage() {
       console.log("Error parsing date:", dateString, error);
       return "Invalid date";
     }
-  };
+  }, []);
 
   const getStatusBadge = (status: JobStatus) => {
     switch (status) {
@@ -233,68 +324,83 @@ export default function JobManagementPage() {
     }
   };
 
-  const filteredApplications = applications.filter((app) => {
-    // Filter by status if not "all"
-    if (statusFilter !== "all" && app.status !== statusFilter) {
-      return false;
-    }
+  // Memoized filtered applications with performance tracking
+  const filteredApplications = useMemo(() => {
+    const startTime = performance.now();
+    
+    const filtered = applications.filter((app) => {
+      // Filter by status if not "all"
+      if (statusFilter !== "all" && app.status !== statusFilter) {
+        return false;
+      }
 
-    // Filter by category
-    if (
-      (applicationCategoryFilter === "healthcare" &&
-        (!app.positionTitle ||
-          (!app.positionTitle.toLowerCase().includes("nurse") &&
-            !app.positionTitle.toLowerCase().includes("care")))) ||
-      (applicationCategoryFilter === "childcare" &&
-        (!app.positionTitle ||
-          (!app.positionTitle.toLowerCase().includes("nanny") &&
-            !app.positionTitle.toLowerCase().includes("child")))) ||
-      (applicationCategoryFilter === "event" &&
-        (!app.positionTitle ||
-          !app.positionTitle.toLowerCase().includes("event"))) ||
-      (applicationCategoryFilter === "general" &&
-        app.positionId &&
-        app.positionTitle)
-    ) {
-      return false;
-    }
+      // Filter by category
+      if (
+        (applicationCategoryFilter === "healthcare" &&
+          (!app.positionTitle ||
+            (!app.positionTitle.toLowerCase().includes("nurse") &&
+              !app.positionTitle.toLowerCase().includes("care")))) ||
+        (applicationCategoryFilter === "childcare" &&
+          (!app.positionTitle ||
+            (!app.positionTitle.toLowerCase().includes("nanny") &&
+              !app.positionTitle.toLowerCase().includes("child")))) ||
+        (applicationCategoryFilter === "event" &&
+          (!app.positionTitle ||
+            !app.positionTitle.toLowerCase().includes("event"))) ||
+        (applicationCategoryFilter === "general" &&
+          app.positionId &&
+          app.positionTitle)
+      ) {
+        return false;
+      }
 
-    // Search term filtering
-    if (searchTerm) {
-      const searchTermLower = searchTerm.toLowerCase();
-      return (
-        app.firstName.toLowerCase().includes(searchTermLower) ||
-        app.lastName.toLowerCase().includes(searchTermLower) ||
-        app.email.toLowerCase().includes(searchTermLower) ||
-        (app.positionTitle &&
-          app.positionTitle.toLowerCase().includes(searchTermLower)) ||
-        (app.skills &&
-          app.skills.some((skill) =>
-            skill.toLowerCase().includes(searchTermLower)
-          )) ||
-        (app.education && app.education.toLowerCase().includes(searchTermLower))
-      );
-    }
+      // Search term filtering
+      if (debouncedSearchTerm) {
+        const searchTermLower = debouncedSearchTerm.toLowerCase();
+        return (
+          app.firstName.toLowerCase().includes(searchTermLower) ||
+          app.lastName.toLowerCase().includes(searchTermLower) ||
+          app.email.toLowerCase().includes(searchTermLower) ||
+          (app.positionTitle &&
+            app.positionTitle.toLowerCase().includes(searchTermLower)) ||
+          (app.skills &&
+            app.skills.some((skill) =>
+              skill.toLowerCase().includes(searchTermLower)
+            )) ||
+          (app.education && app.education.toLowerCase().includes(searchTermLower))
+        );
+      }
 
-    return true;
-  });
+      return true;
+    });
+    
+    const endTime = performance.now();
+    console.log(`🔍 Filtered ${applications.length} applications to ${filtered.length} in ${(endTime - startTime).toFixed(2)}ms`);
+    
+    return filtered;
+  }, [applications, statusFilter, applicationCategoryFilter, debouncedSearchTerm]);
 
-  // Sort by submission date (most recent first)
-  const sortedApplications = [...filteredApplications].sort(
-    (a, b) =>
-      new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-  );
+  // Memoized sorted applications
+  const sortedApplications = useMemo(() => {
+    return [...filteredApplications].sort(
+      (a, b) =>
+        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    );
+  }, [filteredApplications]);
 
-  const filteredJobs = jobs.filter((job) => {
-    // Filter by status if not "all"
-    if (categoryFilter !== "all" && job.category !== categoryFilter) {
-      return false;
-    }
+  // Memoized filtered jobs
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((job) => {
+      // Filter by status if not "all"
+      if (categoryFilter !== "all" && job.category !== categoryFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [jobs, categoryFilter]);
 
-    return true;
-  });
-
-  const handleCreateJob = async () => {
+  // Memoized event handlers for better performance
+  const handleCreateJob = useCallback(async () => {
     if (!formData.title || !formData.category) {
       alert("Please fill in all required fields");
       return;
@@ -316,6 +422,8 @@ export default function JobManagementPage() {
       const result = await createJobPosition(jobData, user);
       if (result.success && result.position) {
         setJobs([...jobs, result.position]);
+        // Invalidate cache
+        jobsCache = null;
         toast.success("Job position created successfully!");
       } else {
         toast.error(result.error || "Failed to create job position");
@@ -327,7 +435,6 @@ export default function JobManagementPage() {
         location: "",
         description: "",
         requirements: "",
-
         category: "",
         status: "draft",
         publicationDate: "",
@@ -341,9 +448,9 @@ export default function JobManagementPage() {
       console.error("Failed to create job:", error);
       toast.error("Failed to create job position");
     }
-  };
+  }, [formData, user, jobs]);
 
-  const handleEditJob = (job: JobPosition) => {
+  const handleEditJob = useCallback((job: JobPosition) => {
     setEditingJob(job);
     setFormData({
       title: job.title,
@@ -353,7 +460,6 @@ export default function JobManagementPage() {
       requirements: Array.isArray(job.requirements)
         ? job.requirements.join("\n")
         : job.requirements,
-
       category: job.category,
       status: job.status,
       publicationDate: job.publicationDate || "",
@@ -366,9 +472,9 @@ export default function JobManagementPage() {
         : job.benefits || "",
     });
     setShowEditDialog(true);
-  };
+  }, []);
 
-  const handleUpdateJob = async () => {
+  const handleUpdateJob = useCallback(async () => {
     if (!editingJob || !formData.title || !formData.category) {
       alert("Please fill in all required fields");
       return;
@@ -395,6 +501,8 @@ export default function JobManagementPage() {
         setJobs(
           jobs.map((job) => (job.id === editingJob.id ? result.position! : job))
         );
+        // Invalidate cache
+        jobsCache = null;
         toast.success("Job position updated successfully!");
       } else {
         toast.error(result.error || "Failed to update job position");
@@ -407,7 +515,6 @@ export default function JobManagementPage() {
         location: "",
         description: "",
         requirements: "",
-
         category: "",
         status: "draft",
         publicationDate: "",
@@ -421,13 +528,15 @@ export default function JobManagementPage() {
       console.error("Failed to update job:", error);
       toast.error("Failed to update job position");
     }
-  };
+  }, [editingJob, formData, user, jobs]);
 
-  const handleDeleteJob = async (id: string) => {
+  const handleDeleteJob = useCallback(async (id: string) => {
     try {
       const result = await deleteJobPosition(id, user);
       if (result.success) {
         setJobs(jobs.filter((job) => job.id !== id));
+        // Invalidate cache
+        jobsCache = null;
         toast.success("Job position deleted successfully!");
       } else {
         toast.error(result.error || "Failed to delete job position");
@@ -436,9 +545,9 @@ export default function JobManagementPage() {
       console.error("Failed to delete job:", error);
       toast.error("Failed to delete job position");
     }
-  };
+  }, [user, jobs]);
 
-  const handleCreateCategory = async () => {
+  const handleCreateCategory = useCallback(async () => {
     if (!newCategory.trim()) {
       toast.error("Please enter a category name");
       return;
@@ -449,6 +558,8 @@ export default function JobManagementPage() {
       if (result.success) {
         const updatedCategories = await getJobCategories(user);
         setCategories(updatedCategories);
+        // Invalidate cache
+        categoriesCache = null;
         toast.success("Category created successfully!");
       } else {
         toast.error(result.error || "Failed to create category");
@@ -458,14 +569,16 @@ export default function JobManagementPage() {
       console.error("Failed to create category:", error);
       toast.error("Failed to create category");
     }
-  };
+  }, [newCategory, user]);
 
-  const handleDeleteCategory = async (category: string) => {
+  const handleDeleteCategory = useCallback(async (category: string) => {
     try {
       const result = await deleteJobCategory(category, user);
       if (result.success) {
         const updatedCategories = await getJobCategories(user);
         setCategories(updatedCategories);
+        // Invalidate cache
+        categoriesCache = null;
         toast.success("Category deleted successfully!");
       } else {
         toast.error(result.error || "Failed to delete category");
@@ -474,7 +587,7 @@ export default function JobManagementPage() {
       console.error("Failed to delete category:", error);
       toast.error("Failed to delete category");
     }
-  };
+  }, [user]);
 
   return (
     <div className="space-y-6">

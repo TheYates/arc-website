@@ -389,42 +389,42 @@ export default function ReviewerPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center text-lg">
-                <Bell className="h-5 w-5 mr-2 text-purple-600" />
+                <Bell className="h-5 w-5 mr-2 text-purple-600 dark:text-purple-400" />
                 Recent Updates
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
                   <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <CheckCircle className="h-5 w-5 text-purple-700 dark:text-purple-400 mt-0.5" />
                     <div className="flex-1">
-                      <p className="font-medium text-blue-900">
+                      <p className="font-medium text-purple-900 dark:text-purple-100">
                         Welcome to Alpha Rescue!
                       </p>
-                      <p className="text-sm text-blue-700 mt-1">
+                      <p className="text-sm text-purple-800 dark:text-purple-300 mt-1">
                         Complete your profile to get started with patient
                         reviews.
                       </p>
-                      <p className="text-xs text-blue-600 mt-2">
+                      <p className="text-xs text-purple-700 dark:text-purple-400 mt-2">
                         {formatDate(new Date())}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <AlertTriangle className="h-5 w-5 text-orange-700 dark:text-orange-400 mt-0.5" />
                     <div className="flex-1">
-                      <p className="font-medium text-amber-900">
+                      <p className="font-medium text-orange-900 dark:text-orange-100">
                         Priority Review Required
                       </p>
-                      <p className="text-sm text-amber-700 mt-1">
+                      <p className="text-sm text-orange-800 dark:text-orange-300 mt-1">
                         High-priority patient case requires immediate medical
                         review.
                       </p>
-                      <p className="text-xs text-amber-600 mt-2">1 hour ago</p>
+                      <p className="text-xs text-orange-700 dark:text-orange-400 mt-2">1 hour ago</p>
                     </div>
                   </div>
                 </div>

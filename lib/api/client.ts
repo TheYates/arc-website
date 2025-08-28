@@ -161,9 +161,9 @@ export async function getPatientByIdClient(
     );
 
     // Cache the result for 30 seconds
-    setCachedData(cacheKey, data.patient, 30000);
+    setCachedData(cacheKey, data.data, 30000);
 
-    return data.patient;
+    return data.data;
   } catch (error) {
     console.error("Get patient error:", error);
     return null;

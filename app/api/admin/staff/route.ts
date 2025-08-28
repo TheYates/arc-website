@@ -14,7 +14,6 @@ export async function GET() {
       select: {
         id: true,
         email: true,
-        username: true,
         firstName: true,
         lastName: true,
         phone: true,
@@ -43,7 +42,6 @@ export async function GET() {
     const transformedCaregivers = caregivers.map((user: any) => ({
       id: user.id,
       email: user.email,
-      username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
@@ -58,7 +56,6 @@ export async function GET() {
     const transformedReviewers = reviewers.map((user: any) => ({
       id: user.id,
       email: user.email,
-      username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,

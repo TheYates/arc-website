@@ -3,6 +3,7 @@ import { prisma } from "@/lib/database/postgresql";
 import { authenticateRequest } from "@/lib/api/auth";
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const authResult = await authenticateRequest(request);
     if (!authResult.success) {
@@ -34,43 +35,66 @@ export async function GET(request: NextRequest) {
       { expiresAt: { gt: new Date() } },
     ];
 
-    const notifications = await prisma.inAppNotification.findMany({
-      where: whereClause,
-      include: {
-        serviceRequest: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
+    // Optimized query with performance considerations
+    const [notifications, unreadCount] = await Promise.all([
+      // Main query with limited includes for better performance
+      prisma.inAppNotification.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          message: true,
+          isRead: true,
+          priority: true,
+          actionUrl: true,
+          actionLabel: true,
+          createdAt: true,
+          // Only include related data if specifically needed
+          serviceRequest: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+            },
+          },
+          schedule: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              scheduledDate: true,
+            },
           },
         },
-        schedule: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            scheduledDate: true,
-          },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      
+      // Separate optimized count query
+      prisma.inAppNotification.count({
+        where: {
+          userId: user.id,
+          isRead: false,
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: new Date() } },
+          ],
         },
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      skip: offset,
-    });
+      })
+    ]);
 
-    // Get unread count
-    const unreadCount = await prisma.inAppNotification.count({
-      where: {
-        userId: user.id,
-        isRead: false,
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
-        ],
-      },
-    });
-
-    return NextResponse.json({ notifications, unreadCount });
+    console.log(`⚡ Fetched ${notifications.length} notifications for user ${user.id} in ${Date.now() - startTime}ms`);
+    
+    return NextResponse.json(
+      { notifications, unreadCount },
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching notifications:", error);
     return NextResponse.json(

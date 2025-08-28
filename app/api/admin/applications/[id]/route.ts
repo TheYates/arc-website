@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/database/postgresql';
 import { ApplicationStatus } from '@/lib/types/applications';
 import { ApplicationApprovalService } from '@/lib/services/application-approval';
+import { authenticateRequest } from '@/lib/api/auth';
 
 // GET /api/admin/applications/[id] - Get specific application
 export async function GET(
@@ -9,6 +10,22 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Authenticate the request
+    const authResult = await authenticateRequest(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
+    }
+
+    const { user } = authResult;
+
+    // Only admins can view applications
+    if (user.role !== "admin" && user.role !== "super_admin") {
+      return NextResponse.json(
+        { error: "Only administrators can view applications" },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const application = await prisma.application.findUnique({
       where: { id },
@@ -123,6 +140,22 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Authenticate the request
+    const authResult = await authenticateRequest(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
+    }
+
+    const { user } = authResult;
+
+    // Only admins can update applications
+    if (user.role !== "admin" && user.role !== "super_admin") {
+      return NextResponse.json(
+        { error: "Only administrators can update applications" },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { status, adminNotes, processedBy } = body;

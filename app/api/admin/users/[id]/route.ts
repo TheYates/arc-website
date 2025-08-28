@@ -39,7 +39,6 @@ export async function GET(
     const transformedUser = {
       id: user.id,
       email: user.email,
-      username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
@@ -141,7 +140,6 @@ export async function PUT(
     const transformedUser = {
       id: updatedUser.id,
       email: updatedUser.email,
-      username: updatedUser.username,
       firstName: updatedUser.firstName,
       lastName: updatedUser.lastName,
       phone: updatedUser.phone,

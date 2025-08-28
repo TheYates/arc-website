@@ -66,7 +66,6 @@ export class ApplicationApprovalService {
         const user = await tx.user.create({
           data: {
             email: application.email,
-            username: this.generateUsername(application.firstName, application.lastName),
             passwordHash: hashedPassword,
             firstName: application.firstName,
             lastName: application.lastName,
@@ -192,15 +191,6 @@ export class ApplicationApprovalService {
       console.error('Resend credentials error:', error);
       return { success: false, error: 'Failed to resend credentials' };
     }
-  }
-
-  /**
-   * Generate unique username from name
-   */
-  private static generateUsername(firstName: string, lastName: string): string {
-    const base = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`.replace(/[^a-z.]/g, '');
-    const timestamp = Date.now().toString().slice(-4); // Last 4 digits of timestamp
-    return `${base}.${timestamp}`;
   }
 
   /**

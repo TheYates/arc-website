@@ -121,14 +121,10 @@ export async function PATCH(
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
 
-      const { status, completionNotes, outcome, completedDate, cancelledReason } = body;
+      const { status } = body;
       
       updateData = {
         ...(status && { status }),
-        ...(completionNotes !== undefined && { completionNotes }),
-        ...(outcome !== undefined && { outcome }),
-        ...(completedDate && { completedDate: new Date(completedDate) }),
-        ...(cancelledReason !== undefined && { cancelledReason }),
       };
 
       // Create notifications for status changes
@@ -142,26 +138,6 @@ export async function PATCH(
             actionUrl: `/patient/schedules/${id}`,
             scheduleId: id,
           };
-
-          // Create care note for completed schedule
-          if (outcome) {
-            try {
-              await createScheduleCompletionCareNote({
-                scheduleId: id,
-                patientId: existingSchedule.patientId,
-                caregiverId: existingSchedule.caregiverId,
-                scheduleTitle: existingSchedule.title,
-                scheduleType: existingSchedule.scheduleType,
-                outcome,
-                completionNotes,
-                completedDate: completedDate ? new Date(completedDate) : new Date(),
-                priority: existingSchedule.priority,
-              });
-            } catch (error) {
-              console.error("Error creating care note for schedule completion:", error);
-              // Don't fail the request if care note creation fails
-            }
-          }
         } else if (status === "CANCELLED") {
           notificationData = {
             userId: existingSchedule.patient.userId,

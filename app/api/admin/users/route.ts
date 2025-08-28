@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
     const transformedUsers = users.map((user: any) => ({
       id: user.id,
       email: user.email,
-      username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
@@ -161,7 +160,6 @@ export async function POST(request: NextRequest) {
     const transformedUser = {
       id: newUser.id,
       email: newUser.email,
-      username: newUser.username,
       firstName: newUser.firstName,
       lastName: newUser.lastName,
       phone: newUser.phone,

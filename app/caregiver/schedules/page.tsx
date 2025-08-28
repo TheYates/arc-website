@@ -10,12 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 
 import { useToast } from "@/components/ui/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { RoleHeader } from "@/components/role-header";
 import { authenticatedGet, authenticatedPost, authenticatedDelete } from "@/lib/api/auth-headers";
@@ -33,6 +35,8 @@ import {
   Trash2,
   CalendarDays,
   CalendarIcon,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -45,13 +49,8 @@ interface CaregiverSchedule {
   title: string;
   description?: string;
   scheduledDate: string;
-  estimatedDuration?: number;
   status: string;
-  priority: string;
   notes?: string;
-  completionNotes?: string;
-  outcome?: string;
-  completedDate?: string;
   patient: {
     id: string;
     user: {
@@ -86,10 +85,10 @@ export default function CaregiverSchedulesPage() {
       scheduleType: "ROUTINE_VISIT",
       scheduledDate: undefined as Date | undefined,
       notes: "",
-      duration: 60,
     },
     errors: {} as Record<string, string>,
   });
+  const [patientSearchOpen, setPatientSearchOpen] = useState(false);
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -189,23 +188,6 @@ export default function CaregiverSchedulesPage() {
     );
   };
 
-  const getPriorityBadge = (priority: string) => {
-    const priorityConfig = {
-      LOW: { label: "Low", className: "bg-green-100 text-green-800" },
-      MEDIUM: { label: "Medium", className: "bg-yellow-100 text-yellow-800" },
-      HIGH: { label: "High", className: "bg-orange-100 text-orange-800" },
-      CRITICAL: { label: "Critical", className: "bg-red-100 text-red-800" },
-    };
-
-    const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.MEDIUM;
-
-    return (
-      <Badge className={config.className}>
-        {config.label}
-      </Badge>
-    );
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -232,18 +214,6 @@ export default function CaregiverSchedulesPage() {
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.SCHEDULED;
-    return <span className={config.color}>{config.label}</span>;
-  };
-
-  const getPriorityText = (priority: string) => {
-    const priorityConfig = {
-      LOW: { label: "Low", color: "text-green-600" },
-      MEDIUM: { label: "Medium", color: "text-yellow-600" },
-      HIGH: { label: "High", color: "text-orange-600" },
-      CRITICAL: { label: "Critical", color: "text-red-600" },
-    };
-
-    const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.MEDIUM;
     return <span className={config.color}>{config.label}</span>;
   };
 
@@ -292,7 +262,6 @@ export default function CaregiverSchedulesPage() {
         scheduleType: "ROUTINE_VISIT",
         scheduledDate: undefined,
         notes: "",
-        duration: 60,
       },
       errors: {},
     }));
@@ -343,8 +312,6 @@ export default function CaregiverSchedulesPage() {
         scheduleType: validation.data.scheduleType,
         title,
         scheduledDate: validation.data.scheduledDate.toISOString(),
-        estimatedDuration: validation.data.duration || 60,
-        priority: "MEDIUM",
         notes: validation.data.notes || "",
       });
 
@@ -352,6 +319,18 @@ export default function CaregiverSchedulesPage() {
         throw new Error("Failed to create schedule");
       }
 
+      // Show success toast with Sonner
+      sonnerToast.success("Schedule Created Successfully!", {
+        description: `${title} scheduled for ${validation.data.scheduledDate.toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        })}`,
+        duration: 4000,
+      });
+
+      // Also show the regular toast for consistency
       toast({
         title: "Success",
         description: "Schedule created successfully",
@@ -365,7 +344,6 @@ export default function CaregiverSchedulesPage() {
           scheduleType: "ROUTINE_VISIT",
           scheduledDate: undefined,
           notes: "",
-          duration: 60,
         },
         errors: {},
       });
@@ -545,69 +523,64 @@ export default function CaregiverSchedulesPage() {
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader>
-                      <TableRow className="text-xs">
-                        <TableHead className="w-[180px] py-2">Service</TableHead>
-                        <TableHead className="w-[120px] py-2">Patient</TableHead>
-                        <TableHead className="w-[140px] py-2">Scheduled</TableHead>
-                        <TableHead className="w-[90px] py-2">Status</TableHead>
-                        <TableHead className="w-[80px] py-2">Priority</TableHead>
-                        <TableHead className="w-[100px] py-2 text-center">Actions</TableHead>
+                      <TableRow>
+                        <TableHead className="w-[200px]">Service</TableHead>
+                        <TableHead className="w-[140px]">Patient</TableHead>
+                        <TableHead className="w-[120px]">Date</TableHead>
+                        <TableHead className="w-[100px]">Status</TableHead>
+                        <TableHead className="w-[80px] text-center">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredSchedules.map((schedule) => (
                         <TableRow
                           key={schedule.id}
-                          className="hover:bg-muted/50 h-12"
+                          className="hover:bg-muted/50"
                         >
-                          <TableCell className="py-2">
-                            <div className="text-sm">
-                              <div className="font-medium">{schedule.title}</div>
-                            
+                          <TableCell>
+                            <div>
+                              <div className="font-medium text-sm">{schedule.title}</div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {getScheduleTypeBadge(schedule.scheduleType)}
+                              </div>
                             </div>
                           </TableCell>
-                          <TableCell className="py-2">
+                          <TableCell>
                             <div className="text-sm">
                               <div className="font-medium">
                                 {schedule.patient.user.firstName} {schedule.patient.user.lastName}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="py-2">
-                            <div className="text-xs">
-                              <div className="font-medium">
-                                {formatDate(schedule.scheduledDate)}
-                              </div>
-                              
+                          <TableCell>
+                            <div className="text-sm">
+                              <div>{formatDate(schedule.scheduledDate)}</div>
+                             
                             </div>
                           </TableCell>
-                          <TableCell className="py-2 text-sm">
-                            {getStatusText(schedule.status)}
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {getStatusBadge(schedule.status)}
+                            </div>
                           </TableCell>
-                          <TableCell className="py-2 text-sm">
-                            {getPriorityText(schedule.priority)}
-                          </TableCell>
-                          <TableCell className="py-2">
+                          <TableCell>
                             <div className="flex justify-center items-center gap-1">
                               <Button
-                                variant="link"
-                                size="lg"
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => handleEditSchedule(schedule)}
                                 title="Edit schedule"
-                                className="h-7 w-auto p-2"
                               >
-                                <Edit className="h-3 w-3" />
-                                Edit
+                                <Edit className="h-4 w-4" />
                               </Button>
                               <Button
-                                variant="link"
-                                size="lg"
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => handleDeleteSchedule(schedule.id)}
                                 title="Delete schedule"
-                                className="h-7 w-auto p-2 text-red-600 hover:text-red-700"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
-                                <Trash2 className="h-3 w-3" />
-                                Delete
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -635,14 +608,19 @@ export default function CaregiverSchedulesPage() {
                 scheduleType: "ROUTINE_VISIT",
                 scheduledDate: undefined,
                 notes: "",
-                duration: 60,
               },
               errors: {},
             });
           }
         }}
+        modal={true}
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent 
+          className="sm:max-w-[425px] z-[50]"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <div onMouseDown={(e) => e.stopPropagation()}>
           <DialogHeader>
             <DialogTitle>New Schedule</DialogTitle>
             <DialogDescription>
@@ -654,26 +632,90 @@ export default function CaregiverSchedulesPage() {
             {/* Patient Selection */}
             <div className="space-y-2">
               <Label htmlFor="patient">Patient *</Label>
-              <Select
-                value={newScheduleDialog.formData.patientId}
-                onValueChange={(value) =>
-                  setNewScheduleDialog(prev => ({
-                    ...prev,
-                    formData: { ...prev.formData, patientId: value }
-                  }))
-                }
-              >
-                <SelectTrigger className={newScheduleDialog.errors.patientId ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Select a patient" />
-                </SelectTrigger>
-                <SelectContent>
-                  {patients.map((patient) => (
-                    <SelectItem key={patient.id} value={patient.id}>
-                      {patient.user.firstName} {patient.user.lastName} ({patient.user.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover modal open={patientSearchOpen} onOpenChange={setPatientSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={patientSearchOpen}
+                    className={cn(
+                      "w-full justify-between",
+                      newScheduleDialog.errors.patientId ? "border-red-500" : ""
+                    )}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    {newScheduleDialog.formData.patientId ? (
+                      (() => {
+                        const selectedPatient = patients.find(
+                          patient => patient.id === newScheduleDialog.formData.patientId
+                        );
+                        return selectedPatient
+                          ? `${selectedPatient.user.firstName} ${selectedPatient.user.lastName}`
+                          : "Select patient...";
+                      })()
+                    ) : (
+                      "Select patient..."
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-[--radix-popover-trigger-width] p-0 z-[100]"
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                  onPointerDownOutside={(e) => e.preventDefault()}
+                  onInteractOutside={(e) => e.preventDefault()}
+                  side="bottom"
+                  align="start"
+                  sideOffset={4}
+                >
+                  <div 
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    className="relative z-[100]"
+                  >
+                    <Command>
+                      <CommandInput placeholder="Search patients..." className="h-9" />
+                      <CommandList>
+                        <CommandEmpty>No patient found.</CommandEmpty>
+                        <CommandGroup>
+                          {patients.map((patient) => (
+                            <CommandItem
+                              key={patient.id}
+                              value={`${patient.user.firstName} ${patient.user.lastName} ${patient.user.email}`}
+                              onSelect={() => {
+                                setNewScheduleDialog(prev => ({
+                                  ...prev,
+                                  formData: { ...prev.formData, patientId: patient.id }
+                                }));
+                                setPatientSearchOpen(false);
+                              }}
+                              onMouseDown={(e) => {
+                                e.stopPropagation();
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  newScheduleDialog.formData.patientId === patient.id
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span>{patient.user.firstName} {patient.user.lastName}</span>
+                                <span className="text-sm text-muted-foreground">{patient.user.email}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </div>
+                </PopoverContent>
+              </Popover>
               {newScheduleDialog.errors.patientId && (
                 <p className="text-sm text-red-500">{newScheduleDialog.errors.patientId}</p>
               )}
@@ -710,12 +752,10 @@ export default function CaregiverSchedulesPage() {
               )}
             </div>
 
-
-
             {/* Scheduled Date */}
             <div className="space-y-2">
               <Label htmlFor="scheduled-date">Scheduled Date *</Label>
-              <Popover>
+              <Popover modal>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -733,7 +773,7 @@ export default function CaregiverSchedulesPage() {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-50" align="start">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={newScheduleDialog.formData.scheduledDate}
@@ -749,35 +789,11 @@ export default function CaregiverSchedulesPage() {
                       return date < today;
                     }}
                     initialFocus
-                    className="rounded-md border"
                   />
                 </PopoverContent>
               </Popover>
               {newScheduleDialog.errors.scheduledDate && (
                 <p className="text-sm text-red-500">{newScheduleDialog.errors.scheduledDate}</p>
-              )}
-            </div>
-
-            {/* Duration */}
-            <div className="space-y-2">
-              <Label htmlFor="duration">Duration (minutes)</Label>
-              <Input
-                id="duration"
-                type="number"
-                min="15"
-                max="480"
-                value={newScheduleDialog.formData.duration}
-                onChange={(e) =>
-                  setNewScheduleDialog(prev => ({
-                    ...prev,
-                    formData: { ...prev.formData, duration: parseInt(e.target.value) || 60 }
-                  }))
-                }
-                className={newScheduleDialog.errors.duration ? "border-red-500" : ""}
-                placeholder="60"
-              />
-              {newScheduleDialog.errors.duration && (
-                <p className="text-sm text-red-500">{newScheduleDialog.errors.duration}</p>
               )}
             </div>
 
@@ -819,7 +835,6 @@ export default function CaregiverSchedulesPage() {
                     scheduleType: "ROUTINE_VISIT",
                     scheduledDate: undefined,
                     notes: "",
-                    duration: 60,
                   },
                   errors: {},
                 });
@@ -834,6 +849,7 @@ export default function CaregiverSchedulesPage() {
               {newScheduleDialog.isSubmitting ? "Creating..." : "Create Schedule"}
             </Button>
           </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

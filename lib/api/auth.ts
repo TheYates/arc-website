@@ -52,7 +52,7 @@ export async function authenticateRequest(
     if (!userId) {
       const userIdHeader = request.headers.get("x-user-id");
       if (userIdHeader) {
-        console.log("🔍 Using x-user-id header fallback");
+        // console.log("🔍 Using x-user-id header fallback");
         userId = userIdHeader;
       }
     }

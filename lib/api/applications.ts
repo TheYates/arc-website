@@ -27,10 +27,14 @@ export async function getApplications(
 }
 
 export async function getApplicationById(
-  id: string
+  id: string,
+  user: User | null = null
 ): Promise<ApplicationData | null> {
   try {
-    const response = await fetch(`/api/admin/applications/${id}`);
+    const response = await authenticatedGet(
+      `/api/admin/applications/${id}`,
+      user
+    );
     if (!response.ok) {
       if (response.status === 404) {
         return null;
@@ -49,7 +53,7 @@ export async function createApplication(
   data: CreateApplicationData
 ): Promise<ApplicationData | null> {
   try {
-    const response = await fetch("/api/admin/applications", {
+    const response = await fetch("/api/patient/application", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -69,24 +73,49 @@ export async function createApplication(
   }
 }
 
+// Public application creation - for use on get-started page
+export async function createPublicApplication(
+  data: CreateApplicationData
+): Promise<ApplicationData | null> {
+  try {
+    const response = await fetch("/api/patient/application", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to create application");
+    }
+
+    const result = await response.json();
+    return result.application || null;
+  } catch (error) {
+    console.error("Error creating public application:", error);
+    throw error; // Re-throw to allow caller to handle
+  }
+}
+
 export async function updateApplicationStatus(
   id: string,
   status: ApplicationStatus,
   adminNotes?: string,
-  processedBy?: string
+  processedBy?: string,
+  user: User | null = null
 ): Promise<ApplicationData | null> {
   try {
-    const response = await fetch(`/api/admin/applications/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const response = await authenticatedPut(
+      `/api/admin/applications/${id}`,
+      user,
+      {
         status,
         adminNotes,
         processedBy,
-      }),
-    });
+      }
+    );
 
     if (!response.ok) {
       throw new Error("Failed to update application status");

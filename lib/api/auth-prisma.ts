@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/database/postgresql'
+import { resetDatabaseConnection } from '@/lib/database/postgresql'
 import bcrypt from 'bcryptjs'
 import { User, UserRole } from '@prisma/client'
 
@@ -18,37 +19,73 @@ export interface AuthResult {
   error?: string
 }
 
-// Authenticate user
+// Enhanced authenticate user with connection retry
 export async function authenticateUser(email: string, password: string): Promise<AuthResult> {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { email },
-    })
+  let lastError: any = null
+  
+  // Try authentication with retry logic
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      console.log(`🔍 Authentication attempt ${attempt}/3 for email: ${email}`)
+      
+      const user = await prisma.user.findUnique({
+        where: { email },
+      })
 
-    if (!user) {
-      return { success: false, error: 'Invalid email or password' }
+      if (!user) {
+        return { success: false, error: 'Invalid email or password' }
+      }
+
+      if (!user.isActive) {
+        return { success: false, error: 'Account is deactivated' }
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash)
+      if (!isValidPassword) {
+        return { success: false, error: 'Invalid email or password' }
+      }
+
+      // Update last login
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLogin: new Date() },
+      })
+
+      console.log(`✅ Authentication successful for: ${email}`)
+      return { success: true, user }
+      
+    } catch (error) {
+      lastError = error
+      console.error(`❌ Authentication attempt ${attempt}/3 failed:`, error)
+      
+      // If it's a connection error and we have more attempts, try to reset connection
+      if (attempt < 3 && isConnectionError(error)) {
+        console.log(`🔄 Attempting connection reset before retry ${attempt + 1}...`)
+        try {
+          await resetDatabaseConnection()
+          // Wait a bit before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+        } catch (resetError) {
+          console.error('Connection reset failed:', resetError)
+        }
+      }
     }
-
-    if (!user.isActive) {
-      return { success: false, error: 'Account is deactivated' }
-    }
-
-    const isValidPassword = await bcrypt.compare(password, user.passwordHash)
-    if (!isValidPassword) {
-      return { success: false, error: 'Invalid email or password' }
-    }
-
-    // Update last login
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() },
-    })
-
-    return { success: true, user }
-  } catch (error) {
-    console.error('Authentication error:', error)
-    return { success: false, error: 'Authentication failed' }
   }
+
+  console.error('🚨 All authentication attempts failed:', lastError)
+  return { success: false, error: 'Authentication failed - database connection issues' }
+}
+
+// Helper function to identify connection errors
+function isConnectionError(error: any): boolean {
+  const errorMessage = error?.message?.toLowerCase() || ''
+  return (
+    errorMessage.includes('can\'t reach database server') ||
+    errorMessage.includes('connection refused') ||
+    errorMessage.includes('timeout') ||
+    errorMessage.includes('network') ||
+    error?.code === 'P1001' // Prisma connection error code
+  )
 }
 
 // Create new user

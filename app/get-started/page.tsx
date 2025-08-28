@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Users, Phone, Check } from "lucide-react";
-import { createApplication } from "@/lib/api/applications";
+import { createPublicApplication } from "@/lib/api/applications";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useSearchParams } from "next/navigation";
@@ -416,7 +416,7 @@ function GetStartedContent() {
       };
 
       // Submit application to API
-      await createApplication(applicationData);
+      await createPublicApplication(applicationData);
 
       // Show success state
       setIsSubmitted(true);

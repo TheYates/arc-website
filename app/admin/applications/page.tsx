@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -32,6 +32,56 @@ import { getApplications } from "@/lib/api/applications";
 import { ApplicationData } from "@/lib/types/applications";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+
+// Enhanced cache for applications with TTL (30 seconds)
+let applicationsCache: { data: ApplicationData[]; timestamp: number } | null = null;
+const CACHE_TTL = 30 * 1000; // 30 seconds
+
+// Helper function to check if cache is valid
+const isCacheValid = (cache: { timestamp: number } | null): boolean => {
+  if (!cache) return false;
+  return Date.now() - cache.timestamp < CACHE_TTL;
+};
+
+// Helper function to get cached data or fetch fresh data
+const getCachedApplications = async (user: any): Promise<ApplicationData[]> => {
+  if (isCacheValid(applicationsCache)) {
+    console.log("📋 Using cached applications data");
+    return applicationsCache!.data;
+  }
+
+  console.log("🔄 Fetching fresh applications data");
+  const startTime = performance.now();
+  const data = await getApplications(user);
+  const endTime = performance.now();
+  
+  console.log(`📋 Applications data fetched in ${(endTime - startTime).toFixed(2)}ms`);
+  
+  // Update cache
+  applicationsCache = {
+    data,
+    timestamp: Date.now(),
+  };
+  
+  return data;
+};
+
+// Debounced search hook
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 import { Loader2, Search, Filter, Calendar, Clock, Plus } from "lucide-react";
 import { AdminApplicationsMobile } from "@/components/mobile/admin-applications";
 
@@ -43,12 +93,24 @@ export default function ApplicationsPage() {
   const router = useRouter();
   const { user } = useAuth();
 
+  // Use debounced search with 300ms delay for better performance
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   useEffect(() => {
     const fetchApplications = async () => {
+      if (!user) return; // Wait for user authentication
+      
+      const startTime = performance.now();
+      console.log("🚀 Starting optimized applications data fetch");
+      
       setIsLoading(true);
       try {
-        const data = await getApplications(user);
+        // Use cached data when available
+        const data = await getCachedApplications(user);
         setApplications(data);
+        
+        const endTime = performance.now();
+        console.log(`✅ Applications page loaded in ${(endTime - startTime).toFixed(2)}ms`);
       } catch (error) {
         console.error("Failed to fetch applications:", error);
       } finally {
@@ -57,7 +119,7 @@ export default function ApplicationsPage() {
     };
 
     fetchApplications();
-  }, []);
+  }, [user]); // Depend on user instead of empty array
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -72,32 +134,46 @@ export default function ApplicationsPage() {
     }
   };
 
-  const filteredApplications = applications.filter((app) => {
-    const matchesStatus = statusFilter === "all" || app.status === statusFilter;
-    const matchesSearch =
-      searchTerm === "" ||
-      app.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.serviceName.toLowerCase().includes(searchTerm.toLowerCase());
+  // Memoized filtering and sorting for better performance
+  const { filteredApplications, sortedApplications } = useMemo(() => {
+    const startTime = performance.now();
+    
+    const filtered = applications.filter((app) => {
+      const matchesStatus = statusFilter === "all" || app.status === statusFilter;
+      const matchesSearch =
+        debouncedSearchTerm === "" ||
+        app.firstName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        app.lastName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        app.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        app.serviceName.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
 
-    return matchesStatus && matchesSearch;
-  });
+      return matchesStatus && matchesSearch;
+    });
 
-  // Sort by most recent first
-  const sortedApplications = [...filteredApplications].sort(
-    (a, b) =>
-      new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-  );
+    // Sort by most recent first
+    const sorted = [...filtered].sort(
+      (a, b) =>
+        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    );
+    
+    const endTime = performance.now();
+    console.log(`🔍 Filtered ${applications.length} applications to ${sorted.length} in ${(endTime - startTime).toFixed(2)}ms`);
+    
+    return {
+      filteredApplications: filtered,
+      sortedApplications: sorted,
+    };
+  }, [applications, statusFilter, debouncedSearchTerm]);
 
-  const handleViewApplication = (id: string) => {
+  // Memoized event handlers for better performance
+  const handleViewApplication = useCallback((id: string) => {
     router.push(`/admin/applications/${id}`);
-  };
+  }, [router]);
 
-  const formatSubmissionDate = (dateString: string) => {
+  const formatSubmissionDate = useCallback((dateString: string) => {
     const date = new Date(dateString);
     return formatDate(date);
-  };
+  }, []);
 
   return (
     <div className="space-y-6">

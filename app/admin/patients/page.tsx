@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,14 +58,17 @@ import {
 } from "lucide-react";
 import { AdminPatientsMobile } from "@/components/mobile/admin-patients";
 
-// Simple cache for patients data
+// Enhanced cache with better management
 let patientsCache: { data: Patient[]; timestamp: number } | null = null;
+let staffCache: { data: { caregivers: User[]; reviewers: User[] }; timestamp: number } | null = null;
+let workloadCache: { data: { caregivers: Array<{ user: User; patientCount: number }>; reviewers: Array<{ user: User; patientCount: number }> }; timestamp: number } | null = null;
 const CACHE_DURATION = 30000; // 30 seconds
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -85,50 +88,112 @@ export default function PatientsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Debounced search for better performance
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        // Check cache first
-        const now = Date.now();
-        if (patientsCache && now - patientsCache.timestamp < CACHE_DURATION) {
-          setPatients(patientsCache.data);
-          setIsLoading(false);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-          // Still fetch other data
-          const [staffData, statsData] = await Promise.all([
-            getAvailableStaff(),
-            getWorkloadStats(),
-          ]);
-          setAvailableStaff(staffData);
-          setWorkloadStats(statsData);
-          return;
-        }
+  // Memoized filtered patients for better performance
+  const filteredPatients = useMemo(() => {
+    if (!debouncedSearchTerm) return patients;
+    
+    const searchTermLower = debouncedSearchTerm.toLowerCase();
+    return patients.filter((patient) => {
+      return (
+        patient.firstName.toLowerCase().includes(searchTermLower) ||
+        patient.lastName.toLowerCase().includes(searchTermLower) ||
+        patient.email.toLowerCase().includes(searchTermLower) ||
+        (patient.medicalRecordNumber &&
+          patient.medicalRecordNumber.toLowerCase().includes(searchTermLower))
+      );
+    });
+  }, [patients, debouncedSearchTerm]);
 
-        const [patientsResponse, staffData, statsData] = await Promise.all([
-          getPatients(1, 50, user),
-          getAvailableStaff(),
-          getWorkloadStats(),
-        ]);
-
-        // Update cache
-        patientsCache = {
-          data: patientsResponse.patients,
-          timestamp: now,
-        };
-
-        setPatients(patientsResponse.patients);
-        setAvailableStaff(staffData);
-        setWorkloadStats(statsData);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-      } finally {
-        setIsLoading(false);
+  // Optimized data fetching with better caching
+  const fetchAllData = useCallback(async () => {
+    const now = Date.now();
+    
+    // Check all caches
+    const patientsFromCache = patientsCache && now - patientsCache.timestamp < CACHE_DURATION;
+    const staffFromCache = staffCache && now - staffCache.timestamp < CACHE_DURATION;
+    const workloadFromCache = workloadCache && now - workloadCache.timestamp < CACHE_DURATION;
+    
+    // If all data is cached, use it
+    if (patientsFromCache && staffFromCache && workloadFromCache) {
+      setPatients(patientsCache!.data);
+      setAvailableStaff(staffCache!.data);
+      setWorkloadStats(workloadCache!.data);
+      setIsLoading(false);
+      return;
+    }
+    
+    // Prepare API calls
+    const apiCalls = [];
+    
+    if (!patientsFromCache) {
+      apiCalls.push(getPatients(1, 50, user));
+    }
+    if (!staffFromCache) {
+      apiCalls.push(getAvailableStaff());
+    }
+    if (!workloadFromCache) {
+      apiCalls.push(getWorkloadStats());
+    }
+    
+    try {
+      const results = await Promise.all(apiCalls);
+      let resultIndex = 0;
+      
+      // Update patients if fetched
+      if (!patientsFromCache) {
+        const patientsResult = results[resultIndex++] as { patients: Patient[]; pagination: any };
+        patientsCache = { data: patientsResult.patients, timestamp: now };
+        setPatients(patientsResult.patients);
+      } else {
+        setPatients(patientsCache!.data);
       }
-    };
+      
+      // Update staff if fetched
+      if (!staffFromCache) {
+        const staffResult = results[resultIndex++] as { caregivers: User[]; reviewers: User[] };
+        staffCache = { data: staffResult, timestamp: now };
+        setAvailableStaff(staffResult);
+      } else {
+        setAvailableStaff(staffCache!.data);
+      }
+      
+      // Update workload if fetched
+      if (!workloadFromCache) {
+        const workloadResult = results[resultIndex++] as {
+          caregivers: Array<{ user: User; patientCount: number }>;
+          reviewers: Array<{ user: User; patientCount: number }>;
+        };
+        workloadCache = { data: workloadResult, timestamp: now };
+        setWorkloadStats(workloadResult);
+      } else {
+        setWorkloadStats(workloadCache!.data);
+      }
+      
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load data. Please refresh the page.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, toast]);
 
-    fetchData();
-  }, []);
+  useEffect(() => {
+    setIsLoading(true);
+    fetchAllData();
+  }, [fetchAllData]);
 
   const getCareLevelBadge = (careLevel?: CareLevel) => {
     switch (careLevel) {
@@ -160,17 +225,7 @@ export default function PatientsPage() {
     }
   };
 
-  const filteredPatients = patients.filter((patient) => {
-    const searchTermLower = searchTerm.toLowerCase();
-    return (
-      searchTerm === "" ||
-      patient.firstName.toLowerCase().includes(searchTermLower) ||
-      patient.lastName.toLowerCase().includes(searchTermLower) ||
-      patient.email.toLowerCase().includes(searchTermLower) ||
-      (patient.medicalRecordNumber &&
-        patient.medicalRecordNumber.toLowerCase().includes(searchTermLower))
-    );
-  });
+
 
   const handleOpenAssignmentDialog = (patient: Patient) => {
     setSelectedPatient(patient);
@@ -179,12 +234,13 @@ export default function PatientsPage() {
     setShowAssignmentDialog(true);
   };
 
-  const handleAssignment = async () => {
+  // Optimized assignment handler with better error handling
+  const handleAssignment = useCallback(async () => {
     if (!selectedPatient || !user) return;
 
     setIsAssigning(true);
     try {
-      let success = true;
+      const promises = [];
 
       // Handle caregiver assignment
       if (
@@ -192,18 +248,12 @@ export default function PatientsPage() {
         selectedCaregiver !== "none" &&
         selectedCaregiver !== selectedPatient.assignedCaregiverId
       ) {
-        success = await assignPatientToCaregiver(
-          selectedPatient.id,
-          selectedCaregiver,
-          user.id
-        );
-        if (!success) throw new Error("Failed to assign caregiver");
+        promises.push(assignPatientToCaregiver(selectedPatient.id, selectedCaregiver, user.id));
       } else if (
         (selectedCaregiver === "none" || !selectedCaregiver) &&
         selectedPatient.assignedCaregiverId
       ) {
-        success = await removeAssignment(selectedPatient.id, "caregiver");
-        if (!success) throw new Error("Failed to remove caregiver assignment");
+        promises.push(removeAssignment(selectedPatient.id, "caregiver"));
       }
 
       // Handle reviewer assignment
@@ -212,34 +262,30 @@ export default function PatientsPage() {
         selectedReviewer !== "none" &&
         selectedReviewer !== selectedPatient.assignedReviewerId
       ) {
-        success = await assignPatientToReviewer(
-          selectedPatient.id,
-          selectedReviewer,
-          user.id
-        );
-        if (!success) throw new Error("Failed to assign reviewer");
+        promises.push(assignPatientToReviewer(selectedPatient.id, selectedReviewer, user.id));
       } else if (
         (selectedReviewer === "none" || !selectedReviewer) &&
         selectedPatient.assignedReviewerId
       ) {
-        success = await removeAssignment(selectedPatient.id, "reviewer");
-        if (!success) throw new Error("Failed to remove reviewer assignment");
+        promises.push(removeAssignment(selectedPatient.id, "reviewer"));
       }
 
-      // Refresh data
-      const [patientsResponse, staffData, statsData] = await Promise.all([
-        getPatients(1, 50),
-        getAvailableStaff(),
-        getWorkloadStats(),
-      ]);
-      setPatients(patientsResponse.patients);
-      setAvailableStaff(staffData);
-      setWorkloadStats(statsData);
+      // Execute all assignments in parallel
+      if (promises.length > 0) {
+        await Promise.all(promises);
+      }
+
+      // Invalidate cache and refresh
+      patientsCache = null;
+      staffCache = null;
+      workloadCache = null;
+      
+      await fetchAllData();
 
       setShowAssignmentDialog(false);
       toast({
         title: "Assignment Updated",
-        description: `Patient assignments have been updated successfully.`,
+        description: "Patient assignments have been updated successfully.",
       });
     } catch (error) {
       console.error("Assignment error:", error);
@@ -251,45 +297,45 @@ export default function PatientsPage() {
     } finally {
       setIsAssigning(false);
     }
-  };
+  }, [selectedPatient, user, selectedCaregiver, selectedReviewer, fetchAllData, toast]);
 
   const handleRemoveAssignment = (patient: Patient) => {
     setPatientToDelete(patient);
     setShowDeleteDialog(true);
   };
 
-  const confirmRemoveAssignment = async () => {
+  const confirmRemoveAssignment = useCallback(async () => {
     if (!user || !patientToDelete) return;
 
     setIsAssigning(true);
     try {
-      let success = true;
+      const promises = [];
 
       // Remove caregiver assignment
       if (patientToDelete.assignedCaregiverId) {
-        success = await removeAssignment(patientToDelete.id, "caregiver");
-        if (!success) throw new Error("Failed to remove caregiver assignment");
+        promises.push(removeAssignment(patientToDelete.id, "caregiver"));
       }
 
-      // Remove reviewer assignment
+      // Remove reviewer assignment  
       if (patientToDelete.assignedReviewerId) {
-        success = await removeAssignment(patientToDelete.id, "reviewer");
-        if (!success) throw new Error("Failed to remove reviewer assignment");
+        promises.push(removeAssignment(patientToDelete.id, "reviewer"));
       }
 
-      // Refresh data
-      const [patientsResponse, staffData, statsData] = await Promise.all([
-        getPatients(1, 50),
-        getAvailableStaff(),
-        getWorkloadStats(),
-      ]);
-      setPatients(patientsResponse.patients);
-      setAvailableStaff(staffData);
-      setWorkloadStats(statsData);
+      // Execute removals in parallel
+      if (promises.length > 0) {
+        await Promise.all(promises);
+      }
+
+      // Invalidate cache and refresh
+      patientsCache = null;
+      staffCache = null;
+      workloadCache = null;
+      
+      await fetchAllData();
 
       toast({
         title: "Assignment Removed",
-        description: `Patient assignments have been removed successfully.`,
+        description: "Patient assignments have been removed successfully.",
       });
     } catch (error) {
       console.error("Remove assignment error:", error);
@@ -303,7 +349,7 @@ export default function PatientsPage() {
       setShowDeleteDialog(false);
       setPatientToDelete(null);
     }
-  };
+  }, [user, patientToDelete, fetchAllData, toast]);
 
   const formatAssignedDate = (dateString?: string) => {
     if (!dateString) return "N/A";

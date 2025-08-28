@@ -31,34 +31,37 @@ interface AdminLayoutProps {
 
 // Helper function to generate breadcrumbs from pathname
 function generateBreadcrumbs(pathname: string) {
-  const segments = pathname.split('/').filter(Boolean);
+  const segments = pathname.split("/").filter(Boolean);
   const breadcrumbs = [];
 
   // Skip the first segment if it's 'admin'
-  const adminIndex = segments.indexOf('admin');
+  const adminIndex = segments.indexOf("admin");
   if (adminIndex !== -1) {
     segments.splice(adminIndex, 1);
   }
 
   // Map of route segments to display names
   const routeNames: Record<string, string> = {
-    'applications': 'Applications',
-    'careers': 'Careers',
-    'patients': 'Patients',
-    'services': 'Services',
-    'logos': 'Logos',
-    'users': 'Users',
-    'settings': 'Settings',
-    'support': 'Support',
+    applications: "Applications",
+    careers: "Careers",
+    patients: "Patients",
+    services: "Services",
+    logos: "Logos",
+    users: "Users",
+    settings: "Settings",
+    support: "Support",
+    redis: "Redis Cache",
   };
 
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
     const isLast = i === segments.length - 1;
-    const href = `/admin/${segments.slice(0, i + 1).join('/')}`;
+    const href = `/admin/${segments.slice(0, i + 1).join("/")}`;
 
     breadcrumbs.push({
-      title: routeNames[segment] || segment.charAt(0).toUpperCase() + segment.slice(1),
+      title:
+        routeNames[segment] ||
+        segment.charAt(0).toUpperCase() + segment.slice(1),
       href: isLast ? undefined : href,
     });
   }
@@ -86,9 +89,7 @@ export function AdminLayout({ children, breadcrumbs }: AdminLayoutProps) {
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/admin">
-                      Admin Panel
-                    </BreadcrumbLink>
+                    <BreadcrumbLink href="/admin">Admin Panel</BreadcrumbLink>
                   </BreadcrumbItem>
                   {finalBreadcrumbs && finalBreadcrumbs.length > 0 && (
                     <>
@@ -116,9 +117,7 @@ export function AdminLayout({ children, breadcrumbs }: AdminLayoutProps) {
               </div>
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-            {children}
-          </div>
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
         </SidebarInset>
       </SidebarProvider>
       {/* Mobile bottom nav */}

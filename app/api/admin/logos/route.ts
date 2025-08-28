@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Logo, LogoResponse } from "@/lib/types/logos";
+import { CacheService } from "@/lib/redis";
 
 // In-memory storage for demo - replace with actual database
 let logos: Logo[] = [
@@ -49,6 +50,18 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get("active") === "true";
+    const cacheKey = `logos:${activeOnly ? "active" : "all"}`;
+
+    // Try to get from cache first
+    const cachedLogos = await CacheService.get<Logo[]>(cacheKey);
+    if (cachedLogos) {
+      console.log(`💾 Cache HIT for ${cacheKey}`);
+      const response: LogoResponse = {
+        success: true,
+        data: cachedLogos,
+      };
+      return NextResponse.json(response);
+    }
 
     let filteredLogos = logos;
     if (activeOnly) {
@@ -57,6 +70,10 @@ export async function GET(request: NextRequest) {
 
     // Sort by sortOrder
     filteredLogos.sort((a, b) => a.sortOrder - b.sortOrder);
+
+    // Cache the result for 5 minutes
+    await CacheService.set(cacheKey, filteredLogos, 300);
+    console.log(`💾 Cache SET for ${cacheKey}`);
 
     const response: LogoResponse = {
       success: true,
@@ -110,6 +127,10 @@ export async function POST(request: NextRequest) {
     };
 
     logos.push(newLogo);
+
+    // Invalidate cache
+    await CacheService.invalidatePattern("logos:*");
+    console.log("🗑️ Cache invalidated after logo creation");
 
     const response: LogoResponse = {
       success: true,
@@ -167,6 +188,10 @@ export async function PUT(request: NextRequest) {
 
     logos[logoIndex] = updatedLogo;
 
+    // Invalidate cache
+    await CacheService.invalidatePattern("logos:*");
+    console.log("🗑️ Cache invalidated after logo update");
+
     const response: LogoResponse = {
       success: true,
       data: updatedLogo,
@@ -207,6 +232,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     logos.splice(logoIndex, 1);
+
+    // Invalidate cache
+    await CacheService.invalidatePattern("logos:*");
+    console.log("🗑️ Cache invalidated after logo deletion");
 
     const response: LogoResponse = {
       success: true,

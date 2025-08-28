@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/database/postgresql";
 import { authenticateRequest } from "@/lib/api/auth";
+import { CacheService } from "@/lib/redis";
 
 // GET /api/patients/[id] - Get patient by ID
 export async function GET(
@@ -18,6 +19,17 @@ export async function GET(
 
     const { user } = authResult;
 
+    // Check cache first (user-specific cache for security)
+    const cacheKey = `patient:${id}:user:${user.id}`;
+    const cachedPatient = await CacheService.get(cacheKey);
+    if (cachedPatient) {
+      console.log(`💾 Cache HIT for patient ${id}`);
+      return NextResponse.json({
+        success: true,
+        data: cachedPatient,
+      });
+    }
+
     // Find patient with user data
     const patient = await prisma.patient.findUnique({
       where: { id },
@@ -32,14 +44,14 @@ export async function GET(
             address: true,
             createdAt: true,
             updatedAt: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     if (!patient) {
       return NextResponse.json(
-        { success: false, error: 'Patient not found' },
+        { success: false, error: "Patient not found" },
         { status: 404 }
       );
     }
@@ -77,7 +89,7 @@ export async function GET(
 
     if (!hasAccess) {
       return NextResponse.json(
-        { success: false, error: 'Access denied' },
+        { success: false, error: "Access denied" },
         { status: 403 }
       );
     }
@@ -105,21 +117,24 @@ export async function GET(
       currentMedications: patient.currentMedications,
       insuranceProvider: patient.insuranceProvider,
       insurancePolicyNumber: patient.insurancePolicyNumber,
-      createdAt: patient.createdAt?.toISOString(),
-      updatedAt: patient.updatedAt?.toISOString(),
+      createdAt: patient.user.createdAt?.toISOString(),
+      updatedAt: patient.user.updatedAt?.toISOString(),
     };
+
+    // Cache the patient data for 5 minutes (user-specific for security)
+    await CacheService.set(cacheKey, transformedPatient, 300);
+    console.log(`💾 Cache SET for patient ${id}`);
 
     return NextResponse.json({
       success: true,
-      data: transformedPatient
+      data: transformedPatient,
     });
-
   } catch (error) {
-    console.error('Error fetching patient:', error);
+    console.error("Error fetching patient:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch patient information'
+        error: "Failed to fetch patient information",
       },
       { status: 500 }
     );
@@ -144,7 +159,7 @@ export async function PUT(
     const { user } = authResult;
 
     // Limited fields that non-admin users can update
-    const { 
+    const {
       phone,
       address,
       heightCm,
@@ -162,12 +177,12 @@ export async function PUT(
     // Check if patient exists
     const existingPatient = await prisma.patient.findUnique({
       where: { id },
-      include: { user: true }
+      include: { user: true },
     });
 
     if (!existingPatient) {
       return NextResponse.json(
-        { success: false, error: 'Patient not found' },
+        { success: false, error: "Patient not found" },
         { status: 404 }
       );
     }
@@ -205,7 +220,7 @@ export async function PUT(
 
     if (!hasUpdateAccess) {
       return NextResponse.json(
-        { success: false, error: 'Access denied' },
+        { success: false, error: "Access denied" },
         { status: 403 }
       );
     }
@@ -217,9 +232,10 @@ export async function PUT(
         where: { id: existingPatient.userId },
         data: {
           phone: phone !== undefined ? phone : existingPatient.user.phone,
-          address: address !== undefined ? address : existingPatient.user.address,
+          address:
+            address !== undefined ? address : existingPatient.user.address,
           updatedAt: new Date(),
-        }
+        },
       });
 
       // Update patient record (limited fields)
@@ -228,15 +244,33 @@ export async function PUT(
         data: {
           heightCm: heightCm ? parseInt(heightCm) : existingPatient.heightCm,
           weightKg: weightKg ? parseFloat(weightKg) : existingPatient.weightKg,
-          careLevel: careLevel ? careLevel.toUpperCase() : existingPatient.careLevel,
+          careLevel: careLevel
+            ? careLevel.toUpperCase()
+            : existingPatient.careLevel,
           status: status ? status.toUpperCase() : existingPatient.status,
-          emergencyContactName: emergencyContactName !== undefined ? emergencyContactName : existingPatient.emergencyContactName,
-          emergencyContactRelationship: emergencyContactRelationship !== undefined ? emergencyContactRelationship : existingPatient.emergencyContactRelationship,
-          emergencyContactPhone: emergencyContactPhone !== undefined ? emergencyContactPhone : existingPatient.emergencyContactPhone,
-          medicalHistory: medicalHistory !== undefined ? medicalHistory : existingPatient.medicalHistory,
-          allergies: allergies !== undefined ? allergies : existingPatient.allergies,
-          currentMedications: currentMedications !== undefined ? currentMedications : existingPatient.currentMedications,
-        }
+          emergencyContactName:
+            emergencyContactName !== undefined
+              ? emergencyContactName
+              : existingPatient.emergencyContactName,
+          emergencyContactRelationship:
+            emergencyContactRelationship !== undefined
+              ? emergencyContactRelationship
+              : existingPatient.emergencyContactRelationship,
+          emergencyContactPhone:
+            emergencyContactPhone !== undefined
+              ? emergencyContactPhone
+              : existingPatient.emergencyContactPhone,
+          medicalHistory:
+            medicalHistory !== undefined
+              ? medicalHistory
+              : existingPatient.medicalHistory,
+          allergies:
+            allergies !== undefined ? allergies : existingPatient.allergies,
+          currentMedications:
+            currentMedications !== undefined
+              ? currentMedications
+              : existingPatient.currentMedications,
+        },
       });
 
       return { user, patient };
@@ -267,17 +301,20 @@ export async function PUT(
       insurancePolicyNumber: result.patient.insurancePolicyNumber,
     };
 
+    // Invalidate cache for this patient
+    await CacheService.invalidatePattern(`patient:${id}:*`);
+    console.log(`🗑️ Cache invalidated for patient ${id}`);
+
     return NextResponse.json({
       success: true,
-      data: transformedPatient
+      data: transformedPatient,
     });
-
   } catch (error) {
-    console.error('Error updating patient:', error);
+    console.error("Error updating patient:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to update patient information' 
+      {
+        success: false,
+        error: "Failed to update patient information",
       },
       { status: 500 }
     );

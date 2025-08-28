@@ -26,6 +26,7 @@ import {
   Shield,
   UserPlus,
   Users,
+  Database,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -130,6 +131,11 @@ const getAdminData = (user: any, pathname: string) => ({
   ],
   projects: [
     {
+      name: "Redis Cache",
+      url: "/admin/redis",
+      icon: Database,
+    },
+    {
       name: "System Analytics",
       url: "/admin/analytics",
       icon: BarChart3,
@@ -169,11 +175,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
-              <SidebarContent>
-          <NavMain items={data.navMain} />
-          <NavProjects projects={data.projects} />
-          <NavSecondary items={data.navSecondary} className="mt-auto" />
-        </SidebarContent>
+      <SidebarContent>
+        <NavMain items={data.navMain} />
+        <NavProjects projects={data.projects} />
+        <NavSecondary items={data.navSecondary} className="mt-auto" />
+      </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
       </SidebarFooter>

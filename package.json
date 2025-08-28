@@ -46,6 +46,9 @@
     "migrate:import": "tsx scripts/import-to-supabase.ts",
     "migrate:api": "tsx scripts/migrate-via-supabase-api.ts",
     "test:supabase": "tsx scripts/test-supabase-connection.ts",
+    "test:redis": "tsx scripts/test-redis-local.ts",
+    "generate:cache": "tsx scripts/generate-test-cache.ts",
+    "test:healthcare-cache": "tsx scripts/test-healthcare-cache.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -85,6 +88,7 @@
     "@supabase/supabase-js": "^2.56.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.15.5",
+    "ioredis": "^5.3.2",
     "autoprefixer": "^10.4.20",
     "bcryptjs": "^3.0.2",
     "better-sqlite3": "^12.2.0",
@@ -124,6 +128,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
+    "@types/ioredis": "^5.0.0",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.3",

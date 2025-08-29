@@ -130,7 +130,7 @@ export default function CaregiverPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background w-full">
+    <div className="min-h-screen bg-background">
       {/* Header Navigation */}
       <RoleHeader role="caregiver" />
 
@@ -140,31 +140,36 @@ export default function CaregiverPage() {
       </div>
 
       {/* Desktop */}
-      <main className="hidden md:block container mx-auto px-4 py-6 w-full max-w-7xl space-y-6">
-        {/* Welcome Header */}
-        <Card className="bg-gradient-to-r from-teal-50 to-green-50 dark:from-teal-900/20 dark:to-green-900/20 border-teal-200 dark:border-teal-700">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-teal-900 dark:text-teal-100">
-                  Welcome back, {user.firstName}! 👋
-                </h1>
-                <p className="text-teal-700 dark:text-teal-300 mt-1 text-lg">
-                  {formatFullDate(currentTime)} • {formatTime(currentTime)}
-                </p>
-                <p className="text-teal-600 dark:text-teal-400 mt-2">
-                  Ready to provide exceptional care today
-                </p>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="text-right text-sm text-teal-700 dark:text-teal-300">
-                  <div>🌡️ Today: 24°C, Sunny</div>
-                  <div>📍 Accra, Ghana</div>
-                </div>
-              </div>
+      <main className="hidden md:block container mx-auto px-4 py-6 max-w-7xl space-y-6">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              Welcome back, {user.firstName}! 👋
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {formatFullDate(currentTime)} • {formatTime(currentTime)}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Ready to provide exceptional care today
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <Bell className="h-4 w-4 mr-2" />
+                Notifications
+              </Button>
+              <Button size="sm">
+                <Activity className="h-4 w-4 mr-2" />
+                Log Activity
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-right text-xs text-muted-foreground">
+              <div>🌡️ Today: 24°C, Sunny • 📍 Accra, Ghana</div>
+            </div>
+          </div>
+        </div>
 
         {/* Profile Completion Notice */}
         {!user.profileComplete && (
@@ -196,76 +201,84 @@ export default function CaregiverPage() {
         {/* Quick Stats Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="pt-4">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">
                     Active Patients
                   </p>
-                  <p className="text-3xl font-bold text-teal-600">0</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <div className="flex items-baseline">
+                    <h3 className="text-3xl font-bold text-teal-600">{assignedPatients.length}</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
                     Assigned to you
                   </p>
                 </div>
-                <div className="p-3 bg-teal-100 rounded-full">
-                  <Users className="h-6 w-6 text-teal-600" />
+                <div className="p-3 bg-teal-100 dark:bg-teal-900/20 rounded-full">
+                  <Users className="h-6 w-6 text-teal-600 dark:text-teal-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="pt-4">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">
                     Today's Tasks
                   </p>
-                  <p className="text-3xl font-bold text-blue-600">0</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <div className="flex items-baseline">
+                    <h3 className="text-3xl font-bold text-blue-600">0</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
                     Pending completion
                   </p>
                 </div>
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <ClipboardCheck className="h-6 w-6 text-blue-600" />
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                  <ClipboardCheck className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="pt-4">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">
                     Hours This Week
                   </p>
-                  <p className="text-3xl font-bold text-green-600">0</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <div className="flex items-baseline">
+                    <h3 className="text-3xl font-bold text-green-600">0</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
                     Out of 40 scheduled
                   </p>
                 </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <Clock className="h-6 w-6 text-green-600" />
+                <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-full">
+                  <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="pt-4">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">
                     Notifications
                   </p>
-                  <p className="text-3xl font-bold text-purple-600">2</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <div className="flex items-baseline">
+                    <h3 className="text-3xl font-bold text-purple-600">2</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
                     Unread messages
                   </p>
                 </div>
-                <div className="p-3 bg-purple-100 rounded-full">
-                  <Bell className="h-6 w-6 text-purple-600" />
+                <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-full">
+                  <Bell className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                 </div>
               </div>
             </CardContent>
@@ -273,18 +286,20 @@ export default function CaregiverPage() {
         </div>
 
         {/* Main Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* My Patients for Care */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Users className="h-5 w-5 mr-2 text-teal-600" />
-                  My Patients for Care
+          <Card className="lg:col-span-3">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center text-lg">
+                    <Users className="h-5 w-5 mr-2 text-teal-600" />
+                    My Patients for Care
+                  </CardTitle>
+                  <CardDescription>Patients assigned to your care</CardDescription>
                 </div>
-                <Badge variant="outline">{assignedPatients.length}/8</Badge>
-              </CardTitle>
-              <CardDescription>Patients assigned to your care</CardDescription>
+                <Badge variant="outline" className="text-xs">{assignedPatients.length}/8</Badge>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoadingPatients ? (
@@ -361,9 +376,9 @@ export default function CaregiverPage() {
           </Card>
 
           {/* Today's Schedule */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center">
+          <Card className="lg:col-span-3">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-lg">
                 <Calendar className="h-5 w-5 mr-2 text-teal-600" />
                 Today's Schedule & Assignments
               </CardTitle>
@@ -395,110 +410,114 @@ export default function CaregiverPage() {
             </CardContent>
           </Card>
 
-          {/* Quick Actions & Info */}
-          <div className="space-y-6">
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <Activity className="h-5 w-5 mr-2 text-teal-600" />
-                  Quick Actions
-                </CardTitle>
-                <CardDescription>Common tasks and tools</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
+        </div>
+
+        {/* Secondary Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+          {/* Quick Actions */}
+          <Card className="lg:col-span-3">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-lg">
+                <Activity className="h-5 w-5 mr-2 text-teal-600" />
+                Quick Actions
+              </CardTitle>
+              <CardDescription>Common tasks and tools</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Button
                   variant="outline"
-                  className="w-full justify-start"
+                  className="justify-start"
                   onClick={() => router.push("/profile")}
                 >
                   <User className="h-4 w-4 mr-2" />
-                  Update My Profile
+                  Update Profile
                 </Button>
 
                 <Button
                   variant="outline"
-                  className="w-full justify-start"
+                  className="justify-start"
                   disabled
                 >
                   <ClipboardCheck className="h-4 w-4 mr-2" />
-                  Log Care Activity
+                  Log Activity
                 </Button>
 
                 <Button
                   variant="outline"
-                  className="w-full justify-start"
+                  className="justify-start"
                   disabled
                 >
                   <Calendar className="h-4 w-4 mr-2" />
-                  Request Schedule Change
+                  Schedule Change
                 </Button>
 
                 <Button
                   variant="outline"
-                  className="w-full justify-start"
+                  className="justify-start"
                   disabled
                 >
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Message Supervisor
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Recent Notifications */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <Bell className="h-5 w-5 mr-2 text-teal-600 dark:text-teal-400" />
-                  Recent Updates
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-700">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="h-5 w-5 text-teal-700 dark:text-teal-400 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="font-medium text-teal-900 dark:text-teal-100">
-                          Welcome to Alpha Rescue!
-                        </p>
-                        <p className="text-sm text-teal-800 dark:text-teal-300 mt-1">
-                          Complete your profile to get started with patient
-                          assignments.
-                        </p>
-                        <p className="text-xs text-teal-700 dark:text-teal-400 mt-2">
-                          {formatDate(new Date())}
-                        </p>
-                      </div>
-                    </div>
+          {/* Recent Notifications */}
+          <Card className="lg:col-span-3">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center text-lg">
+                <Bell className="h-5 w-5 mr-2 text-teal-600 dark:text-teal-400" />
+                Recent Updates
+              </CardTitle>
+              <CardDescription>Latest notifications and system messages</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-700">
+                <div className="flex items-start gap-3">
+                  <div className="p-1 bg-teal-100 dark:bg-teal-800 rounded-full mt-0.5">
+                    <CheckCircle className="h-4 w-4 text-teal-700 dark:text-teal-400" />
                   </div>
-
-                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                    <div className="flex items-start gap-3">
-                      <Activity className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="font-medium text-green-900 dark:text-green-100">
-                          Training Available
-                        </p>
-                        <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                          New care protocols training is now available in your
-                          learning portal.
-                        </p>
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                          2 hours ago
-                        </p>
-                      </div>
-                    </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-teal-900 dark:text-teal-100 text-sm">
+                      Welcome to Alpha Rescue!
+                    </p>
+                    <p className="text-xs text-teal-800 dark:text-teal-300 mt-1">
+                      Complete your profile to get started with patient assignments.
+                    </p>
+                    <p className="text-xs text-teal-700 dark:text-teal-400 mt-2">
+                      {formatDate(new Date())}
+                    </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                <div className="flex items-start gap-3">
+                  <div className="p-1 bg-green-100 dark:bg-green-800 rounded-full mt-0.5">
+                    <Stethoscope className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-green-900 dark:text-green-100 text-sm">
+                      Training Available
+                    </p>
+                    <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                      New care protocols training is now available in your learning portal.
+                    </p>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                      2 hours ago
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Emergency Contact Information */}
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center text-lg">
               <Phone className="h-5 w-5 mr-2 text-red-600" />
               Emergency & Support Contacts
@@ -509,20 +528,20 @@ export default function CaregiverPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 p-4 border rounded-lg bg-red-50 border-red-200">
-                <div className="p-2 bg-red-100 rounded-full">
-                  <Phone className="h-5 w-5 text-red-600" />
+              <div className="flex items-center gap-3 p-4 border rounded-lg bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 hover:shadow-md transition-shadow">
+                <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-full">
+                  <Phone className="h-5 w-5 text-red-600 dark:text-red-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-red-900">Emergency</p>
-                  <p className="text-sm text-red-700">+233 XX XXX XXXX</p>
-                  <p className="text-xs text-red-600">24/7 Emergency Line</p>
+                  <p className="font-semibold text-red-900 dark:text-red-100">Emergency</p>
+                  <p className="text-sm text-red-700 dark:text-red-300">+233 XX XXX XXXX</p>
+                  <p className="text-xs text-red-600 dark:text-red-400">24/7 Emergency Line</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 border rounded-lg">
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <Mail className="h-5 w-5 text-blue-600" />
+              <div className="flex items-center gap-3 p-4 border rounded-lg hover:shadow-md transition-shadow">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                  <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
                   <p className="font-semibold">Support Team</p>
@@ -535,9 +554,9 @@ export default function CaregiverPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 border rounded-lg">
-                <div className="p-2 bg-green-100 rounded-full">
-                  <MapPin className="h-5 w-5 text-green-600" />
+              <div className="flex items-center gap-3 p-4 border rounded-lg hover:shadow-md transition-shadow">
+                <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-full">
+                  <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
                   <p className="font-semibold">Main Office</p>

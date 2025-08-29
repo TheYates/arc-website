@@ -2,6 +2,11 @@ import Redis from "ioredis";
 
 // Redis configuration for local development and production
 const getRedisConfig = () => {
+  // Check if Redis should be disabled (for home development without Redis server)
+  if (process.env.DISABLE_REDIS === "true") {
+    return null;
+  }
+
   // For local development
   if (process.env.NODE_ENV === "development") {
     return {
@@ -26,9 +31,15 @@ const getRedisConfig = () => {
   };
 };
 
-// Create Redis instance
+// Create Redis instance or null if disabled
 const createRedisInstance = () => {
   const config = getRedisConfig();
+
+  // If Redis is disabled, return null
+  if (config === null) {
+    console.log("🚫 Redis is disabled via DISABLE_REDIS environment variable");
+    return null;
+  }
 
   // If config is a string (URL), use it directly
   if (typeof config === "string") {
@@ -41,19 +52,21 @@ const createRedisInstance = () => {
 
 const redis = createRedisInstance();
 
-// Connection event handlers
-redis.on("connect", () => {
-  console.log("✅ Redis connected successfully");
-});
+// Connection event handlers (only if Redis is enabled)
+if (redis) {
+  redis.on("connect", () => {
+    console.log("✅ Redis connected successfully");
+  });
 
-redis.on("error", (err) => {
-  console.warn("⚠️ Redis connection error:", err.message);
-  console.log("📝 Falling back to in-memory cache");
-});
+  redis.on("error", (err) => {
+    console.warn("⚠️ Redis connection error:", err.message);
+    console.log("📝 Falling back to in-memory cache");
+  });
 
-redis.on("ready", () => {
-  console.log("🚀 Redis is ready to accept commands");
-});
+  redis.on("ready", () => {
+    console.log("🚀 Redis is ready to accept commands");
+  });
+}
 
 // Cache utility functions
 export class CacheService {
@@ -64,6 +77,15 @@ export class CacheService {
 
   static async get<T>(key: string): Promise<T | null> {
     try {
+      // If Redis is disabled, use fallback cache directly
+      if (!redis) {
+        const cached = this.fallbackCache.get(key);
+        if (cached && Date.now() < cached.expires) {
+          return cached.data;
+        }
+        return null;
+      }
+
       const result = await redis.get(key);
       return result ? JSON.parse(result) : null;
     } catch (error) {
@@ -78,6 +100,15 @@ export class CacheService {
 
   static async set(key: string, value: any, ttlSeconds = 300): Promise<void> {
     try {
+      // If Redis is disabled, use fallback cache directly
+      if (!redis) {
+        this.fallbackCache.set(key, {
+          data: value,
+          expires: Date.now() + ttlSeconds * 1000,
+        });
+        return;
+      }
+
       await redis.setex(key, ttlSeconds, JSON.stringify(value));
     } catch (error) {
       // Fallback to in-memory cache
@@ -90,6 +121,12 @@ export class CacheService {
 
   static async del(key: string): Promise<void> {
     try {
+      // If Redis is disabled, use fallback cache directly
+      if (!redis) {
+        this.fallbackCache.delete(key);
+        return;
+      }
+
       await redis.del(key);
     } catch (error) {
       this.fallbackCache.delete(key);
@@ -98,6 +135,16 @@ export class CacheService {
 
   static async invalidatePattern(pattern: string): Promise<void> {
     try {
+      // If Redis is disabled, use fallback cache directly
+      if (!redis) {
+        for (const key of this.fallbackCache.keys()) {
+          if (key.includes(pattern.replace("*", ""))) {
+            this.fallbackCache.delete(key);
+          }
+        }
+        return;
+      }
+
       const keys = await redis.keys(pattern);
       if (keys.length > 0) {
         await redis.del(...keys);
@@ -114,6 +161,11 @@ export class CacheService {
 
   static async health(): Promise<{ redis: boolean; fallback: boolean }> {
     try {
+      // If Redis is disabled, always return fallback mode
+      if (!redis) {
+        return { redis: false, fallback: true };
+      }
+
       await redis.ping();
       return { redis: true, fallback: false };
     } catch (error) {

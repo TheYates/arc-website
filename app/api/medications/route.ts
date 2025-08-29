@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createMedication } from "@/lib/api/medications-prisma";
+import {
+  createPrescription,
+  getAllMedications,
+} from "@/lib/api/medications-prisma";
+import { prisma } from "@/lib/database/postgresql";
 
 // POST /api/medications - Create new medication prescription
 export async function POST(request: NextRequest) {
@@ -15,56 +19,114 @@ export async function POST(request: NextRequest) {
       startDate,
       endDate,
       instructions,
-      priority = 'medium',
-      category = 'other'
+      priority = "medium",
+      category = "other",
     } = body;
 
     // Validate required fields
-    if (!patientId || !prescribedBy || !medicationName || !dosage || !frequency) {
+    if (
+      !patientId ||
+      !prescribedBy ||
+      !medicationName ||
+      !dosage ||
+      !frequency
+    ) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Missing required fields: patientId, prescribedBy, medicationName, dosage, frequency' 
+        {
+          success: false,
+          error:
+            "Missing required fields: patientId, prescribedBy, medicationName, dosage, frequency",
         },
         { status: 400 }
       );
     }
 
-    // Create medication data
-    const medicationData = {
+    // Find or create medication in the catalog
+    let medication = await prisma.medication.findFirst({
+      where: {
+        name: {
+          equals: medicationName.trim(),
+          mode: "insensitive",
+        },
+      },
+    });
+
+    // If medication doesn't exist in catalog, create it
+    if (!medication) {
+      medication = await prisma.medication.create({
+        data: {
+          name: medicationName.trim(),
+          genericName: medicationName.trim(),
+          drugClass: category,
+          dosageForms: [route || "oral"],
+          strengthOptions: [dosage],
+          routeOfAdministration: route || "oral",
+          contraindications: [],
+          sideEffects: [],
+          drugInteractions: [],
+        },
+      });
+    }
+
+    // Create prescription data
+    const prescriptionData = {
       patientId,
-      prescribedBy,
-      medicationName: medicationName.trim(),
+      medicationId: medication.id,
+      prescribedById: prescribedBy,
       dosage: dosage.trim(),
       frequency,
-      route: route || 'oral',
-      startDate: startDate || new Date().toISOString(),
-      endDate,
+      duration: endDate
+        ? `${Math.ceil(
+            (new Date(endDate).getTime() -
+              new Date(startDate || Date.now()).getTime()) /
+              (1000 * 60 * 60 * 24)
+          )}`
+        : undefined,
       instructions: instructions?.trim(),
-      isActive: true,
-      isPRN: frequency === 'as_needed',
-      priority,
-      category,
-      lastModifiedBy: prescribedBy
+      startDate: startDate ? new Date(startDate) : new Date(),
+      endDate: endDate ? new Date(endDate) : undefined,
+      notes: `Prescribed via reviewer interface. Priority: ${priority}`,
     };
 
-    const result = await createMedication(medicationData);
+    const result = await createPrescription(prescriptionData);
 
     if (!result) {
-      throw new Error('Failed to create medication');
+      throw new Error("Failed to create prescription");
     }
+
+    // Return prescription with medication details
+    const prescriptionWithDetails = await prisma.prescription.findUnique({
+      where: { id: result.id },
+      include: {
+        medication: {
+          select: {
+            id: true,
+            name: true,
+            genericName: true,
+            drugClass: true,
+            routeOfAdministration: true,
+          },
+        },
+        prescribedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      data: result
+      data: prescriptionWithDetails,
     });
-
   } catch (error) {
-    console.error('Error creating medication:', error);
+    console.error("Error creating medication prescription:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to create medication prescription' 
+      {
+        success: false,
+        error: "Failed to create medication prescription",
       },
       { status: 500 }
     );

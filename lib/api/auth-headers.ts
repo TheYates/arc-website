@@ -4,12 +4,31 @@ import { User } from "@/lib/auth";
  * Utility function to create authentication headers for API requests
  * This ensures consistent authentication across all API calls
  */
-export function createAuthHeaders(user: User | null, additionalHeaders: Record<string, string> = {}): Record<string, string> {
+export function createAuthHeaders(
+  user: User | null,
+  additionalHeaders: Record<string, string> = {}
+): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...additionalHeaders,
   };
 
+  // First priority: Try to get JWT token from stored session
+  if (typeof window !== "undefined") {
+    try {
+      const storedSession = localStorage.getItem("auth_session");
+      if (storedSession) {
+        const sessionData = JSON.parse(storedSession);
+        if (sessionData.accessToken) {
+          headers["Authorization"] = `Bearer ${sessionData.accessToken}`;
+        }
+      }
+    } catch (error) {
+      console.log("Failed to get JWT token from session:", error);
+    }
+  }
+
+  // Fallback: Include user info for legacy auth methods
   if (user?.id) {
     headers["x-user-id"] = user.id;
     headers["x-session-user"] = encodeURIComponent(JSON.stringify(user));
@@ -27,7 +46,7 @@ export async function authenticatedFetch(
   options: RequestInit = {}
 ): Promise<Response> {
   const authHeaders = createAuthHeaders(user);
-  
+
   const mergedOptions: RequestInit = {
     ...options,
     headers: {
@@ -42,7 +61,10 @@ export async function authenticatedFetch(
 /**
  * Helper for GET requests with authentication
  */
-export async function authenticatedGet(url: string, user: User | null): Promise<Response> {
+export async function authenticatedGet(
+  url: string,
+  user: User | null
+): Promise<Response> {
   return authenticatedFetch(url, user, { method: "GET" });
 }
 
@@ -91,6 +113,9 @@ export async function authenticatedPatch(
 /**
  * Helper for DELETE requests with authentication
  */
-export async function authenticatedDelete(url: string, user: User | null): Promise<Response> {
+export async function authenticatedDelete(
+  url: string,
+  user: User | null
+): Promise<Response> {
   return authenticatedFetch(url, user, { method: "DELETE" });
 }

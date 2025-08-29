@@ -1,4 +1,9 @@
-import { CareNote, CreateCareNoteRequest, UpdateCareNoteRequest } from "@/lib/types/care-notes";
+import {
+  CareNote,
+  CreateCareNoteRequest,
+  UpdateCareNoteRequest,
+} from "@/lib/types/care-notes";
+import { createAuthHeaders } from "./auth-headers";
 
 // Cache for care notes
 const CACHE_DURATION = 30000; // 30 seconds
@@ -23,9 +28,10 @@ function clearCache(): void {
 // Get care notes for a patient with optional filtering by author role
 export async function getCareNotes(
   patientId: string,
-  authorRole?: "caregiver" | "reviewer"
+  authorRole?: "caregiver" | "reviewer",
+  user?: any
 ): Promise<CareNote[]> {
-  const cacheKey = `notes-${patientId}-${authorRole || 'all'}`;
+  const cacheKey = `notes-${patientId}-${authorRole || "all"}`;
   const cached = getCachedNotes(cacheKey);
   if (cached) {
     return cached;
@@ -33,11 +39,12 @@ export async function getCareNotes(
 
   const start = performance.now();
   const params = new URLSearchParams();
-  params.append('patientId', patientId);
-  if (authorRole) params.append('authorRole', authorRole);
+  params.append("patientId", patientId);
+  if (authorRole) params.append("authorRole", authorRole);
 
   const response = await fetch(`/api/care-notes?${params.toString()}`, {
-    next: { revalidate: 60 }
+    headers: createAuthHeaders(user),
+    next: { revalidate: 60 },
   });
 
   if (!response.ok) {
@@ -46,23 +53,26 @@ export async function getCareNotes(
 
   const result = await response.json();
   const notes = result.notes || [];
-  
+
   setCachedNotes(cacheKey, notes);
-  
+
   const end = performance.now();
   console.log(`📝 Care notes fetched in ${(end - start).toFixed(2)}ms`);
-  
+
   return notes;
 }
 
 // Create a new care note
-export async function createCareNote(noteData: CreateCareNoteRequest): Promise<CareNote> {
+export async function createCareNote(
+  noteData: CreateCareNoteRequest
+): Promise<CareNote> {
   const start = performance.now();
-  
-  const response = await fetch('/api/care-notes', {
-    method: 'POST',
+
+  const response = await fetch("/api/care-notes", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
+      ...createAuthHeaders(null),
     },
     body: JSON.stringify(noteData),
   });
@@ -73,27 +83,28 @@ export async function createCareNote(noteData: CreateCareNoteRequest): Promise<C
 
   const result = await response.json();
   const note = result.note;
-  
+
   // Clear cache to ensure fresh data
   clearCache();
-  
+
   const end = performance.now();
   console.log(`📝 Care note created in ${(end - start).toFixed(2)}ms`);
-  
+
   return note;
 }
 
 // Update an existing care note
 export async function updateCareNote(
-  noteId: string, 
+  noteId: string,
   updateData: UpdateCareNoteRequest
 ): Promise<CareNote> {
   const start = performance.now();
-  
+
   const response = await fetch(`/api/care-notes/${noteId}`, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
+      ...createAuthHeaders(null),
     },
     body: JSON.stringify(updateData),
   });
@@ -104,41 +115,45 @@ export async function updateCareNote(
 
   const result = await response.json();
   const note = result.note;
-  
+
   // Clear cache to ensure fresh data
   clearCache();
-  
+
   const end = performance.now();
   console.log(`📝 Care note updated in ${(end - start).toFixed(2)}ms`);
-  
+
   return note;
 }
 
 // Delete a care note
 export async function deleteCareNote(noteId: string): Promise<void> {
   const start = performance.now();
-  
+
   const response = await fetch(`/api/care-notes/${noteId}`, {
-    method: 'DELETE',
+    method: "DELETE",
+    headers: createAuthHeaders(null),
   });
 
   if (!response.ok) {
     throw new Error(`Failed to delete care note: ${response.statusText}`);
   }
-  
+
   // Clear cache to ensure fresh data
   clearCache();
-  
+
   const end = performance.now();
   console.log(`📝 Care note deleted in ${(end - start).toFixed(2)}ms`);
 }
 
 // Get a specific care note by ID
-export async function getCareNoteById(noteId: string): Promise<CareNote | null> {
+export async function getCareNoteById(
+  noteId: string
+): Promise<CareNote | null> {
   const start = performance.now();
-  
+
   const response = await fetch(`/api/care-notes/${noteId}`, {
-    next: { revalidate: 60 }
+    headers: createAuthHeaders(null),
+    next: { revalidate: 60 },
   });
 
   if (!response.ok) {
@@ -150,9 +165,9 @@ export async function getCareNoteById(noteId: string): Promise<CareNote | null> 
 
   const result = await response.json();
   const note = result.note;
-  
+
   const end = performance.now();
   console.log(`📝 Care note fetched by ID in ${(end - start).toFixed(2)}ms`);
-  
+
   return note;
 }

@@ -182,22 +182,24 @@ export async function PATCH(
           };
 
           // Update corresponding caregiver schedules to completed
-          try {
-            await prisma.caregiverSchedule.updateMany({
-              where: {
-                caregiverId: existingRequest.caregiverId,
-                patientId: existingRequest.patientId,
-                title: existingRequest.title,
-                scheduledDate: existingRequest.scheduledDate,
-                status: "SCHEDULED",
-              },
-              data: {
-                status: "COMPLETED",
-              },
-            });
-          } catch (error) {
-            console.error("Error updating corresponding schedules:", error);
-            // Don't fail the request if schedule update fails
+          if (existingRequest.scheduledDate) {
+            try {
+              await prisma.caregiverSchedule.updateMany({
+                where: {
+                  caregiverId: existingRequest.caregiverId,
+                  patientId: existingRequest.patientId,
+                  title: existingRequest.title,
+                  scheduledDate: existingRequest.scheduledDate,
+                  status: "SCHEDULED",
+                },
+                data: {
+                  status: "COMPLETED",
+                },
+              });
+            } catch (error) {
+              console.error("Error updating corresponding schedules:", error);
+              // Don't fail the request if schedule update fails
+            }
           }
 
           // Create care note for completed service

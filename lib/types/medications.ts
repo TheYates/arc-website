@@ -36,19 +36,43 @@ export interface MedicationSchedule {
 
 export interface MedicationAdministration {
   id: string;
-  medicationId: string;
+  prescriptionId: string; // Updated to match database schema
   patientId: string;
-  caregiverId: string;
+  administeredById?: string; // Updated to match database schema (nullable)
   scheduledTime: string;
-  actualTime?: string;
+  administeredTime?: string; // Updated to match database schema
   status: AdministrationStatus;
   dosageGiven?: string; // Actual dosage given (might be partial)
   notes?: string;
-  sideEffectsObserved?: string[];
+  sideEffectsObserved?: string;
   patientResponse?: "good" | "fair" | "poor" | "adverse";
   witnessedBy?: string; // For controlled substances
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string; // Made optional to match database
+
+  // Legacy fields for backward compatibility
+  medicationId?: string; // @deprecated - use prescriptionId
+  caregiverId?: string; // @deprecated - use administeredById
+  actualTime?: string; // @deprecated - use administeredTime
+}
+
+// Extended interface for API responses that include nested data
+export interface MedicationAdministrationWithDetails extends MedicationAdministration {
+  prescription?: {
+    id: string;
+    dosage: string;
+    frequency: string;
+    medication: {
+      id: string;
+      name: string;
+      genericName?: string;
+    };
+  };
+  administeredBy?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
 }
 
 export interface MedicationInteraction {

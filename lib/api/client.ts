@@ -51,6 +51,11 @@ function cleanupCache(): void {
   }
 }
 
+function clearCachedData(key: string): void {
+  apiCache.delete(key);
+  console.log(`🗑️ Cache CLEARED for ${key}`);
+}
+
 function invalidateCache(pattern?: string): void {
   if (!pattern) {
     const size = apiCache.size;
@@ -77,9 +82,9 @@ function invalidateCache(pattern?: string): void {
 export async function authenticateUserClient(
   email: string,
   password: string
-): Promise<{ 
-  success: boolean; 
-  user?: User; 
+): Promise<{
+  success: boolean;
+  user?: User;
   tokens?: {
     accessToken: string;
     refreshToken: string;
@@ -110,15 +115,17 @@ export async function authenticateUserClient(
     }
 
     console.log("✅ Client API success, returning user and tokens");
-    return { 
-      success: true, 
+    return {
+      success: true,
       user: data.user,
-      tokens: data.tokens ? {
-        accessToken: data.tokens.accessToken,
-        refreshToken: data.tokens.refreshToken,
-        sessionId: data.tokens.sessionId,
-        expiresAt: new Date(data.tokens.expiresAt),
-      } : undefined,
+      tokens: data.tokens
+        ? {
+            accessToken: data.tokens.accessToken,
+            refreshToken: data.tokens.refreshToken,
+            sessionId: data.tokens.sessionId,
+            expiresAt: new Date(data.tokens.expiresAt),
+          }
+        : undefined,
     };
   } catch (error) {
     console.error("💥 Authentication error in client:", error);
@@ -222,18 +229,48 @@ export async function getMedicationsClient(
     const data = await response.json();
     const parseEnd = performance.now();
 
+    // Transform prescriptions to medications format
+    const medications: Medication[] = (data.prescriptions || []).map(
+      (prescription: any) => ({
+        id: prescription.id,
+        patientId: prescription.patientId || patientId,
+        prescribedBy:
+          prescription.prescribedBy?.id || prescription.prescribedById,
+        medicationName: prescription.medication?.name || "Unknown Medication",
+        genericName: prescription.medication?.genericName,
+        dosage: prescription.dosage,
+        frequency: prescription.frequency,
+        route: prescription.medication?.routeOfAdministration || "oral",
+        startDate: prescription.startDate || prescription.createdAt,
+        endDate: prescription.endDate,
+        instructions: prescription.instructions || "",
+        sideEffects: [],
+        contraindications: [],
+        isActive:
+          prescription.status === "ACTIVE" || prescription.status === "DRAFT",
+        isPRN: false,
+        priority: "medium" as const,
+        category: prescription.medication?.drugClass || ("other" as const),
+        createdAt: prescription.createdAt,
+        updatedAt: prescription.updatedAt,
+        lastModifiedBy:
+          prescription.prescribedBy?.id || prescription.prescribedById,
+        notes: prescription.notes,
+      })
+    );
+
     console.log(
       `💊 Medications API: fetch ${(fetchEnd - start).toFixed(2)}ms, parse ${(
         parseEnd - fetchEnd
       ).toFixed(2)}ms, total ${(parseEnd - start).toFixed(2)}ms, found ${
-        (data.prescriptions || []).length
+        medications.length
       } medications`
     );
 
     // Cache the result for 5 minutes
-    setCachedData(cacheKey, data.prescriptions || [], 300000);
+    setCachedData(cacheKey, medications, 300000);
 
-    return data.prescriptions || [];
+    return medications;
   } catch (error) {
     console.error("Get medications error:", error);
     return [];
@@ -311,6 +348,12 @@ export async function recordMedicationAdministrationClient(
     }
 
     const data = await response.json();
+
+    // Clear the administrations cache for this patient
+    if (administration.patientId) {
+      clearCachedData(`administrations-${administration.patientId}`);
+    }
+
     return data.administration;
   } catch (error) {
     console.error("Record administration error:", error);

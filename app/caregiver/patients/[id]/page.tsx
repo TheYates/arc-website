@@ -243,16 +243,16 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
 
   // Memoized helper function to get the latest administration for a medication
   const getLatestAdministration = useCallback(
-    (medicationId: string) => {
+    (prescriptionId: string) => {
       const medicationAdministrations = (administrations || []).filter(
-        (admin) => admin.medicationId === medicationId
+        (admin) => admin.prescriptionId === prescriptionId
       );
       if (medicationAdministrations.length === 0) return null;
 
       return medicationAdministrations.sort(
         (a, b) =>
-          new Date(b.actualTime || b.scheduledTime).getTime() -
-          new Date(a.actualTime || a.scheduledTime).getTime()
+          new Date(b.administeredTime || b.scheduledTime).getTime() -
+          new Date(a.administeredTime || a.scheduledTime).getTime()
       )[0];
     },
     [administrations]
@@ -274,6 +274,13 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
       statusColors[status as keyof typeof statusColors] ||
       "bg-gray-100 text-gray-800"
     );
+  };
+
+  // Helper function to format frequency text
+  const formatFrequency = (frequency: string) => {
+    return frequency
+      .replace(/_/g, " ") // Replace all underscores with spaces
+      .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize first letter of each word
   };
 
   // Helper function to get administration status icon
@@ -317,11 +324,11 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
     try {
       const currentTime = new Date().toISOString();
       const administrationData = {
-        medicationId: selectedMedication.id,
+        prescriptionId: selectedMedication.id, // This is actually a prescription ID
         patientId: patient.id,
-        caregiverId: user.id,
+        administeredById: user.id, // Use the correct field name
         scheduledTime: currentTime,
-        actualTime:
+        administeredTime:
           adminFormData.status === "administered" ? currentTime : undefined,
         status: adminFormData.status as any,
         dosageGiven: adminFormData.dosageGiven || undefined,
@@ -331,9 +338,9 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
         updatedAt: currentTime,
       };
 
-      await recordMedicationAdministrationClient(administrationData);
+      await recordMedicationAdministrationClient(administrationData, user);
 
-      // Refresh administrations data
+      // Refresh administrations data (cache is automatically cleared by the client)
       const updatedAdministrations = await getMedicationAdministrationsClient(
         patient.id,
         user
@@ -828,7 +835,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                           .filter((m) => m.isActive)
                           .map((medication) => {
                             const latestAdmin = getLatestAdministration(
-                              medication.id
+                              medication.id // This is actually a prescription ID
                             );
                             return (
                               <tr key={medication.id} className="border-b">
@@ -843,12 +850,12 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                                   </div>
                                 </td>
                                 <td className="py-3">{medication.dosage}</td>
-                                <td className="py-3 capitalize">
-                                  {medication.route?.replace("_", " ") ||
+                                <td className="py-3">
+                                  {medication.route?.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()) ||
                                     "Oral"}
                                 </td>
-                                <td className="py-3 capitalize">
-                                  {medication.frequency.replace("_", " ")}
+                                <td className="py-3">
+                                  {formatFrequency(medication.frequency)}
                                 </td>
                                 <td className="py-3">
                                   {formatDate(new Date(medication.startDate))}

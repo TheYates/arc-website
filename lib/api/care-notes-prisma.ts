@@ -4,8 +4,7 @@ import {
   CreateCareNoteRequest,
   UpdateCareNoteRequest,
 } from "@/lib/types/care-notes";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/database/postgresql";
 
 // Convert database record to CareNote type
 function mapToCareNote(dbNote: any): CareNote {

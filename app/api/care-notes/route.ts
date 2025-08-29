@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCareNotes, createCareNote } from "@/lib/api/care-notes-prisma";
 import { CacheService } from "@/lib/redis";
+import { authenticateRequest } from "@/lib/api/auth";
 
 // GET /api/care-notes - Get care notes with optional filtering
 export async function GET(request: NextRequest) {
   try {
+    // Authenticate the request
+    const authResult = await authenticateRequest(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
+    }
+
+    const { user } = authResult;
     const start = performance.now();
     const { searchParams } = new URL(request.url);
     const patientId = searchParams.get("patientId");
@@ -67,6 +75,13 @@ export async function GET(request: NextRequest) {
 // POST /api/care-notes - Create new care note
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate the request
+    const authResult = await authenticateRequest(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
+    }
+
+    const { user } = authResult;
     const body = await request.json();
     const {
       patientId,

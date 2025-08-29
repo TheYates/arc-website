@@ -107,11 +107,11 @@ export function ReviewerMedicationsMobile({
                   className="flex items-center justify-between p-2 -mx-2 rounded-md hover:bg-muted/50 transition-colors"
                 >
                   <span className="text-card-foreground">{m.medicationName}</span>
-                  <Badge 
-                    variant="outline" 
-                    className="capitalize border-border bg-background text-foreground hover:bg-muted transition-colors"
+                  <Badge
+                    variant="outline"
+                    className="border-border bg-background text-foreground hover:bg-muted transition-colors"
                   >
-                    {m.frequency.replace("_", " ")}
+                    {m.frequency.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
                   </Badge>
                 </li>
               ))}

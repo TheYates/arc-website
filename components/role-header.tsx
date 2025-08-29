@@ -138,6 +138,12 @@ export function RoleHeader({ role }: RoleHeaderProps) {
             isActive: pathname.startsWith(`${baseUrl}/users`),
           },
           {
+            name: "Notifications",
+            href: `${baseUrl}/notifications`,
+            icon: <Bell className="h-4 w-4 mr-2" />,
+            isActive: pathname.startsWith(`${baseUrl}/notifications`),
+          },
+          {
             name: "Settings",
             href: `${baseUrl}/settings`,
             icon: <Settings className="h-4 w-4 mr-2" />,
@@ -163,6 +169,12 @@ export function RoleHeader({ role }: RoleHeaderProps) {
             href: `${baseUrl}/patients`,
             icon: <Users className="h-4 w-4 mr-2" />,
             isActive: pathname.startsWith(`${baseUrl}/patients`),
+          },
+          {
+            name: "Notifications",
+            href: `${baseUrl}/notifications`,
+            icon: <Bell className="h-4 w-4 mr-2" />,
+            isActive: pathname.startsWith(`${baseUrl}/notifications`),
           },
         ];
       case "caregiver":
@@ -191,6 +203,12 @@ export function RoleHeader({ role }: RoleHeaderProps) {
             icon: <Users className="h-4 w-4 mr-2" />,
             isActive: pathname.startsWith(`${baseUrl}/patients`),
           },
+          {
+            name: "Notifications",
+            href: `${baseUrl}/notifications`,
+            icon: <Bell className="h-4 w-4 mr-2" />,
+            isActive: pathname.startsWith(`${baseUrl}/notifications`),
+          },
         ];
       case "patient":
         return [
@@ -211,6 +229,12 @@ export function RoleHeader({ role }: RoleHeaderProps) {
             href: `${baseUrl}/medical`,
             icon: <Stethoscope className="h-4 w-4 mr-2" />,
             isActive: pathname.startsWith(`${baseUrl}/medical`),
+          },
+          {
+            name: "Notifications",
+            href: `${baseUrl}/notifications`,
+            icon: <Bell className="h-4 w-4 mr-2" />,
+            isActive: pathname.startsWith(`${baseUrl}/notifications`),
           },
         ];
       default:

@@ -347,14 +347,14 @@ export function MedicationAdministrationForm({
                       <p className="text-sm font-medium text-gray-600">
                         Frequency
                       </p>
-                      <p className="capitalize">
-                        {selectedMedication.frequency.replace(/_/g, " ")}
+                      <p>
+                        {selectedMedication.frequency.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-600">Route</p>
-                      <p className="capitalize">
-                        {selectedMedication.route.replace(/_/g, " ")}
+                      <p>
+                        {selectedMedication.route.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
                       </p>
                     </div>
                     <div className="md:col-span-2">

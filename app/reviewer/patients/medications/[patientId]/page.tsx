@@ -137,16 +137,16 @@ export default function ReviewerMedicationsPage({ params }: PageProps) {
                         <p className="text-sm font-medium text-muted-foreground">
                           Frequency
                         </p>
-                        <p className="capitalize">
-                          {medication.frequency.replace(/_/g, " ")}
+                        <p>
+                          {medication.frequency.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">
                           Route
                         </p>
-                        <p className="capitalize">
-                          {medication.route.replace(/_/g, " ")}
+                        <p>
+                          {medication.route.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
                         </p>
                       </div>
                       <div>

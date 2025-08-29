@@ -62,6 +62,7 @@ import {
 import { RoleHeader } from "@/components/role-header";
 import { ReviewerPatientMobile } from "@/components/mobile/reviewer-patient-detail";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 
 import { PrescriptionDialog } from "@/components/medical/prescription-dialog";
 import { PatientSymptomReportForm } from "@/components/medical/patient-symptom-report-form";
@@ -77,7 +78,7 @@ interface PageProps {
 
 export default function ReviewerPatientDetailPage({ params }: PageProps) {
   const resolvedParams = React.use(params);
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isHydrated } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -116,18 +117,32 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
   useEffect(() => {
     const loadCommonMedications = async () => {
       try {
-        const response = await fetch('/api/medications/catalog?commonOnly=true&limit=50');
+        const response = await fetch(
+          "/api/medications/catalog?commonOnly=true&limit=50"
+        );
         const result = await response.json();
         if (result.success) {
           setCommonMedications(result.data.map((med: any) => med.name));
         }
       } catch (error) {
-        console.error('Error loading common medications:', error);
+        console.error("Error loading common medications:", error);
         // Fallback to hardcoded list if API fails
         setCommonMedications([
-          "Lisinopril", "Metformin", "Amlodipine", "Metoprolol", "Omeprazole",
-          "Simvastatin", "Losartan", "Albuterol", "Gabapentin", "Sertraline",
-          "Ibuprofen", "Acetaminophen", "Aspirin", "Hydrochlorothiazide", "Atorvastatin"
+          "Lisinopril",
+          "Metformin",
+          "Amlodipine",
+          "Metoprolol",
+          "Omeprazole",
+          "Simvastatin",
+          "Losartan",
+          "Albuterol",
+          "Gabapentin",
+          "Sertraline",
+          "Ibuprofen",
+          "Acetaminophen",
+          "Aspirin",
+          "Hydrochlorothiazide",
+          "Atorvastatin",
         ]);
       }
     };
@@ -216,8 +231,8 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
           getMedicationAdministrationsClient(patientId, user),
           Promise.resolve(getVitalSigns(patientId)), // Wrap sync function
           getMedicalReviews(patientId),
-          getCareNotes(patientId, "caregiver"),
-          getCareNotes(patientId, "reviewer"),
+          getCareNotes(patientId, "caregiver", user),
+          getCareNotes(patientId, "reviewer", user),
         ]);
 
         const parallelEnd = performance.now();
@@ -266,8 +281,8 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
   );
 
   useEffect(() => {
-    // Wait for auth to finish loading before making redirect decisions
-    if (authLoading) return;
+    // Wait for auth to finish loading and hydration before making redirect decisions
+    if (authLoading || !isHydrated) return;
 
     if (!user || (user.role !== "reviewer" && user.role !== "super_admin")) {
       router.push("/login");
@@ -275,7 +290,9 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
     }
 
     fetchPatientData();
-  }, [user, router, fetchPatientData, authLoading]);
+  }, [user, router, fetchPatientData, authLoading, isHydrated]);
+
+
 
   // Memoized computed values for better performance
   const activeMedications = useMemo(() => {
@@ -291,13 +308,16 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
   }, [medicalReviews]);
 
   const handleMedicationSaved = useCallback(async () => {
-    const updatedMedications = await getMedicationsClient(resolvedParams.id);
+    const updatedMedications = await getMedicationsClient(
+      resolvedParams.id,
+      user
+    );
     setMedications(updatedMedications);
     toast({
       title: "Success",
       description: "Medication prescribed successfully",
     });
-  }, [resolvedParams.id, toast]);
+  }, [resolvedParams.id, toast, user]);
 
   const handleReviewSaved = async () => {
     const updatedReviews = await getMedicalReviews(resolvedParams.id);
@@ -333,39 +353,88 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
 
   const handleReviewerNoteSaved = useCallback(async () => {
     try {
-      const updatedNotes = await getCareNotes(resolvedParams.id, "reviewer");
+      const updatedNotes = await getCareNotes(
+        resolvedParams.id,
+        "reviewer",
+        user
+      );
       setReviewerNotes(updatedNotes);
       setShowReviewerNoteForm(false);
     } catch (error) {
       console.error("Error refreshing reviewer notes:", error);
     }
-  }, [resolvedParams.id]);
+  }, [resolvedParams.id, user]);
 
   const handleCaregiverNotesRefresh = useCallback(async () => {
     try {
-      const updatedNotes = await getCareNotes(resolvedParams.id, "caregiver");
+      const updatedNotes = await getCareNotes(
+        resolvedParams.id,
+        "caregiver",
+        user
+      );
       setCaregiverNotes(updatedNotes);
     } catch (error) {
       console.error("Error refreshing caregiver notes:", error);
     }
-  }, [resolvedParams.id]);
+  }, [resolvedParams.id, user]);
+
+  const handleMedicationDataRefresh = useCallback(async () => {
+    try {
+      const [updatedMedications, updatedAdministrations] = await Promise.all([
+        getMedicationsClient(resolvedParams.id, user),
+        getMedicationAdministrationsClient(resolvedParams.id, user),
+      ]);
+      setMedications(updatedMedications);
+      setAdministrations(updatedAdministrations);
+
+      toast({
+        title: "Success",
+        description: "Medication data refreshed",
+      });
+    } catch (error) {
+      console.error("Error refreshing medication data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh medication data",
+        variant: "destructive",
+      });
+    }
+  }, [resolvedParams.id, user, toast]);
+
+  // Auto-refresh medication data when on medications tab
+  useEffect(() => {
+    if (activeTab !== "medications" || !patient) return;
+
+    const interval = setInterval(() => {
+      handleMedicationDataRefresh();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [activeTab, patient, handleMedicationDataRefresh]);
 
   // Memoized helper function to get the latest administration for a medication
   const getLatestAdministration = useCallback(
-    (medicationId: string) => {
-      const medicationAdministrations = administrations.filter(
-        (admin) => admin.medicationId === medicationId
+    (prescriptionId: string) => {
+      const medicationAdministrations = (administrations || []).filter(
+        (admin) => admin.prescriptionId === prescriptionId
       );
       if (medicationAdministrations.length === 0) return null;
 
       return medicationAdministrations.sort(
         (a, b) =>
-          new Date(b.actualTime || b.scheduledTime).getTime() -
-          new Date(a.actualTime || a.scheduledTime).getTime()
+          new Date(b.administeredTime || b.scheduledTime).getTime() -
+          new Date(a.administeredTime || a.scheduledTime).getTime()
       )[0];
     },
     [administrations]
   );
+
+  // Helper function to format frequency text
+  const formatFrequency = (frequency: string) => {
+    return frequency
+      .replace(/_/g, " ") // Replace all underscores with spaces
+      .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize first letter of each word
+  };
 
   // Helper function to get administration status badge
   const getAdministrationStatusBadge = (status: string) => {
@@ -451,11 +520,11 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
     try {
       // Save each prescription item to the database
       const savedMedications: Medication[] = [];
-      
+
       for (const item of prescriptionItems) {
         const medicationData = {
           patientId: resolvedParams.id,
-          prescribedBy: user?.id || 'unknown',
+          prescribedBy: user?.id || "unknown",
           medicationName: item.medicationName,
           dosage: item.dosage || "As prescribed",
           frequency: item.frequency,
@@ -468,33 +537,35 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
             : undefined,
           instructions:
             item.instructions ||
-            `Take ${item.dosage || "as prescribed"} ${item.frequency.replace(
-              "_",
-              " "
-            )}`,
+            `Take ${item.dosage || "as prescribed"} ${formatFrequency(item.frequency)}`,
           priority: "medium",
-          category: "other"
+          category: "other",
         };
 
-        const response = await fetch('/api/medications', {
-          method: 'POST',
+        const response = await fetch("/api/medications", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(medicationData),
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
           savedMedications.push(result.data);
         } else {
-          throw new Error(result.error || 'Failed to save medication');
+          throw new Error(result.error || "Failed to save medication");
         }
       }
 
       // Add new medications to the existing list
       setMedications((prev) => [...prev, ...savedMedications]);
+
+      // Show success toast with Sonner
+      sonnerToast.success("Prescriptions Saved Successfully!", {
+        description: `${prescriptionItems.length} medication(s) have been prescribed for ${patient?.firstName} ${patient?.lastName}.`,
+      });
 
       toast({
         title: "Prescriptions saved successfully",
@@ -503,31 +574,29 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
 
       // Clear the prescription items after successful save
       setPrescriptionItems([]);
-      
+
       // Reload medications from database to ensure consistency
-      const medicationsResponse = await fetch(`/api/patients/${resolvedParams.id}/medications`);
-      if (medicationsResponse.ok) {
-        const medicationsResult = await medicationsResponse.json();
-        if (medicationsResult.success) {
-          setMedications(medicationsResult.data);
-        }
-      }
+      const updatedMedications = await getMedicationsClient(
+        resolvedParams.id,
+        user
+      );
+      setMedications(updatedMedications);
 
       // Switch to current medications view to show the newly added medications
       setShowAddPrescription(false);
-      
     } catch (error) {
       console.error("Error saving prescriptions:", error);
       toast({
         title: "Error saving prescriptions",
-        description: error instanceof Error ? error.message : "Please try again later.",
+        description:
+          error instanceof Error ? error.message : "Please try again later.",
         variant: "destructive",
       });
     }
   };
 
-  // Show loading while auth is loading or data is loading
-  if (authLoading || isLoading) {
+  // Show loading only while auth is loading or not hydrated
+  if (authLoading || !isHydrated) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
@@ -580,8 +649,22 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
           </Button>
         </div>
 
-        {/* Patient Header */}
-        <div className="flex items-center justify-between mb-8">
+        {/* Show loading skeleton for patient header while data is loading */}
+        {isLoading ? (
+          <>
+            <div className="flex items-center space-x-4 mb-8">
+              <Skeleton className="h-16 w-16 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+            <Skeleton className="h-96 w-full" />
+          </>
+        ) : (
+          <>
+            {/* Patient Header */}
+            <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
             <Avatar className="h-16 w-16">
               <AvatarFallback className="bg-purple-100 text-purple-600 text-xl">
@@ -620,11 +703,15 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
               <p className="text-xs text-muted-foreground">Age (Years)</p>
             </div>
             <div className=" p-3 rounded-lg bg-card">
-              <p className="text-lg font-bold text-card-foreground">{patient.bloodType || "N/A"}</p>
+              <p className="text-lg font-bold text-card-foreground">
+                {patient.bloodType || "N/A"}
+              </p>
               <p className="text-xs text-muted-foreground">Blood Type</p>
             </div>
             <div className=" p-3 rounded-lg bg-card">
-              <p className="text-lg font-bold text-card-foreground">{patient.gender || "N/A"}</p>
+              <p className="text-lg font-bold text-card-foreground">
+                {patient.gender || "N/A"}
+              </p>
               <p className="text-xs text-muted-foreground">Gender</p>
             </div>
             <div className=" p-3 rounded-lg bg-card">
@@ -689,11 +776,10 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                   ) : (
                     <>
                       <div className="text-2xl font-bold">
-                        {(medications || []).filter((m) => m.isActive).length}
+                        {activeMedications.length}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {(medications || []).filter((m) => m.isActive).length >
-                        0
+                        {activeMedications.length > 0
                           ? "Currently prescribed"
                           : "No active medications"}
                       </p>
@@ -885,7 +971,6 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
             </div>
 
             {/* Recent Activity Section */}
-            
           </TabsContent>
 
           {/* Vitals Tab */}
@@ -1015,13 +1100,22 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                         : "View and manage current medications"}
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowAddPrescription(!showAddPrescription)}
-                  >
-                    {showAddPrescription ? "View Current" : "Add New"}
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleMedicationDataRefresh}
+                    >
+                      Refresh
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddPrescription(!showAddPrescription)}
+                    >
+                      {showAddPrescription ? "View Current" : "Add New"}
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -1066,32 +1160,45 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                                     {medication}
                                   </div>
                                 ))}
-                              
+
                               {/* Show "Add New" option if no exact match found */}
-                              {selectedMedication.trim() && 
-                               !commonMedications.some(med => 
-                                 med.toLowerCase() === selectedMedication.toLowerCase()
-                               ) && (
-                                <div
-                                  className="px-3 py-2 cursor-pointer hover:bg-muted/50 text-sm transition-colors border-t border-border bg-accent/50"
-                                  onClick={() => addMedicationToPrescription(selectedMedication.trim())}
-                                >
-                                  <div className="flex items-center">
-                                    <Plus className="h-3 w-3 mr-2 text-green-600" />
-                                    <span>Add "<strong>{selectedMedication.trim()}</strong>" (new medication)</span>
+                              {selectedMedication.trim() &&
+                                !commonMedications.some(
+                                  (med) =>
+                                    med.toLowerCase() ===
+                                    selectedMedication.toLowerCase()
+                                ) && (
+                                  <div
+                                    className="px-3 py-2 cursor-pointer hover:bg-muted/50 text-sm transition-colors border-t border-border bg-accent/50"
+                                    onClick={() =>
+                                      addMedicationToPrescription(
+                                        selectedMedication.trim()
+                                      )
+                                    }
+                                  >
+                                    <div className="flex items-center">
+                                      <Plus className="h-3 w-3 mr-2 text-green-600" />
+                                      <span>
+                                        Add "
+                                        <strong>
+                                          {selectedMedication.trim()}
+                                        </strong>
+                                        " (new medication)
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                              
+                                )}
+
                               {(commonMedications || []).filter((med) =>
                                 med
                                   .toLowerCase()
                                   .includes(selectedMedication.toLowerCase())
-                              ).length === 0 && !selectedMedication.trim() && (
-                                <div className="px-3 py-2 text-sm text-muted-foreground">
-                                  Type to search medications...
-                                </div>
-                              )}
+                              ).length === 0 &&
+                                !selectedMedication.trim() && (
+                                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                                    Type to search medications...
+                                  </div>
+                                )}
                             </div>
                           )}
                       </div>
@@ -1332,9 +1439,8 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                               </tr>
                             </thead>
                             <tbody>
-                              {medications
-                                .filter((m) => m.isActive)
-                                .map((medication) => {
+                              {medications.length > 0 ? (
+                                medications.map((medication) => {
                                   const latestAdmin = getLatestAdministration(
                                     medication.id
                                   );
@@ -1356,11 +1462,11 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                                       <td className="py-3">
                                         {medication.dosage}
                                       </td>
-                                      <td className="py-3 capitalize">
-                                        {medication.route.replace("_", " ")}
+                                      <td className="py-3">
+                                        {medication.route.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
                                       </td>
-                                      <td className="py-3 capitalize">
-                                        {medication.frequency.replace("_", " ")}
+                                      <td className="py-3">
+                                        {formatFrequency(medication.frequency)}
                                       </td>
                                       <td className="py-3">
                                         {formatDate(
@@ -1383,10 +1489,10 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                                               </Badge>
                                             </div>
                                             <p className="text-xs text-muted-foreground">
-                                              {latestAdmin.actualTime
+                                              {latestAdmin.administeredTime
                                                 ? formatDate(
                                                     new Date(
-                                                      latestAdmin.actualTime
+                                                      latestAdmin.administeredTime
                                                     )
                                                   )
                                                 : `Scheduled: ${formatDate(
@@ -1408,22 +1514,35 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                                         )}
                                       </td>
                                       <td className="py-3">
-                                        <Badge className="bg-green-100 text-green-800">
-                                          Active
-                                        </Badge>
+                                        {medication.isActive ? (
+                                          <Badge className="bg-green-100 text-green-800">
+                                            Active
+                                          </Badge>
+                                        ) : (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-muted-foreground"
+                                          >
+                                            Inactive
+                                          </Badge>
+                                        )}
                                       </td>
                                     </tr>
                                   );
-                                })}
+                                })
+                              ) : (
+                                <tr>
+                                  <td
+                                    colSpan={7}
+                                    className="text-center py-8 text-muted-foreground"
+                                  >
+                                    No medications found
+                                  </td>
+                                </tr>
+                              )}
                             </tbody>
                           </table>
                         </div>
-                        {(medications || []).filter((m) => m.isActive)
-                          .length === 0 && (
-                          <div className="text-center py-8 text-muted-foreground">
-                            No active medications found
-                          </div>
-                        )}
                       </>
                     )}
                   </div>
@@ -1510,6 +1629,8 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
             </Card>
           </TabsContent>
         </Tabs>
+        </>
+        )}
       </div>
       {/* Prescription Dialog */}
       {patient && (
@@ -1774,12 +1895,13 @@ function CreateMedicalReviewForm({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 transition-colors">
+        <Button
+          type="submit"
+          className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 transition-colors"
+        >
           Create Review
         </Button>
       </div>
     </form>
   );
 }
-
-

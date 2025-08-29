@@ -49,8 +49,8 @@ export function CaregiverMedicationsMobile({
               {medications.slice(0, 6).map((m) => (
                 <li key={m.id} className="flex items-center justify-between">
                   <span>{m.medicationName}</span>
-                  <Badge variant="outline" className="capitalize">
-                    {m.frequency.replace("_", " ")}
+                  <Badge variant="outline">
+                    {m.frequency.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
                   </Badge>
                 </li>
               ))}

@@ -6,11 +6,13 @@ import { useAuth } from "@/lib/auth";
 import { getPatientByIdClient } from "@/lib/api/client";
 import { getVitalSigns } from "@/lib/api/vitals";
 import { getMedicationsClient } from "@/lib/api/client";
-import { getMedicalReviews } from "@/lib/api/medical-reviews-client";
+import {
+  getMedicalReviews,
+  type MedicalReviewData,
+} from "@/lib/api/medical-reviews-client";
 import { Patient } from "@/lib/types/patients";
 import type { VitalSigns } from "@/lib/types/vitals";
 import type { Medication } from "@/lib/types/medications";
-import type { MedicalReview } from "@/lib/types/medical-reviews";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +26,7 @@ export function ReviewerPatientMobile({ patientId }: { patientId: string }) {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [vitals, setVitals] = useState<VitalSigns[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
-  const [reviews, setReviews] = useState<MedicalReview[]>([]);
+  const [reviews, setReviews] = useState<MedicalReviewData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -63,7 +63,7 @@ export function NotificationBell() {
   const { toast } = useToast();
   const router = useRouter();
   const { user } = useAuth();
-  
+
   // Add debouncing to prevent excessive API calls
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchRef = useRef<number>(0);
@@ -71,23 +71,23 @@ export function NotificationBell() {
   useEffect(() => {
     if (user) {
       fetchNotifications(true); // Force initial fetch
-      
+
       // Intelligent polling: more frequent when notification panel is open,
       // less frequent when closed, and stop when user is idle
       let pollInterval: NodeJS.Timeout;
-      
+
       const setupPolling = () => {
         clearInterval(pollInterval);
         // Poll every 60 seconds when closed, 15 seconds when open
         const interval = isOpen ? 15000 : 60000;
         pollInterval = setInterval(() => fetchNotifications(false), interval);
       };
-      
+
       setupPolling();
-      
+
       // Update polling frequency when panel opens/closes
       const timeoutId = setTimeout(setupPolling, 100);
-      
+
       return () => {
         clearInterval(pollInterval);
         clearTimeout(timeoutId);
@@ -100,7 +100,7 @@ export function NotificationBell() {
 
   const fetchNotifications = async (force = false) => {
     if (!user) return;
-    
+
     // Debouncing: prevent calls more frequent than 5 seconds unless forced
     const now = Date.now();
     if (!force && now - lastFetchRef.current < 5000) {
@@ -125,7 +125,7 @@ export function NotificationBell() {
       setUnreadCount(data.unreadCount);
     } catch (error) {
       // Silently handle network errors to reduce console spam
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === "development") {
         console.error("Error fetching notifications:", error);
       }
     } finally {
@@ -192,6 +192,11 @@ export function NotificationBell() {
     }
   };
 
+  const handleViewAllNotifications = () => {
+    setIsOpen(false);
+    router.push(`/${user?.role}/notifications`);
+  };
+
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "SERVICE_REQUEST_CREATED":
@@ -214,24 +219,26 @@ export function NotificationBell() {
     switch (user?.role) {
       case "reviewer":
         return {
-          unreadBg: "bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 dark:border-purple-400",
+          unreadBg:
+            "bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 dark:border-purple-400",
           readBg: "bg-white dark:bg-gray-800",
           hoverBg: "hover:bg-purple-100 dark:hover:bg-purple-900/30",
           unreadIndicator: "bg-purple-600 dark:bg-purple-400",
           priorityColors: {
             CRITICAL: "text-red-700 dark:text-red-400",
-            HIGH: "text-orange-700 dark:text-orange-400", 
+            HIGH: "text-orange-700 dark:text-orange-400",
             MEDIUM: "text-purple-700 dark:text-purple-300",
             LOW: "text-purple-600 dark:text-purple-400",
-            default: "text-purple-500 dark:text-purple-400"
+            default: "text-purple-500 dark:text-purple-400",
           },
           titleColor: "text-gray-900 dark:text-gray-100",
           messageColor: "text-gray-600 dark:text-gray-300",
-          timeColor: "text-gray-500 dark:text-gray-400"
+          timeColor: "text-gray-500 dark:text-gray-400",
         };
       case "caregiver":
         return {
-          unreadBg: "bg-teal-50 dark:bg-teal-900/20 border-l-4 border-teal-500 dark:border-teal-400",
+          unreadBg:
+            "bg-teal-50 dark:bg-teal-900/20 border-l-4 border-teal-500 dark:border-teal-400",
           readBg: "bg-white dark:bg-gray-800",
           hoverBg: "hover:bg-teal-100 dark:hover:bg-teal-900/30",
           unreadIndicator: "bg-teal-600 dark:bg-teal-400",
@@ -240,15 +247,16 @@ export function NotificationBell() {
             HIGH: "text-orange-700 dark:text-orange-400",
             MEDIUM: "text-teal-700 dark:text-teal-300",
             LOW: "text-teal-600 dark:text-teal-400",
-            default: "text-teal-500 dark:text-teal-400"
+            default: "text-teal-500 dark:text-teal-400",
           },
           titleColor: "text-gray-900 dark:text-gray-100",
           messageColor: "text-gray-600 dark:text-gray-300",
-          timeColor: "text-gray-500 dark:text-gray-400"
+          timeColor: "text-gray-500 dark:text-gray-400",
         };
       case "patient":
         return {
-          unreadBg: "bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 dark:border-green-400",
+          unreadBg:
+            "bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 dark:border-green-400",
           readBg: "bg-white dark:bg-gray-800",
           hoverBg: "hover:bg-green-100 dark:hover:bg-green-900/30",
           unreadIndicator: "bg-green-600 dark:bg-green-400",
@@ -257,11 +265,11 @@ export function NotificationBell() {
             HIGH: "text-orange-700 dark:text-orange-400",
             MEDIUM: "text-green-700 dark:text-green-300",
             LOW: "text-green-600 dark:text-green-400",
-            default: "text-green-500 dark:text-green-400"
+            default: "text-green-500 dark:text-green-400",
           },
           titleColor: "text-gray-900 dark:text-gray-100",
           messageColor: "text-gray-600 dark:text-gray-300",
-          timeColor: "text-gray-500 dark:text-gray-400"
+          timeColor: "text-gray-500 dark:text-gray-400",
         };
       default:
         return {
@@ -274,18 +282,21 @@ export function NotificationBell() {
             HIGH: "text-orange-600 dark:text-orange-400",
             MEDIUM: "text-blue-600 dark:text-blue-400",
             LOW: "text-green-600 dark:text-green-400",
-            default: "text-gray-600 dark:text-gray-400"
+            default: "text-gray-600 dark:text-gray-400",
           },
           titleColor: "text-gray-900 dark:text-gray-100",
           messageColor: "text-gray-600 dark:text-gray-300",
-          timeColor: "text-gray-500 dark:text-gray-400"
+          timeColor: "text-gray-500 dark:text-gray-400",
         };
     }
   };
 
   const getPriorityColor = (priority: string) => {
     const styles = getRoleBasedNotificationStyles();
-    return styles.priorityColors[priority as keyof typeof styles.priorityColors] || styles.priorityColors.default;
+    return (
+      styles.priorityColors[priority as keyof typeof styles.priorityColors] ||
+      styles.priorityColors.default
+    );
   };
 
   return (
@@ -335,9 +346,13 @@ export function NotificationBell() {
               <DropdownMenuItem
                 key={notification.id}
                 className={`flex flex-col items-start p-3 cursor-pointer transition-colors ${
-                  !notification.isRead 
-                    ? `${getRoleBasedNotificationStyles().unreadBg} ${getRoleBasedNotificationStyles().hoverBg}` 
-                    : `${getRoleBasedNotificationStyles().readBg} ${getRoleBasedNotificationStyles().hoverBg}`
+                  !notification.isRead
+                    ? `${getRoleBasedNotificationStyles().unreadBg} ${
+                        getRoleBasedNotificationStyles().hoverBg
+                      }`
+                    : `${getRoleBasedNotificationStyles().readBg} ${
+                        getRoleBasedNotificationStyles().hoverBg
+                      }`
                 }`}
                 onClick={() => handleNotificationClick(notification)}
               >
@@ -351,18 +366,34 @@ export function NotificationBell() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <p className={`text-sm font-medium truncate ${getRoleBasedNotificationStyles().titleColor}`}>
+                      <p
+                        className={`text-sm font-medium truncate ${
+                          getRoleBasedNotificationStyles().titleColor
+                        }`}
+                      >
                         {notification.title}
                       </p>
                       {!notification.isRead && (
-                        <div className={`w-2 h-2 ${getRoleBasedNotificationStyles().unreadIndicator} rounded-full flex-shrink-0`} />
+                        <div
+                          className={`w-2 h-2 ${
+                            getRoleBasedNotificationStyles().unreadIndicator
+                          } rounded-full flex-shrink-0`}
+                        />
                       )}
                     </div>
-                    <p className={`text-xs mb-2 line-clamp-2 ${getRoleBasedNotificationStyles().messageColor}`}>
+                    <p
+                      className={`text-xs mb-2 line-clamp-2 ${
+                        getRoleBasedNotificationStyles().messageColor
+                      }`}
+                    >
                       {notification.message}
                     </p>
                     <div className="flex items-center justify-between">
-                      <p className={`text-xs ${getRoleBasedNotificationStyles().timeColor}`}>
+                      <p
+                        className={`text-xs ${
+                          getRoleBasedNotificationStyles().timeColor
+                        }`}
+                      >
                         {formatDistanceToNow(new Date(notification.createdAt), {
                           addSuffix: true,
                         })}
@@ -384,7 +415,12 @@ export function NotificationBell() {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-center justify-center">
-              <Button variant="ghost" size="sm" className="w-full">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={handleViewAllNotifications}
+              >
                 View all notifications
               </Button>
             </DropdownMenuItem>

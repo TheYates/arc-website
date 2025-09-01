@@ -12,12 +12,35 @@ export const prisma =
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
     datasources: {
       db: {
-        url: process.env.DATABASE_URL,
+        url: process.env.DATABASE_URL + (process.env.DATABASE_URL?.includes('?') ? '&' : '?') +
+             'connection_limit=3&pool_timeout=60&connect_timeout=60',
+      },
+    },
+    // Optimize connection pool for Supabase
+    __internal: {
+      engine: {
+        connectionTimeout: 60000, // 60 seconds
+        poolTimeout: 60000, // 60 seconds
       },
     },
   });
 
 if (process.env.NODE_ENV !== "production") globalThis.prisma = prisma;
+
+// Graceful shutdown
+process.on('beforeExit', async () => {
+  await prisma.$disconnect();
+});
+
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
 
 export default prisma;
 

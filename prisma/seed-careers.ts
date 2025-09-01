@@ -42,7 +42,7 @@ async function seedCareers() {
     adminUser = await prisma.user.create({
       data: {
         email: "admin@arccare.com",
-        username: "admin",
+        username: "admin",  
         passwordHash: "temp-hash", // This will be updated when admin logs in
         firstName: "Admin",
         lastName: "User",

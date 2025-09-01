@@ -24,6 +24,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
 import { CaregiverMobileDashboard } from "@/components/mobile/caregiver-dashboard";
 import { RoleBottomNav } from "@/components/mobile/role-bottom-nav";
+import { ActivityFeed } from "@/components/activity-feed/activity-feed";
 import { useAuth, hasPermission } from "@/lib/auth";
 import { getPatientsByCaregiver } from "@/lib/api/assignments";
 import { Patient } from "@/lib/types/patients";
@@ -464,55 +465,13 @@ export default function CaregiverPage() {
             </CardContent>
           </Card>
 
-          {/* Recent Notifications */}
-          <Card className="lg:col-span-3">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-lg">
-                <Bell className="h-5 w-5 mr-2 text-teal-600 dark:text-teal-400" />
-                Recent Updates
-              </CardTitle>
-              <CardDescription>Latest notifications and system messages</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-700">
-                <div className="flex items-start gap-3">
-                  <div className="p-1 bg-teal-100 dark:bg-teal-800 rounded-full mt-0.5">
-                    <CheckCircle className="h-4 w-4 text-teal-700 dark:text-teal-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-teal-900 dark:text-teal-100 text-sm">
-                      Welcome to Alpha Rescue!
-                    </p>
-                    <p className="text-xs text-teal-800 dark:text-teal-300 mt-1">
-                      Complete your profile to get started with patient assignments.
-                    </p>
-                    <p className="text-xs text-teal-700 dark:text-teal-400 mt-2">
-                      {formatDate(new Date())}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                <div className="flex items-start gap-3">
-                  <div className="p-1 bg-green-100 dark:bg-green-800 rounded-full mt-0.5">
-                    <Stethoscope className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-green-900 dark:text-green-100 text-sm">
-                      Training Available
-                    </p>
-                    <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                      New care protocols training is now available in your learning portal.
-                    </p>
-                    <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                      2 hours ago
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Recent Activity Feed */}
+          <ActivityFeed
+            className="lg:col-span-3"
+            roleColor="teal"
+            maxItems={5}
+            showLoadMore={false}
+          />
         </div>
 
         {/* Emergency Contact Information */}

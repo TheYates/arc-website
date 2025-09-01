@@ -45,11 +45,16 @@ export function CaregiverMedicationsMobile({
               No active medications.
             </div>
           ) : (
-            <ul className="text-sm space-y-2">
+            <ul className="text-sm space-y-3">
               {medications.slice(0, 6).map((m) => (
                 <li key={m.id} className="flex items-center justify-between">
-                  <span>{m.medicationName}</span>
-                  <Badge variant="outline">
+                  <div className="flex-1">
+                    <div className="font-medium">{m.medicationName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {m.dosage} • {m.route?.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()) || "Oral"}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
                     {m.frequency.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
                   </Badge>
                 </li>

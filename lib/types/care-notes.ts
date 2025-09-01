@@ -18,11 +18,9 @@ export interface CareNote {
   authorName: string;
   authorRole: "caregiver" | "reviewer";
   noteType: NoteType;
-  title: string;
   content: string;
   priority: NotePriority;
   status: NoteStatus;
-  tags?: string[];
   isPrivate: boolean;
   followUpRequired: boolean;
   followUpDate?: string;
@@ -36,21 +34,17 @@ export interface CreateCareNoteRequest {
   authorName: string;
   authorRole: "caregiver" | "reviewer";
   noteType?: NoteType;
-  title: string;
   content: string;
   priority?: NotePriority;
-  tags?: string[];
   isPrivate?: boolean;
   followUpRequired?: boolean;
   followUpDate?: string;
 }
 
 export interface UpdateCareNoteRequest {
-  title?: string;
   content?: string;
   priority?: NotePriority;
   status?: NoteStatus;
-  tags?: string[];
   isPrivate?: boolean;
   followUpRequired?: boolean;
   followUpDate?: string;

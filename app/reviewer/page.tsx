@@ -24,6 +24,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
 import { ReviewerMobileDashboard } from "@/components/mobile/reviewer-dashboard";
 import { RoleBottomNav } from "@/components/mobile/role-bottom-nav";
+import { ActivityFeed } from "@/components/activity-feed/activity-feed";
 import { useAuth } from "@/lib/auth";
 import { getPatientsByReviewer } from "@/lib/api/assignments";
 import { Patient } from "@/lib/types/patients";
@@ -385,52 +386,12 @@ export default function ReviewerPage() {
             </CardContent>
           </Card>
 
-          {/* Recent Notifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg">
-                <Bell className="h-5 w-5 mr-2 text-purple-600 dark:text-purple-400" />
-                Recent Updates
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-purple-700 dark:text-purple-400 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="font-medium text-purple-900 dark:text-purple-100">
-                        Welcome to Alpha Rescue!
-                      </p>
-                      <p className="text-sm text-purple-800 dark:text-purple-300 mt-1">
-                        Complete your profile to get started with patient
-                        reviews.
-                      </p>
-                      <p className="text-xs text-purple-700 dark:text-purple-400 mt-2">
-                        {formatDate(new Date())}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-orange-700 dark:text-orange-400 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="font-medium text-orange-900 dark:text-orange-100">
-                        Priority Review Required
-                      </p>
-                      <p className="text-sm text-orange-800 dark:text-orange-300 mt-1">
-                        High-priority patient case requires immediate medical
-                        review.
-                      </p>
-                      <p className="text-xs text-orange-700 dark:text-orange-400 mt-2">1 hour ago</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Recent Activity Feed */}
+          <ActivityFeed
+            roleColor="purple"
+            maxItems={5}
+            showLoadMore={false}
+          />
         </div>
       </main>
     </div>

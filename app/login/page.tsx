@@ -25,22 +25,24 @@ export default function LoginPage() {
   const { login, user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  // Check if user is already logged in
+  // Check if user is already logged in (optimized to reduce re-renders)
   useEffect(() => {
-    console.log("🔍 Login page useEffect:", {
-      authLoading,
-      user: user?.email,
-      role: user?.role,
-    });
+    // Only log when auth state actually changes
+    if (!isAuthReady && !authLoading) {
+      console.log("🔍 Login page useEffect:", {
+        authLoading,
+        user: user?.email,
+        role: user?.role,
+      });
 
-    // Wait for auth to be ready
-    if (authLoading) {
-     
-      return;
+      setIsAuthReady(true);
+      console.log("✅ Auth ready, isAuthReady set to true");
     }
 
-    setIsAuthReady(true);
-    console.log("✅ Auth ready, isAuthReady set to true");
+    // Wait for auth to be ready
+    if (authLoading || !isAuthReady) {
+      return;
+    }
 
     // If user is already logged in, check if they need to change password
     if (user) {
@@ -59,7 +61,7 @@ export default function LoginPage() {
     } else {
       console.log("❌ No user found, staying on login page");
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, isAuthReady]); // Added isAuthReady to dependencies
 
   const redirectBasedOnRole = (role: string) => {
     console.log("🔄 Redirecting based on role:", role);

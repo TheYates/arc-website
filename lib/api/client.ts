@@ -215,7 +215,7 @@ export async function getMedicationsClient(
 
     const start = performance.now();
     const headers = createAuthHeaders(user);
-    const response = await fetch(`/api/medications/${patientId}`, {
+    const response = await fetch(`/api/patients/${patientId}/medications`, {
       headers,
       next: { revalidate: 120 }, // Increased cache time to 2 minutes
     });
@@ -226,38 +226,11 @@ export async function getMedicationsClient(
       return [];
     }
 
-    const data = await response.json();
+    const result = await response.json();
     const parseEnd = performance.now();
 
-    // Transform prescriptions to medications format
-    const medications: Medication[] = (data.prescriptions || []).map(
-      (prescription: any) => ({
-        id: prescription.id,
-        patientId: prescription.patientId || patientId,
-        prescribedBy:
-          prescription.prescribedBy?.id || prescription.prescribedById,
-        medicationName: prescription.medication?.name || "Unknown Medication",
-        genericName: prescription.medication?.genericName,
-        dosage: prescription.dosage,
-        frequency: prescription.frequency,
-        route: prescription.medication?.routeOfAdministration || "oral",
-        startDate: prescription.startDate || prescription.createdAt,
-        endDate: prescription.endDate,
-        instructions: prescription.instructions || "",
-        sideEffects: [],
-        contraindications: [],
-        isActive:
-          prescription.status === "ACTIVE" || prescription.status === "DRAFT",
-        isPRN: false,
-        priority: "medium" as const,
-        category: prescription.medication?.drugClass || ("other" as const),
-        createdAt: prescription.createdAt,
-        updatedAt: prescription.updatedAt,
-        lastModifiedBy:
-          prescription.prescribedBy?.id || prescription.prescribedById,
-        notes: prescription.notes,
-      })
-    );
+    // The API now returns properly transformed medication data
+    const medications: Medication[] = result.data || [];
 
     console.log(
       `💊 Medications API: fetch ${(fetchEnd - start).toFixed(2)}ms, parse ${(

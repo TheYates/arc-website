@@ -47,7 +47,6 @@ export function CareNotesForm({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    title: "",
     content: "",
   });
 
@@ -59,10 +58,10 @@ export function CareNotesForm({
   };
 
   const handleSave = async () => {
-    if (!formData.title.trim() || !formData.content.trim()) {
+    if (!formData.content.trim()) {
       toast({
         title: "Validation Error",
-        description: "Please provide both a title and content for the note.",
+        description: "Please provide content for the note.",
         variant: "destructive",
       });
       return;
@@ -75,7 +74,6 @@ export function CareNotesForm({
         authorId,
         authorName,
         authorRole,
-        title: formData.title.trim(),
         content: formData.content.trim(),
         noteType: "general",
         priority: "medium",
@@ -121,28 +119,15 @@ export function CareNotesForm({
       {/* Note Form */}
       <div className="space-y-4">
         <div>
-          <Label htmlFor="title" className="text-sm font-medium">
-            Note Title *
-          </Label>
-          <Input
-            id="title"
-            placeholder="Brief title for this note..."
-            value={formData.title}
-            onChange={(e) => handleInputChange("title", e.target.value)}
-            className="mt-1"
-          />
-        </div>
-
-        <div>
           <Label htmlFor="content" className="text-sm font-medium">
-            Note Content *
+            Care Note *
           </Label>
           <Textarea
             id="content"
-            placeholder="Enter your detailed note here..."
+            placeholder="Enter your care note here..."
             value={formData.content}
             onChange={(e) => handleInputChange("content", e.target.value)}
-            rows={6}
+            rows={8}
             className="mt-1"
           />
         </div>
@@ -194,35 +179,34 @@ export function CareNotesHistory({ notes, currentUserRole }: CareNotesHistoryPro
     <div className="space-y-4">
       {notes.map((note) => (
         <Card key={note.id}>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-lg">{note.title}</CardTitle>
-                <div className="flex items-center space-x-4 mt-1">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <User className="h-3 w-3 mr-1" />
-                    {note.authorName}
-                  </div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {formatDate(new Date(note.createdAt))}
-                  </div>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                  <User className="h-3 w-3 mr-1" />
+                  {note.authorName}
+                </div>
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {formatDate(new Date(note.createdAt))}
                 </div>
               </div>
               <div className="flex space-x-2">
-                <Badge 
-                  variant="outline" 
-                  className={`capitalize ${
-                    note.authorRole === 'caregiver' 
-                      ? 'bg-teal-100 text-teal-800' 
-                      : 'bg-purple-100 text-purple-800'
+                <Badge
+                  variant="outline"
+                  className={`capitalize text-xs ${
+                    note.authorRole === 'caregiver'
+                      ? 'bg-teal-100 text-teal-800 dark:bg-teal-800 dark:text-teal-200'
+                      : 'bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-200'
                   }`}
                 >
                   {note.authorRole}
                 </Badge>
-                <Badge variant="outline" className="capitalize">
-                  {note.priority}
-                </Badge>
+                {note.priority !== "medium" && (
+                  <Badge variant="outline" className="capitalize text-xs">
+                    {note.priority}
+                  </Badge>
+                )}
               </div>
             </div>
           </CardHeader>

@@ -25,12 +25,14 @@ import {
   MedicationRoute,
   MedicationInteraction,
 } from "@/lib/types/medications";
-import { createMedication, getMedications } from "@/lib/api/medications";
+import { useAuth } from "@/lib/auth";
+import { createAuthHeaders } from "@/lib/api/auth-headers";
 
 interface MedicationPrescriptionFormProps {
   patientId: string;
   patientName: string;
   prescribedBy: string;
+  commonMedications?: string[];
   onSave?: (medication: Medication) => void;
   onCancel?: () => void;
 }
@@ -39,19 +41,22 @@ export function MedicationPrescriptionForm({
   patientId,
   patientName,
   prescribedBy,
+  commonMedications,
   onSave,
   onCancel,
 }: MedicationPrescriptionFormProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [existingMedications, setExistingMedications] = useState<Medication[]>(
     []
   );
-  const [allMedications, setAllMedications] = useState<string[]>([]);
+  const [allMedications, setAllMedications] = useState<string[]>(commonMedications || []);
   const [interactions, setInteractions] = useState<MedicationInteraction[]>([]);
   const [medicationSearchOpen, setMedicationSearchOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const medicationDropdownRef = useRef<HTMLDivElement>(null);
+  const datePickerRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     medicationName: "",
     dosage: "",
@@ -68,43 +73,62 @@ export function MedicationPrescriptionForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    // Load existing medications for interaction checking
-    const medications = getMedications(patientId).filter((m) => m.isActive);
-    setExistingMedications(medications);
+    const loadMedications = async () => {
+      // Define hardcoded common medications
+      const hardcodedCommonMedications = [
+        "Lisinopril",
+        "Metformin",
+        "Amlodipine",
+        "Metoprolol",
+        "Omeprazole",
+        "Simvastatin",
+        "Losartan",
+        "Albuterol",
+        "Gabapentin",
+        "Sertraline",
+        "Ibuprofen",
+        "Acetaminophen",
+        "Aspirin",
+        "Hydrochlorothiazide",
+        "Atorvastatin",
+      ];
 
-    // Get all previously prescribed medication names for autocomplete
-    const allPatientMedications = getMedications(patientId);
-    const uniqueMedicationNames = Array.from(
-      new Set(allPatientMedications.map((m) => m.medicationName))
-    );
+      try {
+        // Load existing medications for interaction checking
+        const authHeaders = createAuthHeaders(user);
+        const response = await fetch(`/api/patients/${patientId}/medications`, {
+          headers: authHeaders,
+        });
+        if (response.ok) {
+          const result = await response.json();
+          const medications = result.data || [];
+          setExistingMedications(medications.filter((m: any) => m.isActive));
 
-    // Add common medications to the list
-    const commonMedications = [
-      "Lisinopril",
-      "Metformin",
-      "Amlodipine",
-      "Metoprolol",
-      "Omeprazole",
-      "Simvastatin",
-      "Losartan",
-      "Albuterol",
-      "Gabapentin",
-      "Sertraline",
-      "Ibuprofen",
-      "Acetaminophen",
-      "Aspirin",
-      "Hydrochlorothiazide",
-      "Atorvastatin",
-    ];
+          // Get all previously prescribed medication names for autocomplete
+          const uniqueMedicationNames = Array.from(
+            new Set(medications.map((m: any) => m.medicationName).filter(Boolean))
+          ) as string[];
 
-    const combinedMedications = Array.from(
-      new Set([...uniqueMedicationNames, ...commonMedications])
-    ).sort();
+          const combinedMedications = Array.from(
+            new Set([...uniqueMedicationNames, ...(commonMedications || []), ...hardcodedCommonMedications])
+          ).sort();
 
-    setAllMedications(combinedMedications);
-  }, [patientId]);
+          setAllMedications(combinedMedications);
+        } else {
+          // Fallback to just common medications if API fails
+          setAllMedications([...(commonMedications || []), ...hardcodedCommonMedications]);
+        }
+      } catch (error) {
+        console.error('Error loading medications:', error);
+        // Fallback to just common medications if API fails
+        setAllMedications([...(commonMedications || []), ...hardcodedCommonMedications]);
+      }
+    };
 
-  // Close dropdown when clicking outside
+    loadMedications();
+  }, [patientId, user]);
+
+  // Handle click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -113,11 +137,26 @@ export function MedicationPrescriptionForm({
       ) {
         setMedicationSearchOpen(false);
       }
+      if (
+        datePickerRef.current &&
+        !datePickerRef.current.contains(event.target as Node)
+      ) {
+        setDatePickerOpen(false);
+      }
+    };
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMedicationSearchOpen(false);
+        setDatePickerOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscapeKey);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscapeKey);
     };
   }, []);
 
@@ -132,9 +171,7 @@ export function MedicationPrescriptionForm({
       newErrors.dosage = "Dosage is required";
     }
 
-    if (!formData.instructions.trim()) {
-      newErrors.instructions = "Instructions are required";
-    }
+
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -190,9 +227,8 @@ export function MedicationPrescriptionForm({
     setIsLoading(true);
 
     try {
-      const medicationData = {
+      const prescriptionData = {
         patientId,
-        prescribedBy,
         medicationName: formData.medicationName.trim(),
         dosage: formData.dosage.trim(),
         frequency: formData.frequency,
@@ -201,27 +237,58 @@ export function MedicationPrescriptionForm({
           dateRange?.from?.toISOString().split("T")[0] ||
           new Date().toISOString().split("T")[0],
         endDate: dateRange?.to?.toISOString().split("T")[0] || undefined,
-        instructions: formData.instructions.trim(),
-        isActive: true,
-        isPRN: false,
-        priority: "medium" as "low" | "medium" | "high" | "critical",
-        category: "other" as any,
-        lastModifiedBy: prescribedBy,
+        instructions: formData.instructions.trim() || undefined,
+        notes: undefined, // Can be added later if needed
+        monitoringRequired: false,
+        monitoringInstructions: undefined,
+        costEstimate: undefined,
+        insuranceCovered: true,
       };
 
-      const result = createMedication(medicationData);
+      const authHeaders = createAuthHeaders(user);
+      const response = await fetch('/api/prescriptions', {
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+        },
+        body: JSON.stringify(prescriptionData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create prescription');
+      }
+
+      const result = await response.json();
 
       toast({
         title: "Medication Prescribed",
-        description:
-          result.interactions.length > 0
-            ? `Medication prescribed successfully. ${result.interactions.length} drug interaction(s) detected.`
-            : "Medication prescribed successfully.",
-        variant: result.interactions.length > 0 ? "destructive" : "default",
+        description: "Medication prescribed successfully.",
+        variant: "default",
       });
 
       if (onSave) {
-        onSave(result.medication);
+        // Convert the prescription data to the expected Medication format
+        const medicationForCallback = {
+          id: result.data.id,
+          patientId: result.data.patientId,
+          prescribedBy: result.data.prescribedById,
+          medicationName: result.data.medication.name,
+          dosage: result.data.dosage, // Now available from DB response
+          frequency: result.data.frequency, // Now available from DB response
+          route: result.data.route, // Now available from DB response
+          startDate: result.data.startDate,
+          endDate: result.data.endDate,
+          instructions: result.data.instructions,
+          isActive: result.data.status === 'APPROVED',
+          isPRN: false,
+          priority: "medium" as const,
+          category: "other" as const,
+          createdAt: result.data.createdAt,
+          updatedAt: result.data.updatedAt,
+          lastModifiedBy: result.data.prescribedById,
+        };
+        onSave(medicationForCallback);
       }
 
       // Reset form
@@ -316,12 +383,12 @@ export function MedicationPrescriptionForm({
               value={formData.medicationName}
               onChange={(e) => {
                 handleInputChange("medicationName", e.target.value);
-                // Only show dropdown if user has typed something
-                setMedicationSearchOpen(e.target.value.length > 0);
+                // Only show dropdown if user has typed 3 or more characters
+                setMedicationSearchOpen(e.target.value.length >= 3);
               }}
               onFocus={() => {
-                // Only show dropdown on focus if there's already text
-                if (formData.medicationName.length > 0) {
+                // Only show dropdown on focus if there's already 3+ characters
+                if (formData.medicationName.length >= 3) {
                   setMedicationSearchOpen(true);
                 }
               }}
@@ -329,37 +396,120 @@ export function MedicationPrescriptionForm({
             />
             {medicationSearchOpen && formData.medicationName.length > 0 && (
               <div
-                className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
+                className="absolute z-[9999] w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-auto dark:bg-popover dark:border-border"
                 style={{ top: "100%", left: 0 }}
               >
-                {allMedications
-                  .filter((medication) =>
-                    medication
-                      .toLowerCase()
-                      .includes(formData.medicationName.toLowerCase())
-                  )
-                  .slice(0, 10)
-                  .map((medication) => (
-                    <div
-                      key={medication}
-                      className="px-3 py-2 cursor-pointer hover:text-sm"
-                      onClick={() => {
-                        handleInputChange("medicationName", medication);
-                        setMedicationSearchOpen(false);
-                      }}
-                    >
-                      {medication}
-                    </div>
-                  ))}
-                {allMedications.filter((medication) =>
-                  medication
-                    .toLowerCase()
-                    .includes(formData.medicationName.toLowerCase())
-                ).length === 0 && (
-                  <div className="px-3 py-2 text-sm text-gray-500">
-                    No medications found
-                  </div>
-                )}
+                {(() => {
+                  const filteredMedications = allMedications
+                    .filter((medication) =>
+                      medication
+                        .toLowerCase()
+                        .includes(formData.medicationName.toLowerCase())
+                    )
+                    .slice(0, 10);
+
+                  const hasExactMatch = allMedications.some(
+                    (medication) =>
+                      medication.toLowerCase() === formData.medicationName.toLowerCase()
+                  );
+
+                  return (
+                    <>
+                      {filteredMedications.map((medication) => (
+                        <div
+                          key={medication}
+                          className="px-3 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground text-sm"
+                          onClick={() => {
+                            handleInputChange("medicationName", medication);
+                            setMedicationSearchOpen(false);
+                          }}
+                        >
+                          {medication}
+                        </div>
+                      ))}
+                      {filteredMedications.length === 0 && formData.medicationName.length >= 3 && (
+                        <div
+                          className="px-3 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground text-sm text-blue-600 dark:text-blue-400 border-t border-border"
+                          onClick={async () => {
+                            // Save new medication to database
+                            try {
+                              const authHeaders = createAuthHeaders(user);
+                              const response = await fetch('/api/medications/catalog', {
+                                method: 'POST',
+                                headers: {
+                                  ...authHeaders,
+                                },
+                                body: JSON.stringify({
+                                  name: formData.medicationName.trim(),
+                                  category: 'other'
+                                }),
+                              });
+
+                              if (response.ok) {
+                                // Add to local list
+                                setAllMedications(prev => [...prev, formData.medicationName.trim()]);
+                                toast({
+                                  title: "Medication Added",
+                                  description: `"${formData.medicationName}" has been added to the medication catalog.`,
+                                });
+                              }
+                            } catch (error) {
+                              console.error('Error saving medication:', error);
+                              toast({
+                                title: "Note",
+                                description: "Medication will be used for this prescription. It may be added to the catalog later.",
+                                variant: "default",
+                              });
+                            }
+                            setMedicationSearchOpen(false);
+                          }}
+                        >
+                          + Add "{formData.medicationName}" to medication catalog
+                        </div>
+                      )}
+                      {!hasExactMatch && filteredMedications.length > 0 && formData.medicationName.length >= 3 && (
+                        <div
+                          className="px-3 py-2 cursor-pointer hover:bg-accent hover:text-accent-foreground text-sm text-blue-600 dark:text-blue-400 border-t border-border"
+                          onClick={async () => {
+                            // Save new medication to database
+                            try {
+                              const authHeaders = createAuthHeaders(user);
+                              const response = await fetch('/api/medications/catalog', {
+                                method: 'POST',
+                                headers: {
+                                  ...authHeaders,
+                                },
+                                body: JSON.stringify({
+                                  name: formData.medicationName.trim(),
+                                  category: 'other'
+                                }),
+                              });
+
+                              if (response.ok) {
+                                // Add to local list
+                                setAllMedications(prev => [...prev, formData.medicationName.trim()]);
+                                toast({
+                                  title: "Medication Added",
+                                  description: `"${formData.medicationName}" has been added to the medication catalog.`,
+                                });
+                              }
+                            } catch (error) {
+                              console.error('Error saving medication:', error);
+                              toast({
+                                title: "Note",
+                                description: "Medication will be used for this prescription. It may be added to the catalog later.",
+                                variant: "default",
+                              });
+                            }
+                            setMedicationSearchOpen(false);
+                          }}
+                        >
+                          + Add "{formData.medicationName}" to medication catalog
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -471,7 +621,8 @@ export function MedicationPrescriptionForm({
 
             {datePickerOpen && (
               <div
-                className="absolute top-full left-0 mt-2 p-3 bg-white border border-gray-200 rounded-lg shadow-lg"
+                ref={datePickerRef}
+                className="absolute top-full left-0 mt-2 p-3 bg-background border border-border rounded-lg shadow-lg dark:bg-popover dark:border-border"
                 style={{
                   zIndex: 99999,
                   minWidth: "300px",
@@ -519,7 +670,7 @@ export function MedicationPrescriptionForm({
         {/* Instructions */}
         <div>
           <Label htmlFor="instructions" className="text-sm font-medium">
-            Instructions, Side Effects & Notes *
+            Instructions, Side Effects & Notes
           </Label>
           <Textarea
             id="instructions"

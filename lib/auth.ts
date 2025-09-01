@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { authenticateUserClient } from "@/lib/api/client";
 import {
-  verifyToken,
   invalidateSession,
   isTokenExpiringSoon,
   getTokenExpiration,
@@ -67,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [session, setSession] = useState<AuthSession | null>(null);
   const [sessionExpiresAt, setSessionExpiresAt] = useState<Date | null>(null);
   
@@ -104,10 +104,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
 
-      // Verify JWT token
-      const tokenPayload = verifyToken(parsedSession.accessToken);
-      if (!tokenPayload) {
-        console.log("🔒 Invalid access token, attempting refresh...");
+      // Server-side token validation for critical checks
+      let isTokenValid = false;
+      try {
+        const validationResponse = await fetch("/api/auth/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: parsedSession.accessToken }),
+        });
+
+        if (validationResponse.ok) {
+          const validationData = await validationResponse.json();
+          isTokenValid = validationData.valid;
+
+          // If token is expiring soon, we'll refresh it
+          if (validationData.expiringSoon) {
+            console.log("🔄 Token expiring soon, will refresh...");
+          }
+        }
+      } catch (validationError) {
+        console.log("⚠️ Server validation failed, falling back to client check:", validationError);
+
+        // Fallback to basic client-side check if server validation fails
+        try {
+          const token = parsedSession.accessToken;
+          if (token && typeof token === 'string') {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(atob(parts[1]));
+              const now = Math.floor(Date.now() / 1000);
+              isTokenValid = !payload.exp || payload.exp > (now + 300);
+            }
+          }
+        } catch {
+          isTokenValid = false;
+        }
+      }
+
+      if (!isTokenValid) {
+        console.log("🔒 Token validation failed, attempting refresh...");
         
         // Try to refresh with refresh token using API endpoint
         try {
@@ -167,7 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setupSessionMonitoring = useCallback((sessionData: AuthSession) => {
     clearIntervals();
     
-    // Check token expiration every minute
+    // Optimized session monitoring - less frequent checks
     sessionCheckInterval.current = setInterval(() => {
       if (sessionData.accessToken && isTokenExpiringSoon(sessionData.accessToken, 5)) {
         console.log("⚠️ Token expiring soon, attempting refresh...");
@@ -178,29 +213,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (new Date() >= new Date(sessionData.expiresAt)) {
         autoLogout();
       }
-    }, 60000); // Check every minute
+    }, 5 * 60 * 1000); // Check every 5 minutes instead of every minute
 
-    // Set up auto-refresh 5 minutes before token expiration
+    // Set up auto-refresh 10 minutes before token expiration
     tokenRefreshInterval.current = setInterval(() => {
-      if (sessionData.accessToken && isTokenExpiringSoon(sessionData.accessToken, 10)) {
+      if (sessionData.accessToken && isTokenExpiringSoon(sessionData.accessToken, 15)) {
         refreshSession();
       }
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    }, 10 * 60 * 1000); // Check every 10 minutes instead of 5
   }, [autoLogout, clearIntervals]);
 
-  // Hydration-safe auth check
+  // Optimized hydration-safe auth check
   useEffect(() => {
-    console.log("🔍 Auth context initializing, checking stored session...");
-
-    // Wait for hydration to be complete before accessing localStorage
-    if (typeof window === 'undefined') {
+    // Prevent multiple initializations
+    if (isInitialized || typeof window === 'undefined') {
       return;
     }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log("🔍 Auth context initializing, checking stored session...");
+    }
+    setIsInitialized(true);
 
     // Use requestAnimationFrame to ensure DOM is ready
     requestAnimationFrame(async () => {
       try {
         setIsHydrated(true);
+
+        // Quick check for session existence before full validation
+        const storedSession = localStorage.getItem("auth_session");
+        if (!storedSession) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log("🔍 No stored session found, skipping validation");
+          }
+          setIsLoading(false);
+          return;
+        }
 
         // First check for old localStorage format and migrate/clear
         const oldStoredUser = localStorage.getItem("auth_user");
@@ -365,13 +413,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Login function
   const loginUser = useCallback(async (email: string, password: string) => {
-    console.log("🔐 Auth context loginUser called:", { email });
+    if (process.env.NODE_ENV === 'development') {
+      console.log("🔐 Auth context loginUser called:", { email });
+    }
     setIsLoading(true);
 
     try {
-      console.log("📡 Calling authenticateUserClient...");
+      if (process.env.NODE_ENV === 'development') {
+        console.log("📡 Calling authenticateUserClient...");
+      }
       const result = await authenticateUserClient(email, password);
-      console.log("📥 authenticateUserClient result:", result);
+      if (process.env.NODE_ENV === 'development') {
+        console.log("📥 authenticateUserClient result:", result);
+      }
 
       if (!result.success || !result.user || !result.tokens) {
         console.log("❌ Authentication failed:", result.error);
@@ -393,23 +447,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         expiresAt: result.tokens.expiresAt,
       };
 
-      // Set state
+      // Store session for persistence first
+      localStorage.setItem("auth_session", JSON.stringify(newSession));
+      setAuthCookie(newSession);
+      console.log("💾 Session stored in localStorage and cookie");
+
+      // Batch all state updates to minimize re-renders
       setUser(result.user);
       setSession(newSession);
       setSessionExpiresAt(result.tokens.expiresAt);
-
-              // Store session for persistence
-        localStorage.setItem("auth_session", JSON.stringify(newSession));
-        
-        // Also set a cookie for server-side middleware access
-        setAuthCookie(newSession);
-        
-        console.log("💾 Session stored in localStorage and cookie");
-
-      // Setup session monitoring
-      setupSessionMonitoring(newSession);
-
+      setIsAuthenticated(true);
       setIsLoading(false);
+
+      // Setup session monitoring after state updates
+      setupSessionMonitoring(newSession);
       return { success: true };
     } catch (error) {
       console.log("💥 Login error in auth context:", error);

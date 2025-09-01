@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMedications } from "@/lib/api/medications";
+import { getPrescriptionsByPatient } from "@/lib/api/medications-prisma";
 import { CacheService } from "@/lib/redis";
 
 // GET /api/patients/[id]/medications - Get medications for a specific patient
@@ -29,7 +29,7 @@ export async function GET(
     }
 
     const dbStart = performance.now();
-    const medications = getMedications(id);
+    const medications = await getPrescriptionsByPatient(id);
     const dbEnd = performance.now();
 
     console.log(

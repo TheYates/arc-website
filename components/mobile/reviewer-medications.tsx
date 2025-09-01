@@ -100,13 +100,18 @@ export function ReviewerMedicationsMobile({
               No active medications.
             </div>
           ) : (
-            <ul className="text-sm space-y-2">
+            <ul className="text-sm space-y-3">
               {active.slice(0, 6).map((m) => (
-                <li 
-                  key={m.id} 
+                <li
+                  key={m.id}
                   className="flex items-center justify-between p-2 -mx-2 rounded-md hover:bg-muted/50 transition-colors"
                 >
-                  <span className="text-card-foreground">{m.medicationName}</span>
+                  <div className="flex-1">
+                    <div className="font-medium text-card-foreground">{m.medicationName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {m.dosage} • {m.route?.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()) || "Oral"}
+                    </div>
+                  </div>
                   <Badge
                     variant="outline"
                     className="border-border bg-background text-foreground hover:bg-muted transition-colors"

@@ -116,6 +116,14 @@ export default function CaregiverSchedulesPage() {
       setSchedules(data.schedules);
     } catch (error) {
       console.error("Error fetching schedules:", error);
+
+      // Show error toast with Sonner
+      sonnerToast.error("Failed to Load Schedules", {
+        description: "Unable to retrieve your schedule data. Please try refreshing the page.",
+        duration: 5000,
+      });
+
+      // Also show regular toast for consistency
       toast({
         title: "Error",
         description: "Failed to load schedules",
@@ -138,6 +146,14 @@ export default function CaregiverSchedulesPage() {
       setPatients(data.patients);
     } catch (error) {
       console.error("Error fetching patients:", error);
+
+      // Show error toast with Sonner
+      sonnerToast.error("Failed to Load Patients", {
+        description: "Unable to retrieve patient list. Some features may be limited.",
+        duration: 5000,
+      });
+
+      // Also show regular toast for consistency
       toast({
         title: "Error",
         description: "Failed to load patients",
@@ -219,13 +235,21 @@ export default function CaregiverSchedulesPage() {
 
   const handleEditSchedule = (schedule: CaregiverSchedule) => {
     // TODO: Implement edit functionality
+
+    // Show info toast with Sonner
+    sonnerToast.info("Edit Feature Coming Soon", {
+      description: `Edit functionality for "${schedule.title}" will be available in a future update.`,
+      duration: 4000,
+    });
+
+    // Also show regular toast for consistency
     toast({
       title: "Edit Schedule",
       description: "Edit functionality will be implemented soon",
     });
   };
 
-  const handleDeleteSchedule = async (scheduleId: string) => {
+  const handleDeleteSchedule = async (scheduleId: string, scheduleTitle?: string) => {
     if (!confirm("Are you sure you want to delete this schedule?")) {
       return;
     }
@@ -237,6 +261,15 @@ export default function CaregiverSchedulesPage() {
         throw new Error("Failed to delete schedule");
       }
 
+      // Show success toast with Sonner
+      sonnerToast.success("Schedule Deleted Successfully", {
+        description: scheduleTitle
+          ? `"${scheduleTitle}" has been removed from your schedule.`
+          : "The schedule has been removed from your schedule.",
+        duration: 4000,
+      });
+
+      // Also show regular toast for consistency
       toast({
         title: "Success",
         description: "Schedule deleted successfully",
@@ -245,6 +278,14 @@ export default function CaregiverSchedulesPage() {
       fetchSchedules(); // Refresh the list
     } catch (error) {
       console.error("Error deleting schedule:", error);
+
+      // Show error toast with Sonner
+      sonnerToast.error("Failed to Delete Schedule", {
+        description: "Unable to delete the schedule. Please try again.",
+        duration: 5000,
+      });
+
+      // Also show regular toast for consistency
       toast({
         title: "Error",
         description: "Failed to delete schedule",
@@ -276,11 +317,18 @@ export default function CaregiverSchedulesPage() {
     if (!validation.success) {
       const fieldErrors = getScheduleValidationErrors(validation.error);
       
-      setNewScheduleDialog(prev => ({ 
-        ...prev, 
-        errors: fieldErrors 
+      setNewScheduleDialog(prev => ({
+        ...prev,
+        errors: fieldErrors
       }));
-      
+
+      // Show validation error toast with Sonner
+      sonnerToast.error("Please Fix Form Errors", {
+        description: "Some required fields are missing or invalid. Please check the form below.",
+        duration: 5000,
+      });
+
+      // Also show regular toast for consistency
       toast({
         title: "Validation Error",
         description: "Please fix the errors below",
@@ -351,6 +399,14 @@ export default function CaregiverSchedulesPage() {
       fetchSchedules(); // Refresh the list
     } catch (error) {
       console.error("Error creating schedule:", error);
+
+      // Show error toast with Sonner
+      sonnerToast.error("Failed to Create Schedule", {
+        description: "Unable to create the schedule. Please check your connection and try again.",
+        duration: 5000,
+      });
+
+      // Also show regular toast for consistency
       toast({
         title: "Error",
         description: "Failed to create schedule",
@@ -576,7 +632,7 @@ export default function CaregiverSchedulesPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeleteSchedule(schedule.id)}
+                                onClick={() => handleDeleteSchedule(schedule.id, schedule.title)}
                                 title="Delete schedule"
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               >

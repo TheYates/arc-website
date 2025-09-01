@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCareNotes, createCareNote } from "@/lib/api/care-notes-prisma";
 import { CacheService } from "@/lib/redis";
 import { authenticateRequest } from "@/lib/api/auth";
+import { triggerCareNoteCreated } from "@/lib/utils/activity-triggers";
+import { prisma } from "@/lib/database/postgresql";
 
 // GET /api/care-notes - Get care notes with optional filtering
 export async function GET(request: NextRequest) {
@@ -89,10 +91,8 @@ export async function POST(request: NextRequest) {
       authorName,
       authorRole,
       noteType,
-      title,
       content,
       priority,
-      tags,
       isPrivate,
       followUpRequired,
       followUpDate,
@@ -104,13 +104,12 @@ export async function POST(request: NextRequest) {
       !authorId ||
       !authorName ||
       !authorRole ||
-      !title ||
       !content
     ) {
       return NextResponse.json(
         {
           error:
-            "Missing required fields: patientId, authorId, authorName, authorRole, title, content",
+            "Missing required fields: patientId, authorId, authorName, authorRole, content",
         },
         { status: 400 }
       );
@@ -132,10 +131,8 @@ export async function POST(request: NextRequest) {
       authorName,
       authorRole,
       noteType,
-      title,
       content,
       priority,
-      tags,
       isPrivate,
       followUpRequired,
       followUpDate,
@@ -144,6 +141,33 @@ export async function POST(request: NextRequest) {
     // Invalidate care notes cache for this patient
     await CacheService.invalidatePattern(`care-notes:${patientId}:*`);
     console.log(`🗑️ Cache invalidated for patient ${patientId} care notes`);
+
+    // Trigger activity feed item for care note creation
+    try {
+      // Get patient name directly from database
+      const patient = await prisma.patient.findUnique({
+        where: { id: patientId },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true
+            }
+          }
+        }
+      });
+
+      if (patient) {
+        const patientName = `${patient.user.firstName} ${patient.user.lastName}`;
+        await triggerCareNoteCreated(patientId, patientName, noteType, user);
+        console.log("✅ Activity feed item created for care note:", patientId, noteType);
+      } else {
+        console.error("Patient not found for activity feed:", patientId);
+      }
+    } catch (activityError) {
+      console.error("Failed to create activity feed item:", activityError);
+      // Don't fail the main operation if activity creation fails
+    }
 
     return NextResponse.json({ note }, { status: 201 });
   } catch (error) {

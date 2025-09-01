@@ -160,6 +160,9 @@ export default function CaregiverMedicationsPage({ params }: PageProps) {
                           <p className="text-sm text-muted-foreground capitalize">
                             {medication?.route?.replace("_", " ") || "Oral"}
                           </p>
+                          <p className="text-xs text-muted-foreground">
+                            {medication?.frequency?.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()) || "As needed"}
+                          </p>
                         </div>
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">

@@ -13,12 +13,8 @@ export async function POST(request: NextRequest) {
       patientId,
       prescribedBy,
       medicationName,
-      dosage,
-      frequency,
-      route,
-      startDate,
-      endDate,
       instructions,
+      startDate,
       priority = "medium",
       category = "other",
     } = body;
@@ -27,43 +23,54 @@ export async function POST(request: NextRequest) {
     if (
       !patientId ||
       !prescribedBy ||
-      !medicationName ||
-      !dosage ||
-      !frequency
+      !medicationName
     ) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "Missing required fields: patientId, prescribedBy, medicationName, dosage, frequency",
+            "Missing required fields: patientId, prescribedBy, medicationName",
         },
         { status: 400 }
       );
     }
 
+    console.log('📋 Creating prescription with data:', {
+      patientId,
+      prescribedBy,
+      medicationName,
+      instructions: instructions || 'No instructions provided',
+      startDate,
+      priority,
+      category
+    });
+
+    console.log('🔧 Using snake_case field names for MedicationCatalog');
+
     // Find or create medication in the catalog
-    let medication = await prisma.medication.findFirst({
+    let medication = await prisma.medicationCatalog.findFirst({
       where: {
         name: {
           equals: medicationName.trim(),
           mode: "insensitive",
         },
+        is_active: true,
       },
     });
 
     // If medication doesn't exist in catalog, create it
     if (!medication) {
-      medication = await prisma.medication.create({
+      medication = await prisma.medicationCatalog.create({
         data: {
           name: medicationName.trim(),
-          genericName: medicationName.trim(),
-          drugClass: category,
-          dosageForms: [route || "oral"],
-          strengthOptions: [dosage],
-          routeOfAdministration: route || "oral",
-          contraindications: [],
-          sideEffects: [],
-          drugInteractions: [],
+          generic_name: medicationName.trim(),
+          drug_class: category,
+          category: category,
+          dosage_forms: ["oral"],
+          strength_options: ["as prescribed"],
+          route_of_administration: "oral",
+          is_active: true,
+          is_common: false,
         },
       });
     }
@@ -73,18 +80,8 @@ export async function POST(request: NextRequest) {
       patientId,
       medicationId: medication.id,
       prescribedById: prescribedBy,
-      dosage: dosage.trim(),
-      frequency,
-      duration: endDate
-        ? `${Math.ceil(
-            (new Date(endDate).getTime() -
-              new Date(startDate || Date.now()).getTime()) /
-              (1000 * 60 * 60 * 24)
-          )}`
-        : undefined,
-      instructions: instructions?.trim(),
+      instructions: instructions?.trim() || "",
       startDate: startDate ? new Date(startDate) : new Date(),
-      endDate: endDate ? new Date(endDate) : undefined,
       notes: `Prescribed via reviewer interface. Priority: ${priority}`,
     };
 
@@ -94,7 +91,7 @@ export async function POST(request: NextRequest) {
       throw new Error("Failed to create prescription");
     }
 
-    // Return prescription with medication details
+    // Return prescription with medication details using correct snake_case field names
     const prescriptionWithDetails = await prisma.prescription.findUnique({
       where: { id: result.id },
       include: {
@@ -102,9 +99,11 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            genericName: true,
-            drugClass: true,
-            routeOfAdministration: true,
+            generic_name: true,  // snake_case field name
+            drug_class: true,    // snake_case field name
+            route_of_administration: true,  // snake_case field name
+            category: true,
+            is_active: true,
           },
         },
         prescribedBy: {

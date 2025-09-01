@@ -51,39 +51,9 @@ export async function GET(request: NextRequest) {
         "MedicationCatalog table not found, falling back to medications table"
       );
 
-      // Fallback to medications table if MedicationCatalog doesn't exist
-      let where: any = {};
-
-      if (search && search.length > 0) {
-        where.name = {
-          contains: search,
-          mode: "insensitive",
-        };
-      }
-
-      const fallbackMedications = await prisma.medication.findMany({
-        where,
-        select: {
-          id: true,
-          name: true,
-          genericName: true,
-          drugClass: true,
-        },
-        orderBy: {
-          name: "asc",
-        },
-        take: limit,
-      });
-
-      // Transform to match expected format
-      medications = fallbackMedications.map((med) => ({
-        id: med.id,
-        name: med.name,
-        generic_name: med.genericName,
-        drug_class: med.drugClass,
-        category: med.drugClass,
-        is_common: false, // Default to false for fallback
-      }));
+      // No fallback needed - MedicationCatalog is the only table now
+      console.log("MedicationCatalog query failed, no fallback available");
+      medications = [];
     }
 
     // If no medications found and commonOnly was requested, return hardcoded common medications
@@ -143,9 +113,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       name,
+      generic_name,
+      drug_class,
+      category,
+      dosage_forms,
+      strength_options,
+      route_of_administration,
+      // Also accept camelCase for backward compatibility
       genericName,
       drugClass,
-      category,
       dosageForms,
       strengthOptions,
       routeOfAdministration,
@@ -178,15 +154,12 @@ export async function POST(request: NextRequest) {
     const newMedication = await prisma.medicationCatalog.create({
       data: {
         name: name.trim(),
-        generic_name: genericName?.trim(),
-        drug_class: drugClass?.trim(),
+        generic_name: (generic_name || genericName)?.trim(),
+        drug_class: (drug_class || drugClass)?.trim(),
         category: category?.trim(),
-        dosage_forms: dosageForms || [],
-        strength_options: strengthOptions || [],
-        route_of_administration: routeOfAdministration?.trim(),
-        contraindications: [],
-        side_effects: [],
-        drug_interactions: [],
+        dosage_forms: dosage_forms || dosageForms || [],
+        strength_options: strength_options || strengthOptions || [],
+        route_of_administration: (route_of_administration || routeOfAdministration)?.trim(),
         is_common: false, // New medications start as non-common
         is_active: true,
       },

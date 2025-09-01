@@ -75,6 +75,8 @@ function isPublicPath(pathname: string): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+
+
   // Skip middleware for static files and Next.js internals
   if (
     pathname.startsWith('/_next/') ||
@@ -119,8 +121,7 @@ export function middleware(request: NextRequest) {
     if (payload) {
       isAuthenticated = true
       userRole = payload.role.toLowerCase() // Convert to lowercase for consistent role checking
-      // Only log on first access or role changes for cleaner logs
-      // console.log(`✅ Middleware: Valid token format for user ${payload.email} (${payload.role} -> ${userRole})`)
+
     } else {
       console.log('❌ Middleware: Invalid or expired token format')
     }
@@ -138,32 +139,59 @@ export function middleware(request: NextRequest) {
     // Role-based access control for admin paths
     if (pathname.startsWith('/admin') && !['admin', 'super_admin'].includes(userRole!)) {
       console.log(`🚫 Middleware: Unauthorized access attempt to ${pathname} by role ${userRole}`)
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      // Redirect to user's appropriate dashboard
+      const redirectPath = userRole === 'caregiver' ? '/caregiver' : userRole === 'reviewer' ? '/reviewer' : '/dashboard';
+      return NextResponse.redirect(new URL(redirectPath, request.url))
     }
 
     // Role-based access control for caregiver paths
     if (pathname.startsWith('/caregiver') && userRole !== 'caregiver') {
       console.log(`🚫 Middleware: Unauthorized access attempt to ${pathname} by role ${userRole}`)
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      // Redirect to user's appropriate dashboard
+      const redirectPath = userRole === 'reviewer' ? '/reviewer' : userRole === 'admin' || userRole === 'super_admin' ? '/admin' : '/dashboard';
+      return NextResponse.redirect(new URL(redirectPath, request.url))
     }
 
     // Role-based access control for patient paths
     if (pathname.startsWith('/patient') && userRole !== 'patient') {
       console.log(`🚫 Middleware: Unauthorized access attempt to ${pathname} by role ${userRole}`)
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      // Redirect to user's appropriate dashboard
+      const redirectPath = userRole === 'caregiver' ? '/caregiver' : userRole === 'reviewer' ? '/reviewer' : userRole === 'admin' || userRole === 'super_admin' ? '/admin' : '/dashboard';
+      return NextResponse.redirect(new URL(redirectPath, request.url))
     }
 
     // Role-based access control for reviewer paths
     if (pathname.startsWith('/reviewer') && userRole !== 'reviewer') {
       console.log(`🚫 Middleware: Unauthorized access attempt to ${pathname} by role ${userRole}`)
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      // Redirect to user's appropriate dashboard
+      const redirectPath = userRole === 'caregiver' ? '/caregiver' : userRole === 'admin' || userRole === 'super_admin' ? '/admin' : '/dashboard';
+      return NextResponse.redirect(new URL(redirectPath, request.url))
     }
   }
 
   // Handle auth paths (redirect authenticated users away from login)
   if (isAuthPath(pathname) && isAuthenticated) {
-    console.log(`🔄 Middleware: Redirecting authenticated user from ${pathname} to /dashboard`)
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    // Redirect to role-specific dashboard
+    let redirectPath = '/dashboard'; // Default fallback
+
+    switch (userRole) {
+      case 'caregiver':
+        redirectPath = '/caregiver';
+        break;
+      case 'reviewer':
+        redirectPath = '/reviewer';
+        break;
+      case 'admin':
+      case 'super_admin':
+        redirectPath = '/admin';
+        break;
+      case 'patient':
+        redirectPath = '/patient';
+        break;
+    }
+
+    console.log(`🔄 Middleware: Redirecting authenticated ${userRole} from ${pathname} to ${redirectPath}`)
+    return NextResponse.redirect(new URL(redirectPath, request.url))
   }
 
   // Allow the request to continue

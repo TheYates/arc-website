@@ -46,6 +46,7 @@ model User {
   symptomReportsReviewed        SymptomReport[]            @relation("SymptomReportReviewedBy")
   userSessions                  UserSession[]
   vitalSignsRecorded            VitalSigns[]
+  activityFeedCreated           ActivityFeed[]             @relation("ActivityFeedCreatedBy")
 
   @@map("users")
 }
@@ -99,6 +100,7 @@ model Patient {
   serviceRequests              ServiceRequest[]
   symptomReports               SymptomReport[]
   vitalSigns                   VitalSigns[]
+  activityFeed                 ActivityFeed[]
 
   @@map("patients")
 }
@@ -139,45 +141,23 @@ model ReviewerAssignment {
   @@map("reviewer_assignments")
 }
 
-model Medication {
-  id                          String         @id @default(uuid())
-  name                        String
-  genericName                 String?        @map("generic_name")
-  brandNames                  String[]       @map("brand_names")
-  drugClass                   String?        @map("drug_class")
-  dosageForms                 String[]       @map("dosage_forms")
-  strengthOptions             String[]       @map("strength_options")
-  routeOfAdministration       String?        @map("route_of_administration")
-  contraindications           String[]       @map("contraindications")
-  sideEffects                 String[]       @map("side_effects")
-  drugInteractions            String[]       @map("drug_interactions")
-  pregnancyCategory           String?        @map("pregnancy_category")
-  controlledSubstanceSchedule String?        @map("controlled_substance_schedule")
-  createdAt                   DateTime       @default(now()) @map("created_at")
-  prescriptions               Prescription[]
 
-  @@map("medications")
-}
+
+
 
 model MedicationCatalog {
-  id                            String   @id @default(uuid())
-  name                          String
-  generic_name                  String?
-  brand_names                   String[]
-  drug_class                    String?
-  category                      String?
-  dosage_forms                  String[]
-  strength_options              String[]
-  route_of_administration       String?
-  contraindications             String[]
-  side_effects                  String[]
-  drug_interactions             String[]
-  pregnancy_category            String?
-  controlled_substance_schedule String?
-  is_common                     Boolean  @default(false)
-  is_active                     Boolean  @default(true)
-  created_at                    DateTime @default(now())
-  updated_at                    DateTime @default(now())
+  id                      String         @id @default(uuid())
+  name                    String
+  generic_name            String?
+  drug_class              String?
+  category                String?
+  dosage_forms            String[]
+  strength_options        String[]
+  route_of_administration String?
+  is_common               Boolean        @default(false)
+  is_active               Boolean        @default(true)
+  created_at              DateTime       @default(now())
+  prescriptions           Prescription[]
 
   @@map("MedicationCatalog")
 }
@@ -187,10 +167,10 @@ model Prescription {
   patientId                 String                     @map("patient_id")
   medicationId              String                     @map("medication_id")
   prescribedById            String                     @map("prescribed_by_id")
-  dosage                    String
-  frequency                 String
-  duration                  String?
-  instructions              String?
+  dosage                    String                     // e.g., "10mg", "5ml", "1 tablet"
+  frequency                 String                     // e.g., "twice_daily", "every_6_hours"
+  route                     String                     // e.g., "oral", "injection", "topical"
+  instructions              String?                    // Additional instructions from prescriber
   status                    PrescriptionStatus         @default(DRAFT)
   prescribedDate            DateTime                   @default(now()) @map("prescribed_date")
   startDate                 DateTime?                  @map("start_date") @db.Date
@@ -209,7 +189,7 @@ model Prescription {
   updatedAt                 DateTime                   @default(now()) @updatedAt @map("updated_at")
   medicationAdministrations MedicationAdministration[]
   approvedBy                User?                      @relation("PrescriptionApprovedBy", fields: [approvedById], references: [id])
-  medication                Medication                 @relation(fields: [medicationId], references: [id])
+  medication                MedicationCatalog          @relation(fields: [medicationId], references: [id])
   patient                   Patient                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
   prescribedBy              User                       @relation("PrescriptionCreatedBy", fields: [prescribedById], references: [id])
 
@@ -357,11 +337,11 @@ model CareNote {
   patientId        String         @map("patient_id")
   authorId         String         @map("author_id")
   noteType         CareNoteType   @default(GENERAL) @map("note_type")
-  title            String
+
   content          String
   priority         Priority       @default(MEDIUM)
   status           CareNoteStatus @default(SUBMITTED)
-  tags             String[]
+
   isPrivate        Boolean        @default(false) @map("is_private")
   followUpRequired Boolean        @default(false) @map("follow_up_required")
   followUpDate     DateTime?      @map("follow_up_date") @db.Date
@@ -1011,4 +991,45 @@ enum InterviewType {
   IN_PERSON @map("in_person")
   PANEL     @map("panel")
   TECHNICAL @map("technical")
+}
+
+model ActivityFeed {
+  id            String           @id @default(uuid())
+  type          ActivityType
+  priority      ActivityPriority @default(MEDIUM)
+  title         String
+  description   String
+  patientId     String           @map("patient_id")
+  patient       Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  createdById   String           @map("created_by_id")
+  createdBy     User             @relation("ActivityFeedCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  metadata      Json?
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@index([createdById])
+  @@index([createdAt])
+  @@index([type])
+  @@index([priority])
+  @@map("activity_feed")
+}
+
+enum ActivityType {
+  CARE_NOTE_CREATED      @map("care_note_created")
+  MEDICAL_REVIEW_CREATED @map("medical_review_created")
+  MEDICATION_PRESCRIBED  @map("medication_prescribed")
+  MEDICATION_ADMINISTERED @map("medication_administered")
+  VITAL_SIGNS_RECORDED   @map("vital_signs_recorded")
+  PATIENT_ASSIGNED       @map("patient_assigned")
+  SERVICE_REQUEST_CREATED @map("service_request_created")
+  URGENT_ALERT           @map("urgent_alert")
+  CARE_PLAN_UPDATED      @map("care_plan_updated")
+}
+
+enum ActivityPriority {
+  LOW    @map("low")
+  MEDIUM @map("medium")
+  HIGH   @map("high")
+  URGENT @map("urgent")
 }

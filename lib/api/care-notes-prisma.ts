@@ -18,11 +18,11 @@ function mapToCareNote(dbNote: any): CareNote {
         : "Unknown Author",
     authorRole: dbNote.author?.role === "REVIEWER" ? "reviewer" : "caregiver",
     noteType: dbNote.noteType.toLowerCase(),
-    title: dbNote.title,
+
     content: dbNote.content,
     priority: dbNote.priority.toLowerCase(),
     status: dbNote.status.toLowerCase(),
-    tags: dbNote.tags || [],
+
     isPrivate: dbNote.isPrivate,
     followUpRequired: dbNote.followUpRequired,
     followUpDate: dbNote.followUpDate?.toISOString().split("T")[0],
@@ -83,11 +83,11 @@ export async function createCareNote(
         patientId: noteData.patientId,
         authorId: noteData.authorId,
         noteType: (noteData.noteType || "general").toUpperCase() as any,
-        title: noteData.title,
+
         content: noteData.content,
         priority: (noteData.priority || "medium").toUpperCase() as any,
         status: "SUBMITTED",
-        tags: noteData.tags || [],
+
         isPrivate: noteData.isPrivate || false,
         followUpRequired: noteData.followUpRequired || false,
         followUpDate: noteData.followUpDate

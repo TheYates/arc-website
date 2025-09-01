@@ -18,6 +18,7 @@ export interface Medication {
   maxDailyDoses?: number; // For PRN medications
   priority: "low" | "medium" | "high" | "critical";
   category: MedicationCategory;
+  status?: "draft" | "DRAFT" | "pending" | "PENDING" | "approved" | "APPROVED" | "dispensed" | "DISPENSED" | "completed" | "COMPLETED" | "cancelled" | "CANCELLED";
   createdAt: string;
   updatedAt: string;
   lastModifiedBy: string;
@@ -196,13 +197,13 @@ export type MedicationCategory =
   | "other";
 
 export type AdministrationStatus =
-  | "pending"
-  | "administered"
-  | "partial"
-  | "missed"
-  | "refused"
-  | "delayed"
-  | "cancelled";
+  | "pending" | "PENDING" 
+  | "administered" | "ADMINISTERED"
+  | "partial" | "PARTIAL"
+  | "missed" | "MISSED"
+  | "refused" | "REFUSED"
+  | "delayed" | "DELAYED"
+  | "cancelled" | "CANCELLED";
 
 export type MedicationAlertType =
   | "missed_dose"

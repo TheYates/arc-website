@@ -19,61 +19,124 @@ export interface AuthResult {
   error?: string
 }
 
-// Enhanced authenticate user with connection retry
+// Simplified authenticate user with fallback for development
 export async function authenticateUser(email: string, password: string): Promise<AuthResult> {
-  let lastError: any = null
-  
-  // Try authentication with retry logic
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  try {
+    console.log(`🔍 Authentication attempt for email: ${email}`)
+
+    // Quick connection test first
     try {
-      console.log(`🔍 Authentication attempt ${attempt}/3 for email: ${email}`)
-      
-      const user = await prisma.user.findUnique({
-        where: { email },
-      })
+      await Promise.race([
+        prisma.$queryRaw`SELECT 1`,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Connection test timeout')), 3000)
+        )
+      ]);
+      console.log('✅ Database connection test passed');
+    } catch (connectionError) {
+      console.error('❌ Database connection test failed:', connectionError);
 
-      if (!user) {
-        return { success: false, error: 'Invalid email or password' }
+      // Development fallback
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 Using development fallback authentication');
+        return handleDevelopmentAuth(email, password);
       }
 
-      if (!user.isActive) {
-        return { success: false, error: 'Account is deactivated' }
-      }
-
-      const isValidPassword = await bcrypt.compare(password, user.passwordHash)
-      if (!isValidPassword) {
-        return { success: false, error: 'Invalid email or password' }
-      }
-
-      // Update last login
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { lastLogin: new Date() },
-      })
-
-      console.log(`✅ Authentication successful for: ${email}`)
-      return { success: true, user }
-      
-    } catch (error) {
-      lastError = error
-      console.error(`❌ Authentication attempt ${attempt}/3 failed:`, error)
-      
-      // If it's a connection error and we have more attempts, try to reset connection
-      if (attempt < 3 && isConnectionError(error)) {
-        console.log(`🔄 Attempting connection reset before retry ${attempt + 1}...`)
-        try {
-          await resetDatabaseConnection()
-          // Wait a bit before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
-        } catch (resetError) {
-          console.error('Connection reset failed:', resetError)
-        }
-      }
+      throw new Error('Database connection failed');
     }
+
+    // Database query with shorter timeout
+    const user = await Promise.race([
+      prisma.user.findUnique({
+        where: { email },
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Database query timeout')), 5000)
+      )
+    ]) as any;
+
+    if (!user) {
+      return { success: false, error: 'Invalid email or password' }
+    }
+
+    if (!user.isActive) {
+      return { success: false, error: 'Account is deactivated' }
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash)
+    if (!isValidPassword) {
+      return { success: false, error: 'Invalid email or password' }
+    }
+
+    // Update last login with timeout
+    try {
+      await Promise.race([
+        prisma.user.update({
+          where: { id: user.id },
+          data: { lastLogin: new Date() },
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Update timeout')), 5000)
+        )
+      ]);
+    } catch (updateError) {
+      console.warn('⚠️ Failed to update last login:', updateError);
+      // Don't fail authentication if we can't update last login
+    }
+
+    console.log(`✅ Authentication successful for: ${email}`)
+    return { success: true, user }
+
+  } catch (error) {
+    console.error(`❌ Authentication failed:`, error)
+
+    // Check if it's a connection error
+    if (isConnectionError(error)) {
+      return { success: false, error: 'Database connection issues. Please try again.' }
+    }
+
+    return { success: false, error: 'Authentication failed. Please try again.' }
+  }
+}
+
+// Development fallback authentication when database is unavailable
+function handleDevelopmentAuth(email: string, password: string): AuthResult {
+  // Simple development users with correct Prisma UserRole enum values
+  const devCredentials = [
+    { email: 'admin@arc.com', password: 'admin123', role: 'SUPER_ADMIN' as UserRole },
+    { email: 'caregiver@arc.com', password: 'caregiver123', role: 'CAREGIVER' as UserRole },
+    { email: 'reviewer@arc.com', password: 'reviewer123', role: 'REVIEWER' as UserRole },
+  ];
+
+  const cred = devCredentials.find(c => c.email === email);
+  if (!cred || cred.password !== password) {
+    return { success: false, error: 'Invalid email or password' };
   }
 
-  console.error('🚨 All authentication attempts failed:', lastError)
-  return { success: false, error: 'Authentication failed - database connection issues' }
+  // Create a properly typed user object matching Prisma User type
+  const user: User = {
+    id: `dev-${cred.role.toLowerCase()}-1`,
+    email: cred.email,
+    firstName: cred.role === 'SUPER_ADMIN' ? 'Admin' :
+               cred.role === 'CAREGIVER' ? 'Care' : 'Medical',
+    lastName: cred.role === 'SUPER_ADMIN' ? 'User' :
+              cred.role === 'CAREGIVER' ? 'Giver' : 'Reviewer',
+    role: cred.role,
+    isActive: true,
+    passwordHash: cred.password,
+    mustChangePassword: false,
+    passwordChangedAt: new Date(),
+    phone: null,
+    address: null,
+    isEmailVerified: true,
+    profileComplete: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    lastLogin: new Date(),
+  };
+
+  console.log(`✅ Development authentication successful for: ${email}`);
+  return { success: true, user };
 }
 
 // Helper function to identify connection errors

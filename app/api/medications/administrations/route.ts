@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { recordMedicationAdministration } from "@/lib/api/medications-prisma";
 import { prisma } from "@/lib/database/postgresql";
 import { authenticateRequest } from "@/lib/api/auth";
+import { triggerMedicationAdministered } from "@/lib/utils/activity-triggers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,6 +78,36 @@ export async function POST(request: NextRequest) {
         { error: "Failed to record medication administration" },
         { status: 500 }
       );
+    }
+
+    // Trigger activity feed item for medication administration
+    try {
+      const prescription = await prisma.prescription.findUnique({
+        where: { id: administrationData.prescriptionId },
+        include: {
+          medication: true,
+          patient: {
+            include: {
+              user: true
+            }
+          }
+        }
+      });
+
+      if (prescription) {
+        const patientName = `${prescription.patient.user.firstName} ${prescription.patient.user.lastName}`;
+        await triggerMedicationAdministered(
+          prescription.patientId,
+          patientName,
+          prescription.medication.name,
+          administrationData.dosageGiven || prescription.dosage,
+          user
+        );
+        console.log("✅ Activity feed item created for medication administration:", prescription.medication.name);
+      }
+    } catch (activityError) {
+      console.error("Failed to create activity feed item:", activityError);
+      // Don't fail the main operation if activity creation fails
     }
 
     return NextResponse.json({ administration });

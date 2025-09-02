@@ -3,10 +3,17 @@ import { prisma } from "@/lib/database/postgresql";
 import { UserRole } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { authenticateRequest } from "@/lib/api/auth";
+import { applyRateLimit, RateLimitConfigs } from "@/lib/middleware/rate-limit";
 
 // GET /api/admin/users - Get all users (excluding patients)
 export async function GET(request: NextRequest) {
   try {
+    // Apply rate limiting for read operations
+    const rateLimitResponse = await applyRateLimit(request, RateLimitConfigs.read);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await authenticateRequest(request);
     if (!authResult.success) {
       return NextResponse.json({ error: authResult.error }, { status: 401 });
@@ -77,6 +84,12 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/users - Create new user
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting for user creation
+    const rateLimitResponse = await applyRateLimit(request, RateLimitConfigs.crud);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await authenticateRequest(request);
     if (!authResult.success) {
       return NextResponse.json({ error: authResult.error }, { status: 401 });

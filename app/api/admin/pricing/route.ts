@@ -4,6 +4,7 @@ import {
   getAllServicesWithItems,
   getServiceItems,
 } from "@/lib/api/services-prisma";
+import { applyRateLimit, RateLimitConfigs } from "@/lib/middleware/rate-limit";
 
 // Ultra-optimized transform function (works with pre-loaded service items)
 const transformServiceToPricingItemUltraOptimized = (
@@ -54,8 +55,14 @@ const transformServiceToPricingItemUltraOptimized = (
 
 // Note: Sample data removed - now using PostgreSQL database
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Apply rate limiting for read operations
+    const rateLimitResponse = await applyRateLimit(request, RateLimitConfigs.read);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Get all services with their items in a single optimized query
     const servicesWithItems = await getAllServicesWithItems(true); // Include inactive for admin
 
@@ -86,8 +93,14 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Apply strict rate limiting for bulk operations
+    const rateLimitResponse = await applyRateLimit(request, RateLimitConfigs.bulk);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const body = await request.json();
     const { data } = body;
 

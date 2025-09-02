@@ -2,9 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateUser } from "@/lib/api/auth-prisma";
 import { generateTokens } from "@/lib/jwt";
 import { prisma } from "@/lib/database/postgresql";
+import { applyRateLimit, RateLimitConfigs } from "@/lib/middleware/rate-limit";
 
 export async function POST(request: NextRequest) {
   console.log("🚀 API route /api/auth/login called");
+
+  // Apply rate limiting - different limits for admin vs regular users
+  const { email } = await request.json().catch(() => ({ email: '' }));
+  const isAdminAttempt = email && (email.includes('admin') || email.endsWith('@admin.com'));
+
+  const rateLimitConfig = isAdminAttempt ? RateLimitConfigs.adminAuth : RateLimitConfigs.auth;
+  const rateLimitResponse = await applyRateLimit(
+    request,
+    rateLimitConfig,
+    `login:${email || 'unknown'}`
+  );
+
+  if (rateLimitResponse) {
+    console.log(`🚨 Rate limit exceeded for login attempt: ${email}`);
+    return rateLimitResponse;
+  }
 
   try {
     const { email, password } = await request.json();

@@ -172,6 +172,95 @@ export class CacheService {
       return { redis: false, fallback: true };
     }
   }
+
+  // Redis sorted set operations for rate limiting
+  static async zadd(key: string, score: number, member: string): Promise<number> {
+    try {
+      if (!redis) {
+        // Fallback: use in-memory map to simulate sorted set
+        const setKey = `zset:${key}`;
+        if (!this.fallbackCache.has(setKey)) {
+          this.fallbackCache.set(setKey, { data: new Map(), expires: Date.now() + 3600000 });
+        }
+        const cached = this.fallbackCache.get(setKey);
+        if (cached && cached.expires > Date.now()) {
+          cached.data.set(member, score);
+          return 1;
+        }
+        return 0;
+      }
+
+      return await redis.zadd(key, score, member);
+    } catch (error) {
+      console.error('Redis zadd error:', error);
+      return 0;
+    }
+  }
+
+  static async zremrangebyscore(key: string, min: number, max: number): Promise<number> {
+    try {
+      if (!redis) {
+        // Fallback: remove from in-memory map
+        const setKey = `zset:${key}`;
+        const cached = this.fallbackCache.get(setKey);
+        if (cached && cached.expires > Date.now()) {
+          let removed = 0;
+          for (const [member, score] of cached.data.entries()) {
+            if (score >= min && score <= max) {
+              cached.data.delete(member);
+              removed++;
+            }
+          }
+          return removed;
+        }
+        return 0;
+      }
+
+      return await redis.zremrangebyscore(key, min, max);
+    } catch (error) {
+      console.error('Redis zremrangebyscore error:', error);
+      return 0;
+    }
+  }
+
+  static async zcard(key: string): Promise<number> {
+    try {
+      if (!redis) {
+        // Fallback: count in-memory map
+        const setKey = `zset:${key}`;
+        const cached = this.fallbackCache.get(setKey);
+        if (cached && cached.expires > Date.now()) {
+          return cached.data.size;
+        }
+        return 0;
+      }
+
+      return await redis.zcard(key);
+    } catch (error) {
+      console.error('Redis zcard error:', error);
+      return 0;
+    }
+  }
+
+  static async expire(key: string, seconds: number): Promise<boolean> {
+    try {
+      if (!redis) {
+        // Fallback: update expiration in memory
+        const cached = this.fallbackCache.get(key);
+        if (cached) {
+          cached.expires = Date.now() + seconds * 1000;
+          return true;
+        }
+        return false;
+      }
+
+      const result = await redis.expire(key, seconds);
+      return result === 1;
+    } catch (error) {
+      console.error('Redis expire error:', error);
+      return false;
+    }
+  }
 }
 
 export default redis;

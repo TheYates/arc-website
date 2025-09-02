@@ -123,6 +123,12 @@ const getAdminData = (user: any, pathname: string) => ({
       isActive: pathname.startsWith("/admin/users"),
     },
     {
+      title: "Rate Limiting",
+      url: "/admin/rate-limiting",
+      icon: Shield,
+      isActive: pathname.startsWith("/admin/rate-limiting"),
+    },
+    {
       title: "Settings",
       url: "/admin/settings",
       icon: Settings,

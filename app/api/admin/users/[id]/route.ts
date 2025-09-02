@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/database/postgresql';
 import { UserRole } from '@/lib/auth';
+import { applyRateLimit, RateLimitConfigs } from '@/lib/middleware/rate-limit';
 
 // GET /api/admin/users/[id] - Get specific user
 export async function GET(
@@ -8,6 +9,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Apply rate limiting for read operations
+    const rateLimitResponse = await applyRateLimit(request, RateLimitConfigs.read);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const { id } = await params;
     const user = await prisma.user.findUnique({
       where: { id },
@@ -68,6 +75,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Apply rate limiting for update operations
+    const rateLimitResponse = await applyRateLimit(request, RateLimitConfigs.crud);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { firstName, lastName, email, phone, address, role } = body;

@@ -17,3 +17,7 @@ Monitor performance with logging
 Bottom Line: The app can handle 50-100 concurrent users comfortably with the current setup. For more users, you'd need infrastructure upgrades and performance optimizations.
 
 Would you like me to implement any of these optimizations or help you set up performance monitoring?
+
+
+
+what about redis, tanstack, zustand and ssr, csr and isr? do i need any of these?

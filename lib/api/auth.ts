@@ -24,7 +24,7 @@ export async function authenticateRequest(
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.substring(7);
       console.log("🔍 Validating JWT token from Authorization header");
-      
+
       tokenPayload = verifyToken(token);
       if (tokenPayload) {
         // Validate session in database
@@ -45,6 +45,41 @@ export async function authenticateRequest(
           success: false,
           error: "Invalid or expired token",
         };
+      }
+    }
+
+    // 1.5. Check for auth_session cookie (for browser requests)
+    if (!userId) {
+      const cookies = request.headers.get("cookie");
+      if (cookies) {
+        const authSessionMatch = cookies.match(/auth_session=([^;]+)/);
+        if (authSessionMatch) {
+          try {
+            const sessionData = JSON.parse(decodeURIComponent(authSessionMatch[1]));
+            if (sessionData.accessToken) {
+              console.log("🔍 Validating JWT token from auth_session cookie");
+              tokenPayload = verifyToken(sessionData.accessToken);
+              if (tokenPayload) {
+                // Validate session in database
+                const isValidSession = await validateSessionInDatabase(tokenPayload.sessionId, tokenPayload.userId);
+                if (isValidSession) {
+                  userId = tokenPayload.userId;
+                  console.log("✅ JWT token validation from cookie successful");
+                } else {
+                  console.log("❌ Session not found or expired in database");
+                  return {
+                    success: false,
+                    error: "Session expired or invalid",
+                  };
+                }
+              } else {
+                console.log("❌ JWT token validation from cookie failed");
+              }
+            }
+          } catch (e) {
+            console.log("❌ Failed to parse auth_session cookie");
+          }
+        }
       }
     }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/database/postgresql';
 import { generateSecurePassword, hashPassword } from '@/lib/utils/password';
+import { applyRateLimit, RateLimitConfigs } from '@/lib/middleware/rate-limit';
 
 // POST /api/admin/users/[id]/reset-password - Admin reset user password
 export async function POST(
@@ -9,7 +10,19 @@ export async function POST(
 ) {
   try {
     const { id: userId } = await params;
-    
+
+    // Apply rate limiting for password reset operations
+    const rateLimitResponse = await applyRateLimit(
+      request,
+      RateLimitConfigs.passwordReset,
+      `password_reset:${userId}`
+    );
+
+    if (rateLimitResponse) {
+      console.log(`🚨 Rate limit exceeded for password reset: ${userId}`);
+      return rateLimitResponse;
+    }
+
     // Verify the requesting user is an admin
     // TODO: Add proper admin authentication middleware
     const body = await request.json();

@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/database/postgresql";
 import { ApplicationStatus } from "@/lib/types/applications";
 import { authenticateRequest } from "@/lib/api/auth";
+import { applyRateLimit, RateLimitConfigs } from "@/lib/middleware/rate-limit";
 
 // GET /api/admin/applications - Get all applications
 export async function GET(request: NextRequest) {
   try {
+    // Apply rate limiting for read operations
+    const rateLimitResponse = await applyRateLimit(request, RateLimitConfigs.read);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await authenticateRequest(request);
     if (!authResult.success) {
       return NextResponse.json({ error: authResult.error }, { status: 401 });

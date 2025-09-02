@@ -2,17 +2,22 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { VitalsRecordingForm } from "@/components/medical/vitals-recording-form";
+import {
+  VitalsRecordingDialog,
+  VitalsFormData,
+} from "@/components/medical/vitals-recording-dialog";
 import { VitalsChart } from "@/components/medical/vitals-chart";
 import { getPatientById } from "@/lib/api/patients";
 import { getVitalSigns } from "@/lib/api/vitals";
+import { createVitalSignsClient } from "@/lib/api/vitals-client";
 import { useAuth } from "@/lib/auth";
 import { Patient } from "@/lib/types/patients";
 import { VitalSigns } from "@/lib/types/vitals";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CaregiverVitalsMobile } from "@/components/mobile/caregiver-vitals";
+import { useToast } from "@/hooks/use-toast";
 
 interface PageProps {
   params: Promise<{ patientId: string }>;
@@ -21,10 +26,13 @@ interface PageProps {
 export default function CaregiverVitalsPage({ params }: PageProps) {
   const resolvedParams = React.use(params);
   const { user } = useAuth();
+  const { toast } = useToast();
   const router = useRouter();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [vitals, setVitals] = useState<VitalSigns[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,6 +55,68 @@ export default function CaregiverVitalsPage({ params }: PageProps) {
 
   const handleVitalsSaved = (newVitals: VitalSigns) => {
     setVitals((prev) => [newVitals, ...prev]);
+  };
+
+  const handleSaveVitals = async (vitalsData: VitalsFormData) => {
+    if (!user?.id) return;
+
+    setIsSaving(true);
+    try {
+      const result = await createVitalSignsClient({
+        patientId: resolvedParams.patientId,
+        systolicBp: vitalsData.systolicBp || undefined,
+        diastolicBp: vitalsData.diastolicBp || undefined,
+        heartRate: vitalsData.heartRate || undefined,
+        temperature: vitalsData.temperature || undefined,
+        oxygenSaturation: vitalsData.oxygenSaturation || undefined,
+        weightKg: vitalsData.weightKg || undefined,
+        bloodSugar: vitalsData.bloodSugar || undefined,
+        notes: vitalsData.notes || undefined,
+      });
+
+      if (result) {
+        // Convert the result to match our VitalSigns type
+        const newVital: VitalSigns = {
+          id: result.id,
+          patientId: result.patientId,
+          caregiverId: result.recordedById || user.id,
+          heartRate: result.heartRate || undefined,
+          temperature: result.temperature || undefined,
+          bloodPressure:
+            result.systolicBp && result.diastolicBp
+              ? {
+                  systolic: result.systolicBp,
+                  diastolic: result.diastolicBp,
+                }
+              : undefined,
+          oxygenSaturation: result.oxygenSaturation || undefined,
+          weight: result.weightKg || undefined,
+          bloodSugar: result.bloodSugar || undefined,
+          notes: result.notes || undefined,
+          recordedAt: result.recordedDate || new Date().toISOString(),
+          isAlerted: false,
+          alertedValues: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        handleVitalsSaved(newVital);
+        setIsDialogOpen(false);
+        toast({
+          title: "Success",
+          description: "Vital signs recorded successfully.",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving vitals:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save vital signs. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {
@@ -84,12 +154,24 @@ export default function CaregiverVitalsPage({ params }: PageProps) {
         </TabsList>
 
         <TabsContent value="record">
-          <VitalsRecordingForm
-            patientId={resolvedParams.patientId}
-            patientName={`${patient.firstName} ${patient.lastName}`}
-            caregiverId={user?.id || ""}
-            onSave={handleVitalsSaved}
-          />
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold">Record Vital Signs</h2>
+                <p className="text-muted-foreground">
+                  Record new vital signs for {patient.firstName}{" "}
+                  {patient.lastName}
+                </p>
+              </div>
+              <Button
+                onClick={() => setIsDialogOpen(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Record Vitals
+              </Button>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="trends">
@@ -99,6 +181,14 @@ export default function CaregiverVitalsPage({ params }: PageProps) {
           />
         </TabsContent>
       </Tabs>
+
+      <VitalsRecordingDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSave={handleSaveVitals}
+        patientName={`${patient.firstName} ${patient.lastName}`}
+        isLoading={isSaving}
+      />
     </div>
   );
 }

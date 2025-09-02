@@ -7,24 +7,21 @@ import { applyRateLimit, RateLimitConfigs } from "@/lib/middleware/rate-limit";
 export async function POST(request: NextRequest) {
   console.log("🚀 API route /api/auth/login called");
 
-  // Apply rate limiting - different limits for admin vs regular users
-  const { email } = await request.json().catch(() => ({ email: '' }));
-  const isAdminAttempt = email && (email.includes('admin') || email.endsWith('@admin.com'));
-
-  const rateLimitConfig = isAdminAttempt ? RateLimitConfigs.adminAuth : RateLimitConfigs.auth;
-  const rateLimitResponse = await applyRateLimit(
-    request,
-    rateLimitConfig,
-    `login:${email || 'unknown'}`
-  );
-
-  if (rateLimitResponse) {
-    console.log(`🚨 Rate limit exceeded for login attempt: ${email}`);
-    return rateLimitResponse;
-  }
-
   try {
-    const { email, password } = await request.json();
+    // Read the request body once
+    let email: string, password: string;
+    try {
+      const body = await request.json();
+      email = body.email;
+      password = body.password;
+    } catch (parseError) {
+      console.log("❌ Invalid JSON in request body");
+      return NextResponse.json(
+        { error: "Invalid request format" },
+        { status: 400 }
+      );
+    }
+
     console.log("📥 Request data:", {
       email,
       passwordLength: password?.length,
@@ -36,6 +33,24 @@ export async function POST(request: NextRequest) {
         { error: "Email and password are required" },
         { status: 400 }
       );
+    }
+
+    // Apply rate limiting - different limits for admin vs regular users
+    const isAdminAttempt =
+      email && (email.includes("admin") || email.endsWith("@admin.com"));
+
+    const rateLimitConfig = isAdminAttempt
+      ? RateLimitConfigs.adminAuth
+      : RateLimitConfigs.auth;
+    const rateLimitResponse = await applyRateLimit(
+      request,
+      rateLimitConfig,
+      `login:${email || "unknown"}`
+    );
+
+    if (rateLimitResponse) {
+      console.log(`🚨 Rate limit exceeded for login attempt: ${email}`);
+      return rateLimitResponse;
     }
 
     console.log("🔐 Calling authenticateUser...");
@@ -87,9 +102,9 @@ export async function POST(request: NextRequest) {
       sessionId: tokens.sessionId,
       expiresAt: tokens.expiresAt,
     });
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       user,
       tokens: {
         accessToken: tokens.accessToken,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,436 +31,221 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth";
-import { getPatients } from "@/lib/api/patients";
 import { Patient, CareLevel, PatientStatus } from "@/lib/types/patients";
-import {
-  getAvailableStaff,
-  assignPatientToCaregiver,
-  assignPatientToReviewer,
-  removeAssignment,
-  getWorkloadStats,
-} from "@/lib/api/assignments";
 import { User } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 import {
   Loader2,
   Search,
-  Calendar,
   UserPlus,
-  Users,
   Eye,
-  CheckCircle,
   AlertCircle,
-  Stethoscope,
-  X,
+  RefreshCw,
 } from "lucide-react";
 import { AdminPatientsMobile } from "@/components/mobile/admin-patients";
-
-// Enhanced cache with better management
-let patientsCache: { data: Patient[]; timestamp: number } | null = null;
-let staffCache: { data: { caregivers: User[]; reviewers: User[] }; timestamp: number } | null = null;
-let workloadCache: { data: { caregivers: Array<{ user: User; patientCount: number }>; reviewers: Array<{ user: User; patientCount: number }> }; timestamp: number } | null = null;
-const CACHE_DURATION = 30000; // 30 seconds
+import { usePatientManagement, usePatientMutations } from "@/hooks/use-admin-queries";
 
 export default function PatientsPage() {
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
-  const [availableStaff, setAvailableStaff] = useState<{
-    caregivers: User[];
-    reviewers: User[];
-  }>({ caregivers: [], reviewers: [] });
-  const [workloadStats, setWorkloadStats] = useState<{
-    caregivers: Array<{ user: User; patientCount: number }>;
-    reviewers: Array<{ user: User; patientCount: number }>;
-  }>({ caregivers: [], reviewers: [] });
   const [selectedCaregiver, setSelectedCaregiver] = useState<string>("");
   const [selectedReviewer, setSelectedReviewer] = useState<string>("");
-  const [isAssigning, setIsAssigning] = useState(false);
+  
   const router = useRouter();
-  const { toast } = useToast();
-  const { user } = useAuth();
 
-  // Debounced search for better performance
+  const { patients, availableStaff, isLoading, error, refetchAll } = usePatientManagement(1, 50);
+  const { assignCaregiver, assignReviewer, isAssigningCaregiver, isAssigningReviewer } = usePatientMutations();
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
     }, 300);
-    
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Memoized filtered patients for better performance
   const filteredPatients = useMemo(() => {
     if (!debouncedSearchTerm) return patients;
-    
-    const searchTermLower = debouncedSearchTerm.toLowerCase();
-    return patients.filter((patient) => {
-      return (
-        patient.firstName.toLowerCase().includes(searchTermLower) ||
-        patient.lastName.toLowerCase().includes(searchTermLower) ||
-        patient.email.toLowerCase().includes(searchTermLower) ||
-        (patient.medicalRecordNumber &&
-          patient.medicalRecordNumber.toLowerCase().includes(searchTermLower))
-      );
-    });
+    return patients.filter(
+      (patient) =>
+        `${patient.firstName} ${patient.lastName}`.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        patient.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        patient.id.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    );
   }, [patients, debouncedSearchTerm]);
 
-  // Optimized data fetching with better caching
-  const fetchAllData = useCallback(async () => {
-    const now = Date.now();
-    
-    // Check all caches
-    const patientsFromCache = patientsCache && now - patientsCache.timestamp < CACHE_DURATION;
-    const staffFromCache = staffCache && now - staffCache.timestamp < CACHE_DURATION;
-    const workloadFromCache = workloadCache && now - workloadCache.timestamp < CACHE_DURATION;
-    
-    // If all data is cached, use it
-    if (patientsFromCache && staffFromCache && workloadFromCache) {
-      setPatients(patientsCache!.data);
-      setAvailableStaff(staffCache!.data);
-      setWorkloadStats(workloadCache!.data);
-      setIsLoading(false);
-      return;
-    }
-    
-    // Prepare API calls
-    const apiCalls = [];
-    
-    if (!patientsFromCache) {
-      apiCalls.push(getPatients(1, 50, user));
-    }
-    if (!staffFromCache) {
-      apiCalls.push(getAvailableStaff());
-    }
-    if (!workloadFromCache) {
-      apiCalls.push(getWorkloadStats());
-    }
-    
-    try {
-      const results = await Promise.all(apiCalls);
-      let resultIndex = 0;
-      
-      // Update patients if fetched
-      if (!patientsFromCache) {
-        const patientsResult = results[resultIndex++] as { patients: Patient[]; pagination: any };
-        patientsCache = { data: patientsResult.patients, timestamp: now };
-        setPatients(patientsResult.patients);
-      } else {
-        setPatients(patientsCache!.data);
-      }
-      
-      // Update staff if fetched
-      if (!staffFromCache) {
-        const staffResult = results[resultIndex++] as { caregivers: User[]; reviewers: User[] };
-        staffCache = { data: staffResult, timestamp: now };
-        setAvailableStaff(staffResult);
-      } else {
-        setAvailableStaff(staffCache!.data);
-      }
-      
-      // Update workload if fetched
-      if (!workloadFromCache) {
-        const workloadResult = results[resultIndex++] as {
-          caregivers: Array<{ user: User; patientCount: number }>;
-          reviewers: Array<{ user: User; patientCount: number }>;
-        };
-        workloadCache = { data: workloadResult, timestamp: now };
-        setWorkloadStats(workloadResult);
-      } else {
-        setWorkloadStats(workloadCache!.data);
-      }
-      
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load data. Please refresh the page.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, toast]);
+  const handleAssignCaregiver = async () => {
+    if (!selectedPatient || !selectedCaregiver) return;
+    await assignCaregiver.mutateAsync({
+      patientId: selectedPatient.id,
+      caregiverId: selectedCaregiver,
+    });
+    setSelectedCaregiver("");
+    setSelectedReviewer("");
+    setShowAssignmentDialog(false);
+    setSelectedPatient(null);
+  };
 
-  useEffect(() => {
-    setIsLoading(true);
-    fetchAllData();
-  }, [fetchAllData]);
-
-  const getCareLevelBadge = (careLevel?: CareLevel) => {
-    switch (careLevel) {
-      case "low":
-        return <Badge className="bg-green-100 text-green-800">Low</Badge>;
-      case "medium":
-        return <Badge className="bg-blue-100 text-blue-800">Medium</Badge>;
-      case "high":
-        return <Badge className="bg-amber-100 text-amber-800">High</Badge>;
-      case "critical":
-        return <Badge className="bg-red-100 text-red-800">Critical</Badge>;
-      default:
-        return <Badge>Unknown</Badge>;
-    }
+  const handleAssignReviewer = async () => {
+    if (!selectedPatient || !selectedReviewer) return;
+    await assignReviewer.mutateAsync({
+      patientId: selectedPatient.id,
+      reviewerId: selectedReviewer,
+    });
+    setSelectedCaregiver("");
+    setSelectedReviewer("");
+    setShowAssignmentDialog(false);
+    setSelectedPatient(null);
   };
 
   const getStatusBadge = (status?: PatientStatus) => {
-    switch (status) {
-      case "stable":
-        return <Badge className="bg-green-100 text-green-800">Stable</Badge>;
-      case "improving":
-        return <Badge className="bg-teal-100 text-teal-800">Improving</Badge>;
-      case "declining":
-        return <Badge className="bg-amber-100 text-amber-800">Declining</Badge>;
-      case "critical":
-        return <Badge className="bg-red-100 text-red-800">Critical</Badge>;
-      default:
-        return <Badge>Unknown</Badge>;
-    }
-  };
-
-
-
-  const handleOpenAssignmentDialog = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setSelectedCaregiver(patient.assignedCaregiverId || "none");
-    setSelectedReviewer(patient.assignedReviewerId || "none");
-    setShowAssignmentDialog(true);
-  };
-
-  // Optimized assignment handler with better error handling
-  const handleAssignment = useCallback(async () => {
-    if (!selectedPatient || !user) return;
-
-    setIsAssigning(true);
-    try {
-      const promises = [];
-
-      // Handle caregiver assignment
-      if (
-        selectedCaregiver &&
-        selectedCaregiver !== "none" &&
-        selectedCaregiver !== selectedPatient.assignedCaregiverId
-      ) {
-        promises.push(assignPatientToCaregiver(selectedPatient.id, selectedCaregiver, user.id));
-      } else if (
-        (selectedCaregiver === "none" || !selectedCaregiver) &&
-        selectedPatient.assignedCaregiverId
-      ) {
-        promises.push(removeAssignment(selectedPatient.id, "caregiver"));
-      }
-
-      // Handle reviewer assignment
-      if (
-        selectedReviewer &&
-        selectedReviewer !== "none" &&
-        selectedReviewer !== selectedPatient.assignedReviewerId
-      ) {
-        promises.push(assignPatientToReviewer(selectedPatient.id, selectedReviewer, user.id));
-      } else if (
-        (selectedReviewer === "none" || !selectedReviewer) &&
-        selectedPatient.assignedReviewerId
-      ) {
-        promises.push(removeAssignment(selectedPatient.id, "reviewer"));
-      }
-
-      // Execute all assignments in parallel
-      if (promises.length > 0) {
-        await Promise.all(promises);
-      }
-
-      // Invalidate cache and refresh
-      patientsCache = null;
-      staffCache = null;
-      workloadCache = null;
-      
-      await fetchAllData();
-
-      setShowAssignmentDialog(false);
-      toast({
-        title: "Assignment Updated",
-        description: "Patient assignments have been updated successfully.",
-      });
-    } catch (error) {
-      console.error("Assignment error:", error);
-      toast({
-        title: "Assignment Failed",
-        description: "Failed to update patient assignments. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAssigning(false);
-    }
-  }, [selectedPatient, user, selectedCaregiver, selectedReviewer, fetchAllData, toast]);
-
-  const handleRemoveAssignment = (patient: Patient) => {
-    setPatientToDelete(patient);
-    setShowDeleteDialog(true);
-  };
-
-  const confirmRemoveAssignment = useCallback(async () => {
-    if (!user || !patientToDelete) return;
-
-    setIsAssigning(true);
-    try {
-      const promises = [];
-
-      // Remove caregiver assignment
-      if (patientToDelete.assignedCaregiverId) {
-        promises.push(removeAssignment(patientToDelete.id, "caregiver"));
-      }
-
-      // Remove reviewer assignment  
-      if (patientToDelete.assignedReviewerId) {
-        promises.push(removeAssignment(patientToDelete.id, "reviewer"));
-      }
-
-      // Execute removals in parallel
-      if (promises.length > 0) {
-        await Promise.all(promises);
-      }
-
-      // Invalidate cache and refresh
-      patientsCache = null;
-      staffCache = null;
-      workloadCache = null;
-      
-      await fetchAllData();
-
-      toast({
-        title: "Assignment Removed",
-        description: "Patient assignments have been removed successfully.",
-      });
-    } catch (error) {
-      console.error("Remove assignment error:", error);
-      toast({
-        title: "Remove Assignment Failed",
-        description: "Failed to remove patient assignments. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAssigning(false);
-      setShowDeleteDialog(false);
-      setPatientToDelete(null);
-    }
-  }, [user, patientToDelete, fetchAllData, toast]);
-
-  const formatAssignedDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return formatDate(date);
-  };
-
-  const getServiceColor = (serviceName?: string) => {
-    if (!serviceName) return "text-muted-foreground";
-
-    const serviceColors: { [key: string]: string } = {
-      "Yonko Pa": "text-blue-600",
-      "Event Medical Coverage": "text-green-600",
-      "Emergency Response": "text-red-600",
-      "Health Monitoring": "text-purple-600",
-      Consultation: "text-orange-600",
-      "Home Care": "text-teal-600",
-      Rehabilitation: "text-indigo-600",
+    if (!status) return <Badge>Unknown</Badge>;
+    const statusConfig = {
+      active: { label: "Active", variant: "default" as const },
+      inactive: { label: "Inactive", variant: "secondary" as const },
+      discharged: { label: "Discharged", variant: "outline" as const },
+      stable: { label: "Stable", variant: "default" as const },
+      improving: { label: "Improving", variant: "secondary" as const },
+      declining: { label: "Declining", variant: "destructive" as const },
+      critical: { label: "Critical", variant: "destructive" as const },
     };
-
-    return serviceColors[serviceName] || "text-gray-600";
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
+
+  const getCareLevelBadge = (level?: CareLevel) => {
+    if (!level) return <Badge>Unknown</Badge>;
+    const levelConfig = {
+      low: { label: "Low", variant: "outline" as const },
+      medium: { label: "Medium", variant: "secondary" as const },
+      high: { label: "High", variant: "destructive" as const },
+      critical: { label: "Critical", variant: "destructive" as const },
+    };
+    const config = levelConfig[level] || levelConfig.low;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Failed to load patients</h3>
+            <p className="text-muted-foreground mb-4">
+              {error instanceof Error ? error.message : "An error occurred"}
+            </p>
+            <Button onClick={() => refetchAll()} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Mobile (distinct UI) */}
       <div className="md:hidden">
         <AdminPatientsMobile />
       </div>
 
-      {/* Desktop View */}
       <div className="hidden md:block space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Patients</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Patient Management</h1>
             <p className="text-muted-foreground">
-              View and manage all registered patients
+              Manage patient assignments and care coordination
             </p>
           </div>
-          {/* Removed Add From Applications per new flow: approved apps auto-create patients */}
+          <Button onClick={() => router.push("/admin/patients/onboard")} size="lg">
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add Patient
+          </Button>
         </div>
 
         <Card>
-          <CardHeader className="pb-3">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-              <CardTitle>All Patients</CardTitle>
-              <div className="relative w-full md:w-[300px]">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search patients..."
-                  className="pl-9"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Patient Directory</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Total Patients: <span className="font-medium">{filteredPatients.length}</span>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name or email..."
+                    className="pl-10 w-full md:w-80"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <Button onClick={() => refetchAll()} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-0">
             {isLoading ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <Skeleton className="h-20 w-full rounded-lg" />
-                  <Skeleton className="h-20 w-full rounded-lg" />
-                  <Skeleton className="h-20 w-full rounded-lg" />
-                  <Skeleton className="h-20 w-full rounded-lg" />
-                  <Skeleton className="h-20 w-full rounded-lg" />
+              <div className="p-6">
+                <div className="space-y-4">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-4">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                      <Skeleton className="h-6 w-20" />
+                      <Skeleton className="h-6 w-16" />
+                      <Skeleton className="h-8 w-8" />
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : filteredPatients.length === 0 ? (
-              <div className="text-center py-10">
-                <div className="text-muted-foreground">No patients found</div>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => router.push("/admin/applications")}
-                >
-                  Review Applications
-                </Button>
+              <div className="text-center py-12">
+                <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No patients found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchTerm 
+                    ? "Try adjusting your search criteria."
+                    : "Get started by adding your first patient."}
+                </p>
+                {!searchTerm && (
+                  <Button onClick={() => router.push("/admin/patients/onboard")}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add First Patient
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Medical Record #</TableHead>
-                      <TableHead>Service</TableHead>
-                      <TableHead>Care Level</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Assigned Date</TableHead>
-                      <TableHead>Assignments</TableHead>
-                      <TableHead>Actions</TableHead>
+                    <TableRow className="border-b border-border">
+                      <TableHead className="font-semibold text-foreground">Patient</TableHead>
+                      <TableHead className="font-semibold text-foreground">Status</TableHead>
+                      <TableHead className="font-semibold text-foreground">Care Level</TableHead>
+                      <TableHead className="font-semibold text-foreground">Caregiver</TableHead>
+                      <TableHead className="font-semibold text-foreground">Reviewer</TableHead>
+                      <TableHead className="font-semibold text-foreground">Created</TableHead>
+                      <TableHead className="font-semibold text-foreground text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredPatients.map((patient) => (
-                      <TableRow
-                        key={patient.id}
-                        role="link"
-                        tabIndex={0}
-                        className="cursor-pointer hover:bg-accent/50"
-                        onClick={() =>
-                          router.push(`/admin/patients/${patient.id}`)
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            router.push(`/admin/patients/${patient.id}`);
-                          }
-                        }}
-                      >
+                      <TableRow key={patient.id}>
                         <TableCell>
                           <div>
                             <div className="font-medium">
@@ -471,85 +256,46 @@ export default function PatientsPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="font-mono text-xs">
-                            {patient.medicalRecordNumber || "N/A"}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`font-medium ${getServiceColor(
-                              patient.serviceName
-                            )}`}
-                          >
-                            {patient.serviceName || "N/A"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {getCareLevelBadge(patient.careLevel)}
-                        </TableCell>
                         <TableCell>{getStatusBadge(patient.status)}</TableCell>
+                        <TableCell>{getCareLevelBadge(patient.careLevel)}</TableCell>
                         <TableCell>
-                          <div className="flex items-center">
-                            <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                            <span>
-                              {formatAssignedDate(patient.assignedDate)}
-                            </span>
+                          {patient.assignedCaregiver ? (
+                            <div className="text-sm">{patient.assignedCaregiver.name}</div>
+                          ) : (
+                            <span className="text-muted-foreground">Unassigned</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {patient.assignedReviewer ? (
+                            <div className="text-sm">{patient.assignedReviewer.name}</div>
+                          ) : (
+                            <span className="text-muted-foreground">Unassigned</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-muted-foreground">
+                            {formatDate(patient.createdAt)}
                           </div>
                         </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <div className="flex flex-col space-y-1">
-                            {patient.assignedCaregiver && (
-                              <div className="flex items-center space-x-1">
-                                <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                                <span className="text-xs font-medium text-green-600">
-                                  {patient.assignedCaregiver.name}
-                                </span>
-                              </div>
-                            )}
-                            {patient.assignedReviewer && (
-                              <div className="flex items-center space-x-1">
-                                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                                <span className="text-xs font-medium text-purple-600">
-                                  RV:
-                                  {patient.assignedReviewer.name}
-                                </span>
-                              </div>
-                            )}
-                            {!patient.assignedCaregiver &&
-                              !patient.assignedReviewer && (
-                                <span className="text-xs text-muted-foreground">
-                                  No assignments
-                                </span>
-                              )}
-                          </div>
-                        </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
+                        <TableCell>
                           <div className="flex items-center space-x-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() =>
-                                handleOpenAssignmentDialog(patient)
-                              }
+                              onClick={() => router.push(`/admin/patients/${patient.id}`)}
                             >
-                              <UserPlus className="h-4 w-4 mr-2" />
-                              {patient.assignedCaregiver ||
-                              patient.assignedReviewer
-                                ? "Manage"
-                                : "Assign"}
+                              <Eye className="h-4 w-4" />
                             </Button>
-                            {(patient.assignedCaregiver ||
-                              patient.assignedReviewer) && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleRemoveAssignment(patient)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPatient(patient);
+                                setShowAssignmentDialog(true);
+                              }}
+                            >
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -560,257 +306,70 @@ export default function PatientsPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Assignment Dialog */}
-        <Dialog
-          open={showAssignmentDialog}
-          onOpenChange={setShowAssignmentDialog}
-        >
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center">
-                <UserPlus className="h-5 w-5 mr-2" />
-                Assign Patient
-              </DialogTitle>
-              <DialogDescription>
-                Assign {selectedPatient?.firstName} {selectedPatient?.lastName}{" "}
-                to available staff members
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              {/* Current Assignment Status */}
-              {selectedPatient &&
-                (selectedPatient.assignedCaregiver ||
-                  selectedPatient.assignedReviewer) && (
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="text-sm font-medium text-blue-900 mb-2">
-                      Current Assignments:
-                    </div>
-                    <div className="space-y-1 text-xs text-blue-700">
-                      {selectedPatient.assignedCaregiver && (
-                        <div className="flex items-center">
-                          <Users className="h-3 w-3 mr-1" />
-                          <span>
-                            Caregiver: {selectedPatient.assignedCaregiver.name}
-                          </span>
-                        </div>
-                      )}
-                      {selectedPatient.assignedReviewer && (
-                        <div className="flex items-center">
-                          <Eye className="h-3 w-3 mr-1" />
-                          <span>
-                            Reviewer: {selectedPatient.assignedReviewer.name}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-              {/* Caregiver Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="caregiver">Caregiver</Label>
-                <Select
-                  value={selectedCaregiver}
-                  onValueChange={setSelectedCaregiver}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a caregiver" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Assignment</SelectItem>
-                    {availableStaff.caregivers.map((caregiver) => {
-                      const workload =
-                        workloadStats.caregivers.find(
-                          (w) => w.user.id === caregiver.id
-                        )?.patientCount || 0;
-                      return (
-                        <SelectItem key={caregiver.id} value={caregiver.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>
-                              {caregiver.firstName} {caregiver.lastName}
-                            </span>
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              {workload}/5 patients
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                    {/* Show current caregiver even if at capacity */}
-                    {selectedPatient?.assignedCaregiver &&
-                      !availableStaff.caregivers.find(
-                        (c) => c.id === selectedPatient.assignedCaregiverId
-                      ) && (
-                        <SelectItem
-                          value={selectedPatient.assignedCaregiverId!}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span>
-                              {selectedPatient.assignedCaregiver.name}
-                            </span>
-                            <Badge
-                              variant="destructive"
-                              className="ml-2 text-xs"
-                            >
-                              At Capacity
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Reviewer Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="reviewer">Reviewer</Label>
-                <Select
-                  value={selectedReviewer}
-                  onValueChange={setSelectedReviewer}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a reviewer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Assignment</SelectItem>
-                    {availableStaff.reviewers.map((reviewer) => {
-                      const workload =
-                        workloadStats.reviewers.find(
-                          (w) => w.user.id === reviewer.id
-                        )?.patientCount || 0;
-                      return (
-                        <SelectItem key={reviewer.id} value={reviewer.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>
-                              {reviewer.firstName} {reviewer.lastName}
-                            </span>
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              {workload}/5 patients
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                    {/* Show current reviewer even if at capacity */}
-                    {selectedPatient?.assignedReviewer &&
-                      !availableStaff.reviewers.find(
-                        (r) => r.id === selectedPatient.assignedReviewerId
-                      ) && (
-                        <SelectItem value={selectedPatient.assignedReviewerId!}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>{selectedPatient.assignedReviewer.name}</span>
-                            <Badge
-                              variant="destructive"
-                              className="ml-2 text-xs"
-                            >
-                              At Capacity
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Workload Warning */}
-              {(selectedCaregiver &&
-                availableStaff.caregivers.find(
-                  (c) =>
-                    c.id === selectedCaregiver &&
-                    (workloadStats.caregivers.find((w) => w.user.id === c.id)
-                      ?.patientCount || 0) >= 4
-                )) ||
-              (selectedReviewer &&
-                availableStaff.reviewers.find(
-                  (r) =>
-                    r.id === selectedReviewer &&
-                    (workloadStats.reviewers.find((w) => w.user.id === r.id)
-                      ?.patientCount || 0) >= 4
-                )) ? (
-                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <div className="flex items-center">
-                    <AlertCircle className="h-4 w-4 text-amber-600 mr-2" />
-                    <span className="text-sm text-amber-700">
-                      Selected staff member is approaching maximum capacity (5
-                      patients).
-                    </span>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowAssignmentDialog(false)}
-                disabled={isAssigning}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleAssignment} disabled={isAssigning}>
-                {isAssigning ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Assigning...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Update Assignments
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Confirmation Dialog */}
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Remove Assignments</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to remove all assignments for{" "}
-                <strong>
-                  {patientToDelete?.firstName} {patientToDelete?.lastName}
-                </strong>
-                ? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDeleteDialog(false);
-                  setPatientToDelete(null);
-                }}
-                disabled={isAssigning}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmRemoveAssignment}
-                disabled={isAssigning}
-              >
-                {isAssigning ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Removing...
-                  </>
-                ) : (
-                  <>
-                    <X className="h-4 w-4 mr-2" />
-                    Remove Assignments
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
+
+      <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Patient</DialogTitle>
+            <DialogDescription>
+              Assign {selectedPatient?.firstName} {selectedPatient?.lastName} to caregivers and reviewers.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="caregiver">Caregiver</Label>
+              <Select value={selectedCaregiver} onValueChange={setSelectedCaregiver}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a caregiver" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableStaff.caregivers.map((caregiver) => (
+                    <SelectItem key={caregiver.id} value={caregiver.id}>
+                      {caregiver.firstName} {caregiver.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="reviewer">Reviewer</Label>
+              <Select value={selectedReviewer} onValueChange={setSelectedReviewer}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a reviewer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableStaff.reviewers.map((reviewer) => (
+                    <SelectItem key={reviewer.id} value={reviewer.id}>
+                      {reviewer.firstName} {reviewer.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAssignmentDialog(false)}>
+              Cancel
+            </Button>
+            {selectedCaregiver && (
+              <Button onClick={handleAssignCaregiver} disabled={isAssigningCaregiver}>
+                {isAssigningCaregiver && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Assign Caregiver
+              </Button>
+            )}
+            {selectedReviewer && (
+              <Button onClick={handleAssignReviewer} disabled={isAssigningReviewer}>
+                {isAssigningReviewer && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Assign Reviewer
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

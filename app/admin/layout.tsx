@@ -5,6 +5,7 @@ import { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { AdminLayout as NewAdminLayout } from "@/components/admin/admin-layout";
+import { QueryProvider } from "@/lib/query-client";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -86,5 +87,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  return <NewAdminLayout>{children}</NewAdminLayout>;
+  return (
+    <QueryProvider>
+      <NewAdminLayout>{children}</NewAdminLayout>
+    </QueryProvider>
+  );
 }

@@ -18,7 +18,12 @@ import { VitalSigns } from "@/lib/types/vitals";
 import { MedicalReview } from "@/lib/types/medical-reviews";
 import { CareNote } from "@/lib/types/care-notes";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import { formatBloodType, formatGender, formatCareLevel, formatPatientStatus } from "@/lib/types/patients";
+import {
+  formatBloodType,
+  formatGender,
+  formatCareLevel,
+  formatPatientStatus,
+} from "@/lib/types/patients";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,14 +35,7 @@ import { CaregiverOverviewTab } from "@/components/caregiver/patient-detail/Care
 import { CaregiverVitalsTab } from "@/components/caregiver/patient-detail/CaregiverVitalsTab";
 import { CaregiverNotesTab } from "@/components/caregiver/patient-detail/CaregiverNotesTab";
 import { CaregiverReviewerNotesTab } from "@/components/caregiver/patient-detail/CaregiverReviewerNotesTab";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 import {
   Dialog,
   DialogContent,
@@ -116,8 +114,6 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
     notes: "",
   });
 
-
-
   const isCaregiver =
     user?.role === "caregiver" || user?.role === "super_admin";
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
@@ -141,7 +137,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
       try {
         // Fetch patient and medical data in parallel for maximum performance
         const parallelStart = performance.now();
-        
+
         const [
           patientData,
           medicationsData,
@@ -173,12 +169,17 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
           patientId: vital.patientId,
           caregiverId: vital.recordedById,
           recordedAt: vital.recordedDate,
-          bloodPressure: vital.systolicBp && vital.diastolicBp ? {
-            systolic: vital.systolicBp,
-            diastolic: vital.diastolicBp,
-          } : undefined,
+          bloodPressure:
+            vital.systolicBp && vital.diastolicBp
+              ? {
+                  systolic: vital.systolicBp,
+                  diastolic: vital.diastolicBp,
+                }
+              : undefined,
           heartRate: vital.heartRate || undefined,
-          temperature: vital.temperature ? Number(vital.temperature) : undefined,
+          temperature: vital.temperature
+            ? Number(vital.temperature)
+            : undefined,
           oxygenSaturation: vital.oxygenSaturation || undefined,
           weight: vital.weightKg ? Number(vital.weightKg) : undefined,
           bloodSugar: vital.bloodSugar ? Number(vital.bloodSugar) : undefined,
@@ -225,10 +226,9 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
 
   // Memoized computed values for better performance
   const activeMedications = useMemo(() => {
-    return medications.filter((med) =>
-      med.isActive &&
-      med.status !== 'completed' &&
-      med.status !== 'COMPLETED'
+    return medications.filter(
+      (med) =>
+        med.isActive && med.status !== "completed" && med.status !== "COMPLETED"
     );
   }, [medications]);
 
@@ -239,8 +239,6 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
   const pendingAdministrations = useMemo(() => {
     return administrations.filter((admin) => admin.status === "pending");
   }, [administrations]);
-
-
 
   const handleCaregiverNoteSaved = useCallback(async () => {
     try {
@@ -259,10 +257,6 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
       console.error("Error refreshing reviewer notes:", error);
     }
   }, [resolvedParams.id]);
-
-
-
-
 
   // Handle administration form submission
   const handleAdministrationSubmit = async () => {
@@ -326,8 +320,6 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
     });
   };
 
-
-
   // Show loading only while auth is loading
   if (authLoading) {
     return (
@@ -380,7 +372,9 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
           <div className="flex items-center justify-center py-32">
             <Card className="w-96">
               <CardContent className="p-6 text-center">
-                <h2 className="text-xl font-semibold mb-2">Patient Not Found</h2>
+                <h2 className="text-xl font-semibold mb-2">
+                  Patient Not Found
+                </h2>
                 <p className="text-muted-foreground mb-4">
                   The patient you're looking for doesn't exist or you don't have
                   access to view them.
@@ -432,11 +426,15 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                   <p className="text-xs text-muted-foreground">Age</p>
                 </div>
                 <div className=" p-3 rounded-lg">
-                  <p className="text-lg font-bold">{formatBloodType(patient.bloodType)}</p>
+                  <p className="text-lg font-bold">
+                    {formatBloodType(patient.bloodType)}
+                  </p>
                   <p className="text-xs text-muted-foreground">Blood Type</p>
                 </div>
                 <div className=" p-3 rounded-lg">
-                  <p className="text-lg font-bold">{formatGender(patient.gender)}</p>
+                  <p className="text-lg font-bold">
+                    {formatGender(patient.gender)}
+                  </p>
                   <p className="text-xs text-muted-foreground">Gender</p>
                 </div>
                 <div className=" p-3 rounded-lg">
@@ -445,231 +443,241 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                       ? `${patient.heightCm}cm / ${patient.weightKg}kg`
                       : "N/A"}
                   </p>
-                  <p className="text-xs text-muted-foreground">Height / Weight</p>
+                  <p className="text-xs text-muted-foreground">
+                    Height / Weight
+                  </p>
                 </div>
               </div>
             </div>
 
-        {/* Content Tabs */}
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-6"
-        >
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="vitals">Vitals</TabsTrigger>
-            <TabsTrigger value="medications">Medications & Administration</TabsTrigger>
-            <TabsTrigger value="caregiver-notes">Caregiver Notes</TabsTrigger>
-            <TabsTrigger value="reviewer-notes">Reviewer Notes</TabsTrigger>
-          </TabsList>
+            {/* Content Tabs */}
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="space-y-6"
+            >
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="vitals">Vitals</TabsTrigger>
+                <TabsTrigger value="medications">
+                  Medications & Administration
+                </TabsTrigger>
+                <TabsTrigger value="caregiver-notes">
+                  Caregiver Notes
+                </TabsTrigger>
+                <TabsTrigger value="reviewer-notes">Reviewer Notes</TabsTrigger>
+              </TabsList>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            {user && (
-              <CaregiverOverviewTab
-                patient={patient}
-                user={user}
-                medications={medications || []}
-                vitals={vitals}
-                medicalReviews={medicalReviews}
-                isMedicalDataLoading={isMedicalDataLoading}
-                onEditPatient={() => setShowPatientEditForm(true)}
-              />
-            )}
-          </TabsContent>
+              {/* Overview Tab */}
+              <TabsContent value="overview" className="space-y-6">
+                {user && (
+                  <CaregiverOverviewTab
+                    patient={patient}
+                    user={user}
+                    medications={medications || []}
+                    vitals={vitals}
+                    medicalReviews={medicalReviews}
+                    isMedicalDataLoading={isMedicalDataLoading}
+                    onEditPatient={() => setShowPatientEditForm(true)}
+                  />
+                )}
+              </TabsContent>
 
-          {/* Vitals Tab */}
-          <TabsContent value="vitals" className="space-y-6">
-            {user && (
-              <CaregiverVitalsTab
-                patient={patient}
-                user={user}
-                vitals={vitals}
-                onVitalsUpdate={setVitals}
-              />
-            )}
-          </TabsContent>
+              {/* Vitals Tab */}
+              <TabsContent value="vitals" className="space-y-6">
+                {user && (
+                  <CaregiverVitalsTab
+                    patient={patient}
+                    user={user}
+                    vitals={vitals}
+                    onVitalsUpdate={setVitals}
+                  />
+                )}
+              </TabsContent>
 
-          {/* Medications & Administration Tab */}
-          <TabsContent value="medications" className="space-y-6">
-            {user && (
-              <CaregiverMedicationsTab
-                patient={patient}
-                user={user}
-                medications={medications || []}
-                administrations={administrations || []}
-                isMedicalDataLoading={isMedicalDataLoading}
-                onAdministrationsUpdate={setAdministrations}
-              />
-            )}
-          </TabsContent>
+              {/* Medications & Administration Tab */}
+              <TabsContent value="medications" className="space-y-6">
+                {user && (
+                  <CaregiverMedicationsTab
+                    patient={patient}
+                    user={user}
+                    medications={medications || []}
+                    administrations={administrations || []}
+                    isMedicalDataLoading={isMedicalDataLoading}
+                    onAdministrationsUpdate={setAdministrations}
+                  />
+                )}
+              </TabsContent>
 
-          {/* Caregiver Notes Tab */}
-          <TabsContent value="caregiver-notes" className="space-y-6">
-            {user && (
-              <CaregiverNotesTab
-                patient={patient}
-                user={user}
-                caregiverNotes={caregiverNotes}
-                onNoteSaved={handleCaregiverNoteSaved}
-              />
-            )}
-          </TabsContent>
+              {/* Caregiver Notes Tab */}
+              <TabsContent value="caregiver-notes" className="space-y-6">
+                {user && (
+                  <CaregiverNotesTab
+                    patient={patient}
+                    user={user}
+                    caregiverNotes={caregiverNotes}
+                    onNoteSaved={handleCaregiverNoteSaved}
+                  />
+                )}
+              </TabsContent>
 
-          {/* Reviewer Notes Tab (Read-only for Caregivers) */}
-          <TabsContent value="reviewer-notes" className="space-y-6">
-            {user && (
-              <CaregiverReviewerNotesTab
-                patient={patient}
-                user={user}
-                reviewerNotes={reviewerNotes}
-                onRefresh={handleReviewerNotesRefresh}
-              />
-            )}
-          </TabsContent>
-        </Tabs>
+              {/* Reviewer Notes Tab (Read-only for Caregivers) */}
+              <TabsContent value="reviewer-notes" className="space-y-6">
+                {user && (
+                  <CaregiverReviewerNotesTab
+                    patient={patient}
+                    user={user}
+                    reviewerNotes={reviewerNotes}
+                    onRefresh={handleReviewerNotesRefresh}
+                  />
+                )}
+              </TabsContent>
+            </Tabs>
 
-        {/* Administration Dialog */}
-        <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader className="pb-3">
-              <DialogTitle className="flex items-center text-lg">
-                <Pill className="h-4 w-4 mr-2 text-teal-600" />
-                Record Administration
-              </DialogTitle>
-            </DialogHeader>
+            {/* Administration Dialog */}
+            <Dialog open={showAdminDialog} onOpenChange={setShowAdminDialog}>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader className="pb-3">
+                  <DialogTitle className="flex items-center text-lg">
+                    <Pill className="h-4 w-4 mr-2 text-teal-600" />
+                    Record Administration
+                  </DialogTitle>
+                </DialogHeader>
 
-            {selectedMedication && (
-              <div className="space-y-3">
-                {/* Medication Info - Compact */}
-                <div className="p-2 rounded">
-                  <div className="flex justify-between items-start">
+                {selectedMedication && (
+                  <div className="space-y-3">
+                    {/* Medication Info - Compact */}
+                    <div className="p-2 rounded">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-sm">
+                            {selectedMedication.medicationName}
+                          </h4>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedMedication.dosage} •{" "}
+                            {selectedMedication.route?.replace("_", " ") ||
+                              "Oral"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Time</p>
+                          <p className="text-xs font-mono">
+                            {adminFormData.actualTime}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Selection - Horizontal */}
                     <div>
-                      <h4 className="font-medium text-sm">
-                        {selectedMedication.medicationName}
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedMedication.dosage} •{" "}
-                        {selectedMedication.route?.replace("_", " ") || "Oral"}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Time</p>
-                      <p className="text-xs font-mono">
-                        {adminFormData.actualTime}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Status Selection - Horizontal */}
-                <div>
-                  <Label className="text-sm font-medium">Status</Label>
-                  <RadioGroup
-                    value={adminFormData.status}
-                    onValueChange={(value) =>
-                      setAdminFormData({ ...adminFormData, status: value })
-                    }
-                    className="flex gap-4 mt-2"
-                  >
-                    <div className="flex items-center space-x-1">
-                      <RadioGroupItem value="administered" id="administered" />
-                      <Label
-                        htmlFor="administered"
-                        className="flex items-center text-sm"
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
-                        Administered
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <RadioGroupItem value="missed" id="missed" />
-                      <Label
-                        htmlFor="missed"
-                        className="flex items-center text-sm"
-                      >
-                        <X className="h-3 w-3 mr-1 text-red-600" />
-                        Missed
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <RadioGroupItem value="refused" id="refused" />
-                      <Label
-                        htmlFor="refused"
-                        className="flex items-center text-sm"
-                      >
-                        <AlertTriangle className="h-3 w-3 mr-1 text-orange-600" />
-                        Refused
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                {/* Dosage (for administered) - Compact */}
-                {adminFormData.status === "administered" && (
-                  <div>
-                    <Label
-                      htmlFor="dosageGiven"
-                      className="text-sm font-medium"
-                    >
-                      Dosage Given
-                    </Label>
-                    <Input
-                      id="dosageGiven"
-                      placeholder="e.g., 10mg, 1 tablet"
-                      value={adminFormData.dosageGiven}
-                      onChange={(e) =>
-                        setAdminFormData({
-                          ...adminFormData,
-                          dosageGiven: e.target.value,
-                        })
+                      <Label className="text-sm font-medium">Status</Label>
+                      <RadioGroup
+                        value={adminFormData.status}
+                        onValueChange={(value) =>
+                          setAdminFormData({ ...adminFormData, status: value })
                         }
-                      className="mt-1 h-8"
-                    />
+                        className="flex gap-4 mt-2"
+                      >
+                        <div className="flex items-center space-x-1">
+                          <RadioGroupItem
+                            value="administered"
+                            id="administered"
+                          />
+                          <Label
+                            htmlFor="administered"
+                            className="flex items-center text-sm"
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
+                            Administered
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <RadioGroupItem value="missed" id="missed" />
+                          <Label
+                            htmlFor="missed"
+                            className="flex items-center text-sm"
+                          >
+                            <X className="h-3 w-3 mr-1 text-red-600" />
+                            Missed
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <RadioGroupItem value="refused" id="refused" />
+                          <Label
+                            htmlFor="refused"
+                            className="flex items-center text-sm"
+                          >
+                            <AlertTriangle className="h-3 w-3 mr-1 text-orange-600" />
+                            Refused
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+
+                    {/* Dosage (for administered) - Compact */}
+                    {adminFormData.status === "administered" && (
+                      <div>
+                        <Label
+                          htmlFor="dosageGiven"
+                          className="text-sm font-medium"
+                        >
+                          Dosage Given
+                        </Label>
+                        <Input
+                          id="dosageGiven"
+                          placeholder="e.g., 10mg, 1 tablet"
+                          value={adminFormData.dosageGiven}
+                          onChange={(e) =>
+                            setAdminFormData({
+                              ...adminFormData,
+                              dosageGiven: e.target.value,
+                            })
+                          }
+                          className="mt-1 h-8"
+                        />
+                      </div>
+                    )}
+
+                    {/* Notes - Compact */}
+                    <div>
+                      <Label htmlFor="notes" className="text-sm font-medium">
+                        Notes (Optional)
+                      </Label>
+                      <Input
+                        id="notes"
+                        placeholder="Any additional notes..."
+                        value={adminFormData.notes}
+                        onChange={(e) =>
+                          setAdminFormData({
+                            ...adminFormData,
+                            notes: e.target.value,
+                          })
+                        }
+                        className="mt-1 h-8"
+                      />
+                    </div>
                   </div>
                 )}
 
-                {/* Notes - Compact */}
-                <div>
-                  <Label htmlFor="notes" className="text-sm font-medium">
-                    Notes (Optional)
-                  </Label>
-                  <Input
-                    id="notes"
-                    placeholder="Any additional notes..."
-                    value={adminFormData.notes}
-                    onChange={(e) =>
-                      setAdminFormData({
-                        ...adminFormData,
-                        notes: e.target.value,
-                      })
-                    }
-                    className="mt-1 h-8"
-                  />
-                </div>
-              </div>
-            )}
-
-            <DialogFooter className="pt-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowAdminDialog(false)}
-                size="sm"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAdministrationSubmit}
-                className="bg-teal-600 hover:bg-teal-700"
-                size="sm"
-              >
-                Record Administration
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        </>
+                <DialogFooter className="pt-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAdminDialog(false)}
+                    size="sm"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAdministrationSubmit}
+                    className="bg-teal-600 hover:bg-teal-700"
+                    size="sm"
+                  >
+                    Record Administration
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
         )}
 
         {/* Patient Edit Dialog */}
@@ -682,7 +690,6 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
             userRole="caregiver"
           />
         )}
-
       </div>
     </div>
   );

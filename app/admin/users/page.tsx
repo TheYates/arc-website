@@ -2,12 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,6 +46,7 @@ import { useAuth, User, UserRole, hasPermission } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { authenticatedGet, authenticatedPost } from "@/lib/api/auth-headers";
+import { useUsers, useUserMutations } from "@/hooks/use-admin-user-queries";
 import {
   Loader2,
   Search,
@@ -66,6 +62,8 @@ import {
   Trash2,
   MoreHorizontal,
   KeyRound,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -77,8 +75,7 @@ import { AdminUsersMobile } from "@/components/mobile/admin-users";
 import { PasswordResetDialog } from "@/components/admin/password-reset-dialog";
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // UI State
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -87,7 +84,6 @@ export default function UsersPage() {
   const [userToResetPassword, setUserToResetPassword] = useState<User | null>(
     null
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -96,29 +92,33 @@ export default function UsersPage() {
     address: "",
     role: "caregiver" as UserRole,
   });
+
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setIsLoading(true);
-      try {
-        const response = await authenticatedGet("/api/admin/users", user);
-        if (!response.ok) {
-          throw new Error("Failed to fetch users");
-        }
-        const data = await response.json();
-        setUsers(data.users || []);
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // 🚀 TanStack Query - Replace manual data fetching
+  const {
+    data: users = [],
+    isLoading,
+    error,
+    refetch,
+  } = useUsers({
+    role: roleFilter,
+    search: searchTerm,
+  });
 
-    fetchUsers();
-  }, []);
+  // 🚀 TanStack Query - Replace manual mutations
+  const {
+    createUser,
+    updateUser,
+    deleteUser,
+    resetPassword,
+    isCreatingUser,
+    isUpdatingUser,
+    isDeletingUser,
+    isResettingPassword,
+  } = useUserMutations();
 
   const getRoleBadge = (role: UserRole) => {
     const roleConfig = {
@@ -165,32 +165,15 @@ export default function UsersPage() {
     if (!user.profileComplete) {
       return <Badge variant="outline">Incomplete</Badge>;
     }
-    return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
+    return (
+      <Badge variant="default" className="bg-green-100 text-green-800">
+        Active
+      </Badge>
+    );
   };
 
-  const filteredUsers = users.filter((user) => {
-    // Filter out inactive users (soft deleted)
-    if (!user.isActive) {
-      return false;
-    }
-
-    // Filter by role
-    if (roleFilter !== "all" && user.role !== roleFilter) {
-      return false;
-    }
-
-    // Search term filtering
-    if (searchTerm) {
-      const searchTermLower = searchTerm.toLowerCase();
-      return (
-        user.firstName.toLowerCase().includes(searchTermLower) ||
-        user.lastName.toLowerCase().includes(searchTermLower) ||
-        user.email.toLowerCase().includes(searchTermLower)
-      );
-    }
-
-    return true;
-  });
+  // Filter out inactive users (soft deleted) - TanStack Query handles role and search filtering
+  const filteredUsers = users.filter((user) => user.isActive);
 
   const formatUserDate = (dateString: string) => {
     if (!dateString) return "Never";
@@ -202,10 +185,10 @@ export default function UsersPage() {
     if (!dateString) return "Never";
     const date = new Date(dateString);
     const formattedDate = formatDate(date);
-    const time = date.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
+    const time = date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
     });
     return `${formattedDate} at ${time}`;
   };
@@ -224,50 +207,12 @@ export default function UsersPage() {
   };
 
   const handleAddUser = async () => {
-    if (
-      !formData.firstName ||
-      !formData.lastName ||
-      !formData.email
-    ) {
+    if (!formData.firstName || !formData.lastName || !formData.email) {
       return; // Basic validation
     }
 
-    setIsSubmitting(true);
-    try {
-      const response = await authenticatedPost(
-        "/api/admin/users",
-        user,
-        formData
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create user");
-      }
-
-      const data = await response.json();
-
-      // Update local state
-      setUsers((prevUsers) => [...prevUsers, data.user]);
-      resetForm();
-
-      toast({
-        title: "User Created",
-        description: `${data.user.firstName} ${data.user.lastName} has been created successfully.`,
-      });
-    } catch (error) {
-      console.error("Failed to add user:", error);
-      toast({
-        title: "Error Creating User",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to create user. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    await createUser.mutateAsync(formData);
+    resetForm();
   };
 
   const handleEditUser = async () => {
@@ -280,83 +225,18 @@ export default function UsersPage() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`/api/admin/users/${editingUser.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update user");
-      }
-
-      const data = await response.json();
-
-      // Update local state
-      setUsers((prevUsers) =>
-        prevUsers.map((user) => (user.id === editingUser.id ? data.user : user))
-      );
-      resetForm();
-
-      toast({
-        title: "User Updated",
-        description: `${data.user.firstName} ${data.user.lastName} has been updated successfully.`,
-      });
-    } catch (error) {
-      console.error("Failed to edit user:", error);
-      toast({
-        title: "Error Updating User",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to update user. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    await updateUser.mutateAsync({
+      userId: editingUser.id,
+      userData: formData,
+    });
+    resetForm();
   };
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
 
-    try {
-      const response = await fetch(`/api/admin/users/${userToDelete.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to delete user");
-      }
-
-      // Update local state (remove the user from the list)
-      setUsers((prevUsers) =>
-        prevUsers.filter((user) => user.id !== userToDelete.id)
-      );
-
-      toast({
-        title: "User Deleted",
-        description: `${userToDelete.firstName} ${userToDelete.lastName} has been deleted successfully.`,
-      });
-
-      setUserToDelete(null);
-    } catch (error) {
-      console.error("Failed to delete user:", error);
-      toast({
-        title: "Error Deleting User",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to delete user. Please try again.",
-        variant: "destructive",
-      });
-    }
+    await deleteUser.mutateAsync(userToDelete.id);
+    setUserToDelete(null);
   };
 
   if (!user || !hasPermission(user.role, "user_management")) {
@@ -368,6 +248,27 @@ export default function UsersPage() {
             You don't have permission to view this page
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Failed to load users</h3>
+            <p className="text-muted-foreground mb-4">
+              {error instanceof Error ? error.message : "An error occurred"}
+            </p>
+            <Button onClick={() => refetch()} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -402,7 +303,9 @@ export default function UsersPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              User Management
+            </h1>
             <p className="text-muted-foreground">
               Manage platform users and their roles
             </p>
@@ -421,7 +324,8 @@ export default function UsersPage() {
           <CardContent className="pt-0">
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Total Users: <span className="font-medium">{filteredUsers.length}</span>
+                Total Users:{" "}
+                <span className="font-medium">{filteredUsers.length}</span>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                 <div className="relative">
@@ -475,11 +379,11 @@ export default function UsersPage() {
                 <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">No users found</h3>
                 <p className="text-muted-foreground mb-4">
-                  {searchTerm || roleFilter !== "all" 
+                  {searchTerm || roleFilter !== "all"
                     ? "Try adjusting your search or filter criteria."
                     : "Get started by adding your first user."}
                 </p>
-                {(!searchTerm && roleFilter === "all") && (
+                {!searchTerm && roleFilter === "all" && (
                   <Button onClick={() => setShowAddDialog(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add First User
@@ -491,13 +395,27 @@ export default function UsersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-border">
-                      <TableHead className="font-semibold text-foreground">User</TableHead>
-                      <TableHead className="font-semibold text-foreground">Role</TableHead>
-                      <TableHead className="font-semibold text-foreground">Status</TableHead>
-                      <TableHead className="font-semibold text-foreground">Contact</TableHead>
-                      <TableHead className="font-semibold text-foreground">Created</TableHead>
-                      <TableHead className="font-semibold text-foreground">Last Login</TableHead>
-                      <TableHead className="font-semibold text-foreground text-right">Actions</TableHead>
+                      <TableHead className="font-semibold text-foreground">
+                        User
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground">
+                        Role
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground">
+                        Status
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground">
+                        Contact
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground">
+                        Created
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground">
+                        Last Login
+                      </TableHead>
+                      <TableHead className="font-semibold text-foreground text-right">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -535,7 +453,9 @@ export default function UsersPage() {
                           <div className="text-sm">
                             <div className="flex items-center text-muted-foreground mb-1">
                               <Mail className="h-3 w-3 mr-2 flex-shrink-0" />
-                              <span className="truncate max-w-[180px]">{u.email}</span>
+                              <span className="truncate max-w-[180px]">
+                                {u.email}
+                              </span>
                             </div>
                             {u.phone && (
                               <div className="text-xs text-muted-foreground">
@@ -556,7 +476,11 @@ export default function UsersPage() {
                         >
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -715,15 +639,15 @@ export default function UsersPage() {
             <Button
               variant="outline"
               onClick={resetForm}
-              disabled={isSubmitting}
+              disabled={isCreatingUser || isUpdatingUser}
             >
               Cancel
             </Button>
             <Button
               onClick={editingUser ? handleEditUser : handleAddUser}
-              disabled={isSubmitting}
+              disabled={isCreatingUser || isUpdatingUser}
             >
-              {isSubmitting && (
+              {(isCreatingUser || isUpdatingUser) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               {editingUser ? "Update User" : "Create User"}
@@ -751,13 +675,20 @@ export default function UsersPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setUserToDelete(null)}>
+            <AlertDialogCancel
+              onClick={() => setUserToDelete(null)}
+              disabled={isDeletingUser}
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteUser}
+              disabled={isDeletingUser}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
+              {isDeletingUser && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               Delete User
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -3,15 +3,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import {
-  getPatientByIdClient,
-  getMedicationsClient,
-  getMedicationAdministrationsClient,
-  recordMedicationAdministrationClient,
-} from "@/lib/api/client";
-import { getVitalSignsClient } from "@/lib/api/vitals-client";
-import { getMedicalReviews } from "@/lib/api/medical-reviews-client";
-import { getCareNotes } from "@/lib/api/care-notes-client";
+import { recordMedicationAdministrationClient } from "@/lib/api/client";
+import { useCaregiverPatientDetail } from "@/hooks/use-caregiver-queries";
 import { Patient } from "@/lib/types/patients";
 import { Medication, MedicationAdministration } from "@/lib/types/medications";
 import { VitalSigns } from "@/lib/types/vitals";
@@ -84,24 +77,30 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
   const { user, logout, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isMedicalDataLoading, setIsMedicalDataLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Medical data states
-  const [medications, setMedications] = useState<Medication[]>([]);
-  const [administrations, setAdministrations] = useState<
-    MedicationAdministration[]
-  >([]);
-  const [vitals, setVitals] = useState<VitalSigns[]>([]);
-  const [medicalReviews, setMedicalReviews] = useState<MedicalReview[]>([]);
-  const [caregiverNotes, setCaregiverNotes] = useState<CareNote[]>([]);
-  const [reviewerNotes, setReviewerNotes] = useState<CareNote[]>([]);
+  // 🚀 TanStack Query - Replace manual data fetching
+  const {
+    patient,
+    medications,
+    administrations,
+    vitals,
+    medicalReviews,
+    caregiverNotes,
+    reviewerNotes,
+    isLoading,
+    isMedicalDataLoading,
+    error,
+    refetchAll,
+    refetchMedications,
+    refetchAdministrations,
+    refetchVitals,
+    refetchMedicalReviews,
+    refetchCareNotes,
+  } = useCaregiverPatientDetail(resolvedParams.id);
 
   // UI states
   const [showSymptomForm, setShowSymptomForm] = useState(false);
-
   const [showPatientEditForm, setShowPatientEditForm] = useState(false);
   const [showReviewerNoteHistory, setShowReviewerNoteHistory] = useState(false);
   const [showAdminDialog, setShowAdminDialog] = useState(false);
@@ -126,103 +125,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
       router.push("/login");
       return;
     }
-
-    const fetchAllData = async () => {
-      const startTime = performance.now();
-      console.log(
-        "🚀 Starting optimized parallel data fetch for ID:",
-        resolvedParams.id
-      );
-
-      try {
-        // Fetch patient and medical data in parallel for maximum performance
-        const parallelStart = performance.now();
-
-        const [
-          patientData,
-          medicationsData,
-          administrationsData,
-          vitalsData,
-          reviewsData,
-          caregiverNotesData,
-          reviewerNotesData,
-        ] = await Promise.all([
-          getPatientByIdClient(resolvedParams.id, user),
-          getMedicationsClient(resolvedParams.id, user),
-          getMedicationAdministrationsClient(resolvedParams.id, user),
-          getVitalSignsClient(resolvedParams.id, user),
-          getMedicalReviews(resolvedParams.id),
-          getCareNotes(resolvedParams.id, "caregiver"),
-          getCareNotes(resolvedParams.id, "reviewer"),
-        ]);
-
-        const parallelEnd = performance.now();
-        console.log(
-          `📊 All data fetched in parallel: ${(
-            parallelEnd - parallelStart
-          ).toFixed(2)}ms`
-        );
-
-        // Transform vitals data to match UI type
-        const transformedVitals: VitalSigns[] = vitalsData.map((vital) => ({
-          id: vital.id,
-          patientId: vital.patientId,
-          caregiverId: vital.recordedById,
-          recordedAt: vital.recordedDate,
-          bloodPressure:
-            vital.systolicBp && vital.diastolicBp
-              ? {
-                  systolic: vital.systolicBp,
-                  diastolic: vital.diastolicBp,
-                }
-              : undefined,
-          heartRate: vital.heartRate || undefined,
-          temperature: vital.temperature
-            ? Number(vital.temperature)
-            : undefined,
-          oxygenSaturation: vital.oxygenSaturation || undefined,
-          weight: vital.weightKg ? Number(vital.weightKg) : undefined,
-          bloodSugar: vital.bloodSugar ? Number(vital.bloodSugar) : undefined,
-          notes: vital.notes || undefined,
-          isAlerted: false, // TODO: Implement alert checking from database
-          alertedValues: [],
-          createdAt: vital.recordedDate,
-          updatedAt: vital.recordedDate,
-        }));
-
-        // Set all data at once to minimize re-renders
-        setPatient(patientData);
-        setMedications(medicationsData);
-        setAdministrations(administrationsData);
-        setVitals(transformedVitals);
-        setMedicalReviews(reviewsData as unknown as MedicalReview[]);
-        setCaregiverNotes(caregiverNotesData);
-        setReviewerNotes(reviewerNotesData);
-
-        // Both loading states complete together
-        setIsLoading(false);
-        setIsMedicalDataLoading(false);
-
-        const totalEnd = performance.now();
-        console.log(
-          `✅ Total optimized page load time: ${(totalEnd - startTime).toFixed(
-            2
-          )}ms`
-        );
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load patient data",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        setIsMedicalDataLoading(false);
-      }
-    };
-
-    fetchAllData();
-  }, [resolvedParams.id, user, router, toast]);
+  }, [authLoading, user, router]);
 
   // Memoized computed values for better performance
   const activeMedications = useMemo(() => {
@@ -240,23 +143,23 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
     return administrations.filter((admin) => admin.status === "pending");
   }, [administrations]);
 
+  // 🚀 TanStack Query - Simplified refresh handlers
   const handleCaregiverNoteSaved = useCallback(async () => {
-    try {
-      const updatedNotes = await getCareNotes(resolvedParams.id, "caregiver");
-      setCaregiverNotes(updatedNotes);
-    } catch (error) {
-      console.error("Error refreshing caregiver notes:", error);
-    }
-  }, [resolvedParams.id]);
+    refetchAll(); // Refetch all data including care notes
+  }, [refetchAll]);
 
   const handleReviewerNotesRefresh = useCallback(async () => {
-    try {
-      const updatedNotes = await getCareNotes(resolvedParams.id, "reviewer");
-      setReviewerNotes(updatedNotes);
-    } catch (error) {
-      console.error("Error refreshing reviewer notes:", error);
-    }
-  }, [resolvedParams.id]);
+    refetchAll(); // Refetch all data including care notes
+  }, [refetchAll]);
+
+  // Wrapper functions for component compatibility
+  const handleVitalsUpdate = useCallback(() => {
+    refetchVitals();
+  }, [refetchVitals]);
+
+  const handleAdministrationsUpdate = useCallback(() => {
+    refetchAdministrations();
+  }, [refetchAdministrations]);
 
   // Handle administration form submission
   const handleAdministrationSubmit = async () => {
@@ -281,12 +184,8 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
 
       await recordMedicationAdministrationClient(administrationData, user);
 
-      // Refresh administrations data (cache is automatically cleared by the client)
-      const updatedAdministrations = await getMedicationAdministrationsClient(
-        patient.id,
-        user
-      );
-      setAdministrations(updatedAdministrations);
+      // 🚀 TanStack Query - Refresh administrations data
+      refetchAdministrations();
 
       toast({
         title: "Administration Recorded",
@@ -313,7 +212,8 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
   };
 
   const handlePatientEditSuccess = (updatedPatient: Patient) => {
-    setPatient(updatedPatient);
+    // 🚀 TanStack Query - Refetch patient data to get latest updates
+    refetchAll();
     toast({
       title: "Patient updated",
       description: "Patient information has been successfully updated.",
@@ -333,8 +233,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background w-full">
-      {/* Header Navigation */}
+    <div className="min-h-screen bg-background">
       <RoleHeader role="caregiver" />
 
       {/* Mobile (distinct UI) */}
@@ -343,7 +242,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
       </div>
 
       {/* Desktop */}
-      <div className="hidden md:block container mx-auto px-4 py-8 max-w-7xl">
+      <div className="hidden md:block container mx-auto px-4 py-6 space-y-6">
         {/* Back Button */}
         <div className="mb-6">
           <Button
@@ -490,7 +389,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                     patient={patient}
                     user={user}
                     vitals={vitals}
-                    onVitalsUpdate={setVitals}
+                    onVitalsUpdate={handleVitalsUpdate}
                   />
                 )}
               </TabsContent>
@@ -504,7 +403,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                     medications={medications || []}
                     administrations={administrations || []}
                     isMedicalDataLoading={isMedicalDataLoading}
-                    onAdministrationsUpdate={setAdministrations}
+                    onAdministrationsUpdate={handleAdministrationsUpdate}
                   />
                 )}
               </TabsContent>

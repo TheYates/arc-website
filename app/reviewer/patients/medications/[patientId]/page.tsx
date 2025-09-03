@@ -55,15 +55,32 @@ export default function ReviewerMedicationsPage({ params }: PageProps) {
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex justify-center items-center h-64">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!patient) {
-    return <div>Patient not found</div>;
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-6">
+          <div className="text-center">
+            <div className="text-muted-foreground">Patient not found</div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-6 space-y-6">
       {/* Mobile (distinct UI) */}
       <div className="md:hidden">
         <ReviewerMedicationsMobile patientId={resolvedParams.patientId} />
@@ -169,6 +186,7 @@ export default function ReviewerMedicationsPage({ params }: PageProps) {
           </div>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

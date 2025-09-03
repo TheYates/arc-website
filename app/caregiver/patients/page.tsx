@@ -25,7 +25,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
 import { CaregiverPatientsMobile } from "@/components/mobile/caregiver-patients";
 import { useAuth } from "@/lib/auth";
-import { getPatientsByCaregiverClient } from "@/lib/api/client";
+import { useCaregiverPatients, useCaregiverPatientManagement } from "@/hooks/use-caregiver-queries";
 import { Patient, CareLevel, PatientStatus } from "@/lib/types/patients";
 import { formatDate } from "@/lib/utils";
 import {
@@ -56,8 +56,25 @@ import {
 export default function CaregiverPatientsPage() {
   const { user, logout, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [assignedPatients, setAssignedPatients] = useState<Patient[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterLevel, setFilterLevel] = useState<CareLevel | "all">("all");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+
+  // 🚀 TanStack Query - Replace manual data fetching
+  const {
+    data: assignedPatients = [],
+    isLoading,
+    error,
+    refetch,
+  } = useCaregiverPatients();
+
+  // 🚀 TanStack Query - Get filtered patients
+  const {
+    data: filteredPatients = [],
+  } = useCaregiverPatientManagement({
+    search: searchTerm,
+    careLevel: filterLevel,
+  });
 
   const calculateAge = (dateOfBirth?: string): string => {
     if (!dateOfBirth) return "N/A";
@@ -73,9 +90,6 @@ export default function CaregiverPatientsPage() {
     }
     return age.toString();
   };
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterLevel, setFilterLevel] = useState<CareLevel | "all">("all");
-  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
 
   // Check permissions
   useEffect(() => {
@@ -93,40 +107,7 @@ export default function CaregiverPatientsPage() {
     }
   }, [user, router, authLoading]);
 
-  useEffect(() => {
-    const fetchAssignedPatients = async () => {
-      if (!user) return;
 
-      setIsLoading(true);
-      try {
-        const patients = await getPatientsByCaregiverClient(user.id);
-        setAssignedPatients(patients);
-      } catch (error) {
-        console.error("Failed to fetch assigned patients:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAssignedPatients();
-  }, [user]);
-
-  const filteredPatients = assignedPatients.filter((patient) => {
-    const matchesSearch =
-      searchTerm === "" ||
-      patient.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (patient.medicalRecordNumber &&
-        patient.medicalRecordNumber
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()));
-
-    const matchesFilter =
-      filterLevel === "all" || patient.careLevel === filterLevel;
-
-    return matchesSearch && matchesFilter;
-  });
 
   const formatAssignedDate = (dateString?: string) => {
     if (!dateString) return "N/A";
@@ -137,25 +118,27 @@ export default function CaregiverPatientsPage() {
   // Show loading while auth is loading
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background w-full">
+      <div className="min-h-screen bg-background">
         <RoleHeader role="caregiver" />
-        <main className="container mx-auto px-4 py-6 w-full max-w-7xl">
-          <div className="space-y-6">
-            <div className="h-8 bg-gray-200 rounded animate-pulse w-48"></div>
-            <div className="h-96 bg-gray-200 rounded animate-pulse"></div>
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
           </div>
-        </main>
+        </div>
       </div>
     );
   }
 
   if (!user || user.role !== "caregiver") {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-center">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <div className="text-muted-foreground">
-            Access denied. Caregiver role required.
+      <div className="min-h-screen bg-background">
+        <RoleHeader role="caregiver" />
+        <div className="container mx-auto px-4 py-6">
+          <div className="text-center">
+            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <div className="text-muted-foreground">
+              Access denied. Caregiver role required.
+            </div>
           </div>
         </div>
       </div>
@@ -163,8 +146,7 @@ export default function CaregiverPatientsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background w-full">
-      {/* Header Navigation */}
+    <div className="min-h-screen bg-background">
       <RoleHeader role="caregiver" />
 
       {/* Mobile (distinct UI) */}
@@ -173,11 +155,11 @@ export default function CaregiverPatientsPage() {
       </div>
 
       {/* Desktop */}
-      <main className="hidden md:block container mx-auto px-4 py-6 w-full max-w-7xl">
+      <div className="hidden md:block container mx-auto px-4 py-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold ">My Patients</h1>
+            <h1 className="text-3xl font-bold">My Patients</h1>
             <p className="text-muted-foreground">
               Manage and view your assigned patients
             </p>
@@ -576,7 +558,7 @@ export default function CaregiverPatientsPage() {
             ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

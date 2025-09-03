@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth";
 import { RoleHeader } from "@/components/role-header";
-import { authenticatedGet } from "@/lib/api/auth-headers";
+import { useReviewerServiceRequests, useServiceRequestMutations } from "@/hooks/use-reviewer-queries";
 import {
   Calendar,
   Clock,
@@ -74,12 +74,26 @@ interface ServiceRequest {
 }
 
 export default function ReviewerServiceRequestsPage() {
-  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pending");
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+
+  // 🚀 TanStack Query - Replace manual data fetching
+  const {
+    data: serviceRequests = [],
+    isLoading,
+    error,
+    refetch,
+  } = useReviewerServiceRequests();
+
+  // 🚀 TanStack Query - Replace manual mutations
+  const {
+    approveServiceRequest,
+    rejectServiceRequest,
+    isApprovingServiceRequest,
+    isRejectingServiceRequest,
+  } = useServiceRequestMutations();
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -87,97 +101,16 @@ export default function ReviewerServiceRequestsPage() {
         router.push("/");
         return;
       }
-      fetchServiceRequests();
     }
   }, [user, authLoading, router]);
 
-  const fetchServiceRequests = async () => {
-    try {
-      const response = await authenticatedGet("/api/service-requests", user);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch service requests");
-      }
-
-      const data = await response.json();
-      setServiceRequests(data.serviceRequests);
-    } catch (error) {
-      console.error("Error fetching service requests:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load service requests",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  // 🚀 TanStack Query - Simplified mutation handlers
+  const handleApproveRequest = (requestId: string) => {
+    approveServiceRequest(requestId);
   };
 
-  const handleApproveRequest = async (requestId: string) => {
-    try {
-      const response = await fetch(`/api/service-requests/${requestId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: "APPROVED",
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to approve request");
-      }
-
-      toast({
-        title: "Success",
-        description: "Service request approved",
-      });
-
-      // Refresh the list
-      fetchServiceRequests();
-    } catch (error) {
-      console.error("Error approving request:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve request",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRejectRequest = async (requestId: string, reason: string) => {
-    try {
-      const response = await fetch(`/api/service-requests/${requestId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: "REJECTED",
-          rejectionReason: reason,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to reject request");
-      }
-
-      toast({
-        title: "Success",
-        description: "Service request rejected",
-      });
-
-      // Refresh the list
-      fetchServiceRequests();
-    } catch (error) {
-      console.error("Error rejecting request:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reject request",
-        variant: "destructive",
-      });
-    }
+  const handleRejectRequest = (requestId: string, reason: string) => {
+    rejectServiceRequest({ requestId, reason });
   };
 
   const getStatusBadge = (status: string) => {
@@ -469,16 +402,26 @@ export default function ReviewerServiceRequestsPage() {
                                     "Rejected by reviewer"
                                   )
                                 }
+                                disabled={isRejectingServiceRequest}
                                 className="text-red-600 hover:text-red-700"
                               >
-                                <ThumbsDown className="h-4 w-4 mr-2" />
+                                {isRejectingServiceRequest ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <ThumbsDown className="h-4 w-4 mr-2" />
+                                )}
                                 Reject
                               </Button>
                               <Button
                                 size="sm"
                                 onClick={() => handleApproveRequest(request.id)}
+                                disabled={isApprovingServiceRequest}
                               >
-                                <ThumbsUp className="h-4 w-4 mr-2" />
+                                {isApprovingServiceRequest ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <ThumbsUp className="h-4 w-4 mr-2" />
+                                )}
                                 Approve
                               </Button>
                             </>

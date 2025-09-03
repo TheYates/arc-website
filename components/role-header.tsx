@@ -289,12 +289,14 @@ export function RoleHeader({ role }: RoleHeaderProps) {
         {/* Center section - Empty for now */}
         <div className="flex-1"></div>
 
-        {/* Right side - Search, Theme Toggle, Notifications and User Menu */}
+        {/* Right side - Theme Toggle, Notifications and User Menu */}
         <div className="flex items-center space-x-3">
-          {/* Search - smaller and moved to right */}
-          <div className="hidden md:block">
-            <CommandSearch variant={config.searchVariant} size="sm" />
-          </div>
+          {/* Search - only for admin and patient roles */}
+          {(role === "admin" || role === "patient") && (
+            <div className="hidden md:block">
+              <CommandSearch variant={config.searchVariant} size="sm" />
+            </div>
+          )}
 
           {/* Theme Toggle */}
           <ThemeToggle />

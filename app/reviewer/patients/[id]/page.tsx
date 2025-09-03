@@ -3,17 +3,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { getPatientByIdClient } from "@/lib/api/client";
-import {
-  getMedicationsClient,
-  getMedicationAdministrationsClient,
-} from "@/lib/api/client";
-import { getVitalSignsClient } from "@/lib/api/vitals-client";
-import {
-  getMedicalReviews,
-  createMedicalReview,
-} from "@/lib/api/medical-reviews-client";
-import { getCareNotes } from "@/lib/api/care-notes-client";
+import { createMedicalReview } from "@/lib/api/medical-reviews-client";
+import { useReviewerPatientDetail } from "@/hooks/use-reviewer-queries";
 import { Patient } from "@/lib/types/patients";
 import { Medication, MedicationAdministration } from "@/lib/types/medications";
 import { VitalSigns } from "@/lib/types/vitals";
@@ -92,24 +83,27 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
   const { user, isLoading: authLoading, isHydrated } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isMedicalDataLoading, setIsMedicalDataLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Medical data states
-  const [medications, setMedications] = useState<Medication[]>([]);
-  const [administrations, setAdministrations] = useState<
-    MedicationAdministration[]
-  >([]);
-  const [vitals, setVitals] = useState<VitalSigns[]>([]);
-  const [medicalReviews, setMedicalReviews] = useState<MedicalReview[]>([]);
-  const [caregiverNotes, setCaregiverNotes] = useState<CareNote[]>([]);
-  const [reviewerNotes, setReviewerNotes] = useState<CareNote[]>([]);
+  // 🚀 TanStack Query - Replace manual data fetching
+  const {
+    patient,
+    medications,
+    administrations,
+    vitals,
+    medicalReviews,
+    caregiverNotes,
+    reviewerNotes,
+    isLoading,
+    isMedicalDataLoading,
+    error,
+    refetchAll,
+    refetchMedications,
+    refetchAdministrations,
+  } = useReviewerPatientDetail(resolvedParams.id);
 
   // UI states
   const [showPrescribeDialog, setShowPrescribeDialog] = useState(false);
-
   const [showPatientEditForm, setShowPatientEditForm] = useState(false);
 
 
@@ -143,130 +137,7 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
   }, []);
 
   // Memoize the patient data fetching function
-  const fetchPatientData = useCallback(async () => {
-    const startTime = performance.now();
-    console.log(
-      "🚀 Starting reviewer patient data fetch for ID:",
-      resolvedParams.id
-    );
 
-    try {
-      // Fetch patient data first (needed for header) - this shows immediately
-      const patientStart = performance.now();
-      const patientData = await getPatientByIdClient(resolvedParams.id, user);
-      const patientEnd = performance.now();
-      console.log(
-        `👤 Patient data fetched in ${(patientEnd - patientStart).toFixed(2)}ms`
-      );
-
-      setPatient(patientData);
-      setIsLoading(false); // Show patient info immediately
-
-      if (patientData) {
-        // Fetch medical data in background
-        fetchMedicalData(resolvedParams.id, startTime);
-      }
-    } catch (error) {
-      console.error("Error fetching patient:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load patient data",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-    }
-  }, [resolvedParams.id, toast]);
-
-  // Memoize the medical data fetching function
-  const fetchMedicalData = useCallback(
-    async (patientId: string, startTime: number) => {
-      try {
-        // Fetch all medical data in parallel for better performance
-        const parallelStart = performance.now();
-        console.log("📊 Starting parallel reviewer medical data fetch...");
-
-        const [
-          medicationsData,
-          administrationsData,
-          vitalsData,
-          reviewsData,
-          caregiverNotesData,
-          reviewerNotesData,
-        ] = await Promise.all([
-          getMedicationsClient(patientId, user),
-          getMedicationAdministrationsClient(patientId, user),
-          getVitalSignsClient(patientId, user),
-          getMedicalReviews(patientId),
-          getCareNotes(patientId, "caregiver", user),
-          getCareNotes(patientId, "reviewer", user),
-        ]);
-
-        const parallelEnd = performance.now();
-        console.log(
-          `📊 All parallel medical data fetched in ${(
-            parallelEnd - parallelStart
-          ).toFixed(2)}ms`
-        );
-
-        // Transform medical reviews data
-        const transformStart = performance.now();
-        const transformedReviews = transformMedicalReviews(reviewsData);
-        const transformEnd = performance.now();
-        console.log(
-          `🔄 Data transformation took ${(
-            transformEnd - transformStart
-          ).toFixed(2)}ms`
-        );
-
-        // Transform vitals data to match UI type
-        const transformedVitals: VitalSigns[] = vitalsData.map((vital) => ({
-          id: vital.id,
-          patientId: vital.patientId,
-          caregiverId: vital.recordedById,
-          recordedAt: vital.recordedDate,
-          bloodPressure: vital.systolicBp && vital.diastolicBp ? {
-            systolic: vital.systolicBp,
-            diastolic: vital.diastolicBp,
-          } : undefined,
-          heartRate: vital.heartRate || undefined,
-          temperature: vital.temperature ? Number(vital.temperature) : undefined,
-          oxygenSaturation: vital.oxygenSaturation || undefined,
-          weight: vital.weightKg ? Number(vital.weightKg) : undefined,
-          bloodSugar: vital.bloodSugar ? Number(vital.bloodSugar) : undefined,
-          notes: vital.notes || undefined,
-          isAlerted: false, // TODO: Implement alert checking from database
-          alertedValues: [],
-          createdAt: vital.recordedDate,
-          updatedAt: vital.recordedDate,
-        }));
-
-        // Set all data at once to minimize re-renders
-        setMedications(medicationsData);
-        setAdministrations(administrationsData);
-        setVitals(transformedVitals);
-        setMedicalReviews(transformedReviews);
-        setCaregiverNotes(caregiverNotesData);
-        setReviewerNotes(reviewerNotesData);
-
-        const totalEnd = performance.now();
-        console.log(
-          `✅ Total reviewer page load time: ${(totalEnd - startTime).toFixed(
-            2
-          )}ms`
-        );
-      } catch (error) {
-        console.error("Error fetching medical data:", error);
-        toast({
-          title: "Warning",
-          description: "Some medical data failed to load",
-          variant: "destructive",
-        });
-      } finally {
-        setIsMedicalDataLoading(false);
-      }
-    },
-    [transformMedicalReviews, toast]
-  );
 
   useEffect(() => {
     // Wait for auth to finish loading and hydration before making redirect decisions
@@ -276,99 +147,52 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
       router.push("/login");
       return;
     }
-
-    fetchPatientData();
-  }, [user, router, fetchPatientData, authLoading, isHydrated]);
+  }, [user, router, authLoading, isHydrated]);
 
 
 
 
 
+  // 🚀 TanStack Query - Simplified refresh handler
   const handleMedicationSaved = useCallback(async () => {
-    const updatedMedications = await getMedicationsClient(
-      resolvedParams.id,
-      user
-    );
-    setMedications(updatedMedications);
+    refetchMedications();
     toast({
       title: "Success",
       description: "Medication prescribed successfully",
     });
-  }, [resolvedParams.id, toast, user]);
+  }, [refetchMedications, toast]);
 
 
 
   const handleReviewerNoteSaved = useCallback(async () => {
-    try {
-      const updatedNotes = await getCareNotes(
-        resolvedParams.id,
-        "reviewer",
-        user
-      );
-      setReviewerNotes(updatedNotes);
-    } catch (error) {
-      console.error("Error refreshing reviewer notes:", error);
-    }
-  }, [resolvedParams.id, user]);
+    refetchAll(); // Refetch all data including care notes
+  }, [refetchAll]);
 
   const handleCaregiverNotesRefresh = useCallback(async () => {
-    try {
-      const updatedNotes = await getCareNotes(
-        resolvedParams.id,
-        "caregiver",
-        user
-      );
-      setCaregiverNotes(updatedNotes);
-    } catch (error) {
-      console.error("Error refreshing caregiver notes:", error);
-    }
-  }, [resolvedParams.id, user]);
+    refetchAll(); // Refetch all data including care notes
+  }, [refetchAll]);
 
   const handleMedicationDataRefresh = useCallback(async () => {
-    try {
-      const [updatedMedications, updatedAdministrations] = await Promise.all([
-        getMedicationsClient(resolvedParams.id, user),
-        getMedicationAdministrationsClient(resolvedParams.id, user),
-      ]);
-      setMedications(updatedMedications);
-      setAdministrations(updatedAdministrations);
+    refetchMedications();
+    refetchAdministrations();
+    // Show success toast with Sonner
+    sonnerToast.success("Medication Data Refreshed", {
+      description: "Updated medication and administration data.",
+      duration: 3000,
+    });
 
-      // Show success toast with Sonner
-      sonnerToast.success("Medication Data Refreshed", {
-        description: `Updated ${updatedMedications.length} medication(s) and ${updatedAdministrations.length} administration record(s).`,
-        duration: 3000,
-      });
-
-      // Also show regular toast for consistency
-      toast({
-        title: "Success",
-        description: "Medication data refreshed",
-      });
-    } catch (error) {
-      console.error("Error refreshing medication data:", error);
-
-      // Show error toast with Sonner
-      sonnerToast.error("Failed to Refresh Data", {
-        description: "Unable to refresh medication data. Please check your connection and try again.",
-        duration: 5000,
-      });
-
-      // Also show regular toast for consistency
-      toast({
-        title: "Error",
-        description: "Failed to refresh medication data",
-        variant: "destructive",
-      });
-    }
-  }, [resolvedParams.id, user, toast]);
+    // Also show regular toast for consistency
+    toast({
+      title: "Success",
+      description: "Medication data refreshed",
+    });
+  }, [refetchMedications, refetchAdministrations, toast]);
 
   // Patient edit success handler
   const handlePatientEditSuccess = useCallback((updatedPatient: Patient) => {
-    // Update the patient state with the new data
-    setPatient(updatedPatient);
-    // Refresh all patient data to ensure consistency
-    fetchPatientData();
-  }, [fetchPatientData]);
+    // 🚀 TanStack Query - Refetch all patient data
+    refetchAll();
+  }, [refetchAll]);
 
   // Auto-refresh removed - users can manually refresh using the refresh button
 
@@ -425,16 +249,16 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background w-full">
-      {/* Header Navigation */}
+    <div className="min-h-screen bg-background">
       <RoleHeader role="reviewer" />
+
       {/* Mobile (distinct UI) */}
       <div className="md:hidden">
         <ReviewerPatientMobile patientId={resolvedParams.id} />
       </div>
 
       {/* Desktop */}
-      <div className="hidden md:block container mx-auto px-4 py-8 max-w-7xl">
+      <div className="hidden md:block container mx-auto px-4 py-6 space-y-6">
         {/* Back Button */}
         <div className="mb-6">
           <Button

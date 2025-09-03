@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -25,7 +25,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
 import { ReviewerPatientsMobile } from "@/components/mobile/reviewer-patients";
 import { useAuth } from "@/lib/auth";
-import { getPatientsByReviewer } from "@/lib/api/assignments";
+import { useReviewerPatients, useReviewerPatientManagement } from "@/hooks/use-reviewer-queries";
 import { useToast } from "@/hooks/use-toast";
 import { Patient, CareLevel, PatientStatus } from "@/lib/types/patients";
 import { formatDate } from "@/lib/utils";
@@ -51,17 +51,32 @@ import {
   ClipboardCheck,
   List,
   Grid3X3,
+  Loader2,
 } from "lucide-react";
 
 export default function ReviewerPatientsPage() {
   const { user, logout, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [assignedPatients, setAssignedPatients] = useState<Patient[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterLevel, setFilterLevel] = useState<CareLevel | "all">("all");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+
+  // 🚀 TanStack Query - Replace manual data fetching
+  const {
+    data: assignedPatients = [],
+    isLoading,
+    error,
+    refetch,
+  } = useReviewerPatients();
+
+  // 🚀 TanStack Query - Get filtered patients
+  const {
+    data: filteredPatients = [],
+  } = useReviewerPatientManagement({
+    search: searchTerm,
+    careLevel: filterLevel,
+  });
 
   // Check permissions
   useEffect(() => {
@@ -78,24 +93,6 @@ export default function ReviewerPatientsPage() {
       return;
     }
   }, [user, router, authLoading]);
-
-  useEffect(() => {
-    const fetchAssignedPatients = async () => {
-      if (!user) return;
-
-      setIsLoading(true);
-      try {
-        const patients = await getPatientsByReviewer(user.id);
-        setAssignedPatients(patients);
-      } catch (error) {
-        console.error("Failed to fetch assigned patients:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAssignedPatients();
-  }, [user]);
 
   // Memoize helper functions to prevent recreation on every render
   const getCareLevelColor = useCallback((careLevel?: CareLevel) => {
@@ -126,25 +123,7 @@ export default function ReviewerPatientsPage() {
     }
   }, []);
 
-  // Memoize filtered patients to prevent unnecessary recalculations
-  const filteredPatients = useMemo(() => {
-    return assignedPatients.filter((patient) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        patient.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (patient.medicalRecordNumber &&
-          patient.medicalRecordNumber
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()));
 
-      const matchesFilter =
-        filterLevel === "all" || patient.careLevel === filterLevel;
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [assignedPatients, searchTerm, filterLevel]);
 
   const formatAssignedDate = (dateString?: string) => {
     if (!dateString) return "N/A";
@@ -155,25 +134,27 @@ export default function ReviewerPatientsPage() {
   // Show loading while auth is loading
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background w-full">
+      <div className="min-h-screen bg-background">
         <RoleHeader role="reviewer" />
-        <main className="container mx-auto px-4 py-6 w-full max-w-7xl">
-          <div className="space-y-6">
-            <div className="h-8 bg-gray-200 rounded animate-pulse w-48"></div>
-            <div className="h-96 bg-gray-200 rounded animate-pulse"></div>
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
           </div>
-        </main>
+        </div>
       </div>
     );
   }
 
   if (!user || user.role !== "reviewer") {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-center">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <div className="text-muted-foreground">
-            Access denied. Reviewer role required.
+      <div className="min-h-screen bg-background">
+        <RoleHeader role="reviewer" />
+        <div className="container mx-auto px-4 py-6">
+          <div className="text-center">
+            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <div className="text-muted-foreground">
+              Access denied. Reviewer role required.
+            </div>
           </div>
         </div>
       </div>
@@ -181,8 +162,7 @@ export default function ReviewerPatientsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background w-full">
-      {/* Header Navigation */}
+    <div className="min-h-screen bg-background">
       <RoleHeader role="reviewer" />
 
       {/* Mobile (distinct UI) */}
@@ -191,7 +171,7 @@ export default function ReviewerPatientsPage() {
       </div>
 
       {/* Desktop */}
-      <main className="hidden md:block container mx-auto px-4 py-6 w-full max-w-7xl">
+      <div className="hidden md:block container mx-auto px-4 py-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -630,7 +610,7 @@ export default function ReviewerPatientsPage() {
             ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

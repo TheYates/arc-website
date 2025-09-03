@@ -20,7 +20,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { RoleHeader } from "@/components/role-header";
-import { authenticatedGet, authenticatedPost, authenticatedDelete } from "@/lib/api/auth-headers";
+import { useCaregiverSchedules, useCaregiverScheduleMutations, useCaregiverPatients } from "@/hooks/use-caregiver-queries";
+import { Patient } from "@/lib/types/patients";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Clock,
@@ -62,20 +63,28 @@ interface CaregiverSchedule {
   };
 }
 
-interface Patient {
-  id: string;
-  user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-}
+// Using the imported Patient type from lib/types/patients
 
 export default function CaregiverSchedulesPage() {
-  const [schedules, setSchedules] = useState<CaregiverSchedule[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // 🚀 TanStack Query - Replace manual data fetching
+  const {
+    data: schedules = [],
+    isLoading,
+    error,
+    refetch: refetchSchedules,
+  } = useCaregiverSchedules();
+
+  const {
+    data: patients = [],
+    isLoading: isPatientsLoading,
+  } = useCaregiverPatients();
+
+  const {
+    createSchedule,
+    deleteSchedule,
+    isCreatingSchedule,
+    isDeletingSchedule,
+  } = useCaregiverScheduleMutations();
   const [activeTab, setActiveTab] = useState("upcoming");
   const [newScheduleDialog, setNewScheduleDialog] = useState({
     isOpen: false,
@@ -99,68 +108,10 @@ export default function CaregiverSchedulesPage() {
         router.push("/");
         return;
       }
-      fetchSchedules();
-      fetchPatients();
     }
   }, [user, authLoading, router]);
 
-  const fetchSchedules = async () => {
-    try {
-      const response = await authenticatedGet("/api/caregiver-schedules", user);
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch schedules");
-      }
-
-      const data = await response.json();
-      setSchedules(data.schedules);
-    } catch (error) {
-      console.error("Error fetching schedules:", error);
-
-      // Show error toast with Sonner
-      sonnerToast.error("Failed to Load Schedules", {
-        description: "Unable to retrieve your schedule data. Please try refreshing the page.",
-        duration: 5000,
-      });
-
-      // Also show regular toast for consistency
-      toast({
-        title: "Error",
-        description: "Failed to load schedules",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchPatients = async () => {
-    try {
-      const response = await authenticatedGet("/api/patients", user);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch patients");
-      }
-
-      const data = await response.json();
-      setPatients(data.patients);
-    } catch (error) {
-      console.error("Error fetching patients:", error);
-
-      // Show error toast with Sonner
-      sonnerToast.error("Failed to Load Patients", {
-        description: "Unable to retrieve patient list. Some features may be limited.",
-        duration: 5000,
-      });
-
-      // Also show regular toast for consistency
-      toast({
-        title: "Error",
-        description: "Failed to load patients",
-        variant: "destructive",
-      });
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -249,49 +200,21 @@ export default function CaregiverSchedulesPage() {
     });
   };
 
-  const handleDeleteSchedule = async (scheduleId: string, scheduleTitle?: string) => {
+  // 🚀 TanStack Query - Simplified delete handler
+  const handleDeleteSchedule = (scheduleId: string, scheduleTitle?: string) => {
     if (!confirm("Are you sure you want to delete this schedule?")) {
       return;
     }
 
-    try {
-      const response = await authenticatedDelete(`/api/caregiver-schedules/${scheduleId}`, user);
+    // Show success toast with Sonner
+    sonnerToast.success("Schedule Deleted Successfully", {
+      description: scheduleTitle
+        ? `"${scheduleTitle}" has been removed from your schedule.`
+        : "The schedule has been removed from your schedule.",
+      duration: 4000,
+    });
 
-      if (!response.ok) {
-        throw new Error("Failed to delete schedule");
-      }
-
-      // Show success toast with Sonner
-      sonnerToast.success("Schedule Deleted Successfully", {
-        description: scheduleTitle
-          ? `"${scheduleTitle}" has been removed from your schedule.`
-          : "The schedule has been removed from your schedule.",
-        duration: 4000,
-      });
-
-      // Also show regular toast for consistency
-      toast({
-        title: "Success",
-        description: "Schedule deleted successfully",
-      });
-
-      fetchSchedules(); // Refresh the list
-    } catch (error) {
-      console.error("Error deleting schedule:", error);
-
-      // Show error toast with Sonner
-      sonnerToast.error("Failed to Delete Schedule", {
-        description: "Unable to delete the schedule. Please try again.",
-        duration: 5000,
-      });
-
-      // Also show regular toast for consistency
-      toast({
-        title: "Error",
-        description: "Failed to delete schedule",
-        variant: "destructive",
-      });
-    }
+    deleteSchedule(scheduleId);
   };
 
   const handleNewSchedule = () => {
@@ -354,79 +277,51 @@ export default function CaregiverSchedulesPage() {
 
     const title = scheduleTypeLabels[validation.data.scheduleType as keyof typeof scheduleTypeLabels] || "Visit";
 
-    try {
-      const response = await authenticatedPost("/api/caregiver-schedules", user, {
-        patientId: validation.data.patientId,
-        scheduleType: validation.data.scheduleType,
-        title,
-        scheduledDate: validation.data.scheduledDate.toISOString(),
-        notes: validation.data.notes || "",
-      });
+    // 🚀 TanStack Query - Use mutation for creating schedule
+    const scheduleData = {
+      patientId: validation.data.patientId,
+      scheduleType: validation.data.scheduleType,
+      title,
+      scheduledDate: validation.data.scheduledDate.toISOString(),
+      notes: validation.data.notes || "",
+    };
 
-      if (!response.ok) {
-        throw new Error("Failed to create schedule");
-      }
+    // Show success toast with Sonner
+    sonnerToast.success("Schedule Created Successfully!", {
+      description: `${title} scheduled for ${validation.data.scheduledDate.toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      })}`,
+      duration: 4000,
+    });
 
-      // Show success toast with Sonner
-      sonnerToast.success("Schedule Created Successfully!", {
-        description: `${title} scheduled for ${validation.data.scheduledDate.toLocaleDateString("en-US", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric"
-        })}`,
-        duration: 4000,
-      });
+    setNewScheduleDialog({
+      isOpen: false,
+      isSubmitting: false,
+      formData: {
+        patientId: "",
+        scheduleType: "ROUTINE_VISIT",
+        scheduledDate: undefined,
+        notes: "",
+      },
+      errors: {},
+    });
 
-      // Also show the regular toast for consistency
-      toast({
-        title: "Success",
-        description: "Schedule created successfully",
-      });
-
-      setNewScheduleDialog({
-        isOpen: false,
-        isSubmitting: false,
-        formData: {
-          patientId: "",
-          scheduleType: "ROUTINE_VISIT",
-          scheduledDate: undefined,
-          notes: "",
-        },
-        errors: {},
-      });
-
-      fetchSchedules(); // Refresh the list
-    } catch (error) {
-      console.error("Error creating schedule:", error);
-
-      // Show error toast with Sonner
-      sonnerToast.error("Failed to Create Schedule", {
-        description: "Unable to create the schedule. Please check your connection and try again.",
-        duration: 5000,
-      });
-
-      // Also show regular toast for consistency
-      toast({
-        title: "Error",
-        description: "Failed to create schedule",
-        variant: "destructive",
-      });
-    } finally {
-      setNewScheduleDialog(prev => ({ ...prev, isSubmitting: false }));
-    }
+    createSchedule(scheduleData);
   };
 
-  const filterSchedulesByStatus = (status: string) => {
+  const filterSchedulesByStatus = (status: string): CaregiverSchedule[] => {
     const now = new Date();
     switch (status) {
       case "upcoming":
-        return schedules.filter(schedule => 
+        return schedules.filter((schedule: CaregiverSchedule) =>
           (schedule.status === "SCHEDULED" || schedule.status === "IN_PROGRESS") &&
           new Date(schedule.scheduledDate) >= now
         );
       case "past":
-        return schedules.filter(schedule => 
+        return schedules.filter((schedule: CaregiverSchedule) =>
           new Date(schedule.scheduledDate) < now &&
           (schedule.status === "COMPLETED" || schedule.status === "CANCELLED" || schedule.status === "NO_SHOW")
         );
@@ -435,8 +330,8 @@ export default function CaregiverSchedulesPage() {
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        return schedules.filter(schedule => {
+
+        return schedules.filter((schedule: CaregiverSchedule) => {
           const scheduleDate = new Date(schedule.scheduledDate);
           return scheduleDate >= today && scheduleDate < tomorrow;
         });
@@ -588,7 +483,7 @@ export default function CaregiverSchedulesPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredSchedules.map((schedule) => (
+                      {filteredSchedules.map((schedule: CaregiverSchedule) => (
                         <TableRow
                           key={schedule.id}
                           className="hover:bg-muted/50"
@@ -708,7 +603,7 @@ export default function CaregiverSchedulesPage() {
                           patient => patient.id === newScheduleDialog.formData.patientId
                         );
                         return selectedPatient
-                          ? `${selectedPatient.user.firstName} ${selectedPatient.user.lastName}`
+                          ? `${selectedPatient.firstName} ${selectedPatient.lastName}`
                           : "Select patient...";
                       })()
                     ) : (
@@ -736,10 +631,10 @@ export default function CaregiverSchedulesPage() {
                       <CommandList>
                         <CommandEmpty>No patient found.</CommandEmpty>
                         <CommandGroup>
-                          {patients.map((patient) => (
+                          {patients.map((patient: Patient) => (
                             <CommandItem
                               key={patient.id}
-                              value={`${patient.user.firstName} ${patient.user.lastName} ${patient.user.email}`}
+                              value={`${patient.firstName} ${patient.lastName} ${patient.email}`}
                               onSelect={() => {
                                 setNewScheduleDialog(prev => ({
                                   ...prev,
@@ -761,8 +656,8 @@ export default function CaregiverSchedulesPage() {
                                 )}
                               />
                               <div className="flex flex-col">
-                                <span>{patient.user.firstName} {patient.user.lastName}</span>
-                                <span className="text-sm text-muted-foreground">{patient.user.email}</span>
+                                <span>{patient.firstName} {patient.lastName}</span>
+                                <span className="text-sm text-muted-foreground">{patient.email}</span>
                               </div>
                             </CommandItem>
                           ))}
@@ -900,9 +795,9 @@ export default function CaregiverSchedulesPage() {
             </Button>
             <Button
               onClick={handleSubmitNewSchedule}
-              disabled={newScheduleDialog.isSubmitting}
+              disabled={isCreatingSchedule}
             >
-              {newScheduleDialog.isSubmitting ? "Creating..." : "Create Schedule"}
+              {isCreatingSchedule ? "Creating..." : "Create Schedule"}
             </Button>
           </DialogFooter>
           </div>

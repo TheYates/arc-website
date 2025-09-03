@@ -26,7 +26,7 @@ import { ReviewerMobileDashboard } from "@/components/mobile/reviewer-dashboard"
 import { RoleBottomNav } from "@/components/mobile/role-bottom-nav";
 import { ActivityFeed } from "@/components/activity-feed/activity-feed";
 import { useAuth } from "@/lib/auth";
-import { getPatientsByReviewer } from "@/lib/api/assignments";
+import { useReviewerDashboard } from "@/hooks/use-reviewer-queries";
 import { Patient } from "@/lib/types/patients";
 import {
   Heart,
@@ -53,8 +53,15 @@ export default function ReviewerPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [assignedPatients, setAssignedPatients] = useState<Patient[]>([]);
-  const [isLoadingPatients, setIsLoadingPatients] = useState(true);
+
+  // 🚀 TanStack Query - Replace manual data fetching
+  const {
+    patients: assignedPatients,
+    stats,
+    isLoading: isLoadingPatients,
+    error,
+    refetchAll,
+  } = useReviewerDashboard();
 
   // Update time every minute
   useEffect(() => {
@@ -63,24 +70,6 @@ export default function ReviewerPage() {
     }, 60000);
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    const fetchAssignedPatients = async () => {
-      if (!user) return;
-
-      setIsLoadingPatients(true);
-      try {
-        const patients = await getPatientsByReviewer(user.id);
-        setAssignedPatients(patients);
-      } catch (error) {
-        console.error("Failed to fetch assigned patients:", error);
-      } finally {
-        setIsLoadingPatients(false);
-      }
-    };
-
-    fetchAssignedPatients();
-  }, [user]);
 
   // Check permissions
   useEffect(() => {
@@ -113,11 +102,14 @@ export default function ReviewerPage() {
 
   if (!user || user.role !== "reviewer") {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-center">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <div className="text-muted-foreground">
-            Access denied. Reviewer role required.
+      <div className="min-h-screen bg-background">
+        <RoleHeader role="reviewer" />
+        <div className="container mx-auto px-4 py-6">
+          <div className="text-center">
+            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <div className="text-muted-foreground">
+              Access denied. Reviewer role required.
+            </div>
           </div>
         </div>
       </div>
@@ -125,8 +117,7 @@ export default function ReviewerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background w-full">
-      {/* Header Navigation */}
+    <div className="min-h-screen bg-background">
       <RoleHeader role="reviewer" />
 
       {/* Mobile (distinct UI) */}
@@ -135,7 +126,7 @@ export default function ReviewerPage() {
       </div>
 
       {/* Desktop */}
-      <main className="hidden md:block container mx-auto px-4 py-6 w-full max-w-7xl">
+      <div className="hidden md:block container mx-auto px-4 py-6 space-y-6">
         {/* Welcome Header */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -176,7 +167,7 @@ export default function ReviewerPage() {
                     Assigned Patients
                   </p>
                   <p className="text-2xl font-bold">
-                    {isLoadingPatients ? "..." : assignedPatients.length}
+                    {isLoadingPatients ? "..." : stats.assignedPatients}
                   </p>
                 </div>
               </div>
@@ -194,7 +185,7 @@ export default function ReviewerPage() {
                   <p className="text-sm font-medium text-muted-foreground">
                     Pending Reviews
                   </p>
-                  <p className="text-2xl font-bold">3</p>
+                  <p className="text-2xl font-bold">{stats.pendingReviews}</p>
                 </div>
               </div>
             </CardContent>
@@ -211,7 +202,7 @@ export default function ReviewerPage() {
                   <p className="text-sm font-medium text-muted-foreground">
                     Reviews This Week
                   </p>
-                  <p className="text-2xl font-bold">12</p>
+                  <p className="text-2xl font-bold">{stats.reviewsThisWeek}</p>
                 </div>
               </div>
             </CardContent>
@@ -228,7 +219,7 @@ export default function ReviewerPage() {
                   <p className="text-sm font-medium text-muted-foreground">
                     Priority Cases
                   </p>
-                  <p className="text-2xl font-bold">1</p>
+                  <p className="text-2xl font-bold">{stats.priorityCases}</p>
                 </div>
               </div>
             </CardContent>
@@ -245,7 +236,7 @@ export default function ReviewerPage() {
                   <Users className="h-5 w-5 mr-2 text-purple-600" />
                   My Patients for Review
                 </div>
-                <Badge variant="outline">{assignedPatients.length}/5</Badge>
+                <Badge variant="outline">{stats.assignedPatients}/5</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -393,7 +384,7 @@ export default function ReviewerPage() {
             showLoadMore={false}
           />
         </div>
-      </main>
+      </div>
     </div>
   );
 }

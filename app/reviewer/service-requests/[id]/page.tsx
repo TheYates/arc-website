@@ -249,23 +249,33 @@ export default function ReviewerServiceRequestDetailPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="min-h-screen bg-background">
+        <RoleHeader role="reviewer" />
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!serviceRequest) {
     return (
-      <div className="text-center py-10">
-        <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <div className="text-muted-foreground">Service request not found</div>
+      <div className="min-h-screen bg-background">
+        <RoleHeader role="reviewer" />
+        <div className="container mx-auto px-4 py-6">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <div className="text-muted-foreground">Service request not found</div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-background">
       <RoleHeader role="reviewer" />
 
       <div className="container mx-auto px-4 py-6 space-y-6">
@@ -510,6 +520,6 @@ export default function ReviewerServiceRequestDetailPage() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

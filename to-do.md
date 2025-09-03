@@ -18,6 +18,9 @@ Bottom Line: The app can handle 50-100 concurrent users comfortably with the cur
 
 Would you like me to implement any of these optimizations or help you set up performance monitoring?
 
+1. remove the search from the caregiver and reviewer header
+2. if caregiver/schedules and caregiver/notifications has no tanstack query, add it
+3. i dont see header text for caregiver/notifications
 
 
 what about redis, tanstack, zustand and ssr, csr and isr? do i need any of these?

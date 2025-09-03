@@ -26,7 +26,7 @@ import { CaregiverMobileDashboard } from "@/components/mobile/caregiver-dashboar
 import { RoleBottomNav } from "@/components/mobile/role-bottom-nav";
 import { ActivityFeed } from "@/components/activity-feed/activity-feed";
 import { useAuth, hasPermission } from "@/lib/auth";
-import { getPatientsByCaregiver } from "@/lib/api/assignments";
+import { useCaregiverDashboard } from "@/hooks/use-caregiver-queries";
 import { Patient } from "@/lib/types/patients";
 import { formatDate } from "@/lib/utils";
 import {
@@ -59,8 +59,15 @@ export default function CaregiverPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [assignedPatients, setAssignedPatients] = useState<Patient[]>([]);
-  const [isLoadingPatients, setIsLoadingPatients] = useState(true);
+
+  // 🚀 TanStack Query - Replace manual data fetching
+  const {
+    patients: assignedPatients,
+    stats,
+    isLoading: isLoadingPatients,
+    error,
+    refetchAll,
+  } = useCaregiverDashboard();
 
   // Update time every minute
   useEffect(() => {
@@ -69,24 +76,6 @@ export default function CaregiverPage() {
     }, 60000);
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    const fetchAssignedPatients = async () => {
-      if (!user) return;
-
-      setIsLoadingPatients(true);
-      try {
-        const patients = await getPatientsByCaregiver(user.id);
-        setAssignedPatients(patients);
-      } catch (error) {
-        console.error("Failed to fetch assigned patients:", error);
-      } finally {
-        setIsLoadingPatients(false);
-      }
-    };
-
-    fetchAssignedPatients();
-  }, [user]);
 
   // Check permissions
   useEffect(() => {
@@ -119,11 +108,14 @@ export default function CaregiverPage() {
 
   if (!user || user.role !== "caregiver") {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-center">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <div className="text-muted-foreground">
-            Access denied. Caregiver role required.
+      <div className="min-h-screen bg-background">
+        <RoleHeader role="caregiver" />
+        <div className="container mx-auto px-4 py-6">
+          <div className="text-center">
+            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <div className="text-muted-foreground">
+              Access denied. Caregiver role required.
+            </div>
           </div>
         </div>
       </div>
@@ -141,7 +133,7 @@ export default function CaregiverPage() {
       </div>
 
       {/* Desktop */}
-      <main className="hidden md:block container mx-auto px-4 py-6 max-w-7xl space-y-6">
+      <div className="hidden md:block container mx-auto px-4 py-6 space-y-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -209,7 +201,7 @@ export default function CaregiverPage() {
                     Active Patients
                   </p>
                   <div className="flex items-baseline">
-                    <h3 className="text-3xl font-bold text-teal-600">{assignedPatients.length}</h3>
+                    <h3 className="text-3xl font-bold text-teal-600">{stats.activePatients}</h3>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Assigned to you
@@ -230,7 +222,7 @@ export default function CaregiverPage() {
                     Today's Tasks
                   </p>
                   <div className="flex items-baseline">
-                    <h3 className="text-3xl font-bold text-blue-600">0</h3>
+                    <h3 className="text-3xl font-bold text-blue-600">{stats.todaysTasks}</h3>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Pending completion
@@ -251,7 +243,7 @@ export default function CaregiverPage() {
                     Hours This Week
                   </p>
                   <div className="flex items-baseline">
-                    <h3 className="text-3xl font-bold text-green-600">0</h3>
+                    <h3 className="text-3xl font-bold text-green-600">{stats.hoursThisWeek}</h3>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Out of 40 scheduled
@@ -272,7 +264,7 @@ export default function CaregiverPage() {
                     Notifications
                   </p>
                   <div className="flex items-baseline">
-                    <h3 className="text-3xl font-bold text-purple-600">2</h3>
+                    <h3 className="text-3xl font-bold text-purple-600">{stats.notifications}</h3>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Unread messages
@@ -299,7 +291,7 @@ export default function CaregiverPage() {
                   </CardTitle>
                   <CardDescription>Patients assigned to your care</CardDescription>
                 </div>
-                <Badge variant="outline" className="text-xs">{assignedPatients.length}/8</Badge>
+                <Badge variant="outline" className="text-xs">{stats.activePatients}/8</Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -368,7 +360,7 @@ export default function CaregiverPage() {
                       size="sm"
                       onClick={() => router.push("/caregiver/patients")}
                     >
-                      View All {assignedPatients.length} Patients
+                      View All {stats.activePatients} Patients
                     </Button>
                   )}
                 </div>
@@ -528,7 +520,7 @@ export default function CaregiverPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   );
 }

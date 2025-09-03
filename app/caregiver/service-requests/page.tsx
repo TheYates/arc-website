@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth";
 import { RoleHeader } from "@/components/role-header";
+import { useCaregiverServiceRequests } from "@/hooks/use-caregiver-queries";
 import {
   authenticatedGet,
   authenticatedPatch,
@@ -91,12 +92,18 @@ interface ServiceRequest {
 }
 
 export default function CaregiverServiceRequestsPage() {
-  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("requestedDate");
+
+  // 🚀 TanStack Query - Replace manual data fetching
+  const {
+    data: serviceRequests = [],
+    isLoading,
+    error,
+    refetch,
+  } = useCaregiverServiceRequests();
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isScheduling, setIsScheduling] = useState<string | null>(null);
   const [scheduleDialog, setScheduleDialog] = useState<{
@@ -134,7 +141,6 @@ export default function CaregiverServiceRequestsPage() {
         router.push("/");
         return;
       }
-      fetchServiceRequests();
     }
   }, [user, authLoading, router]);
 
@@ -162,27 +168,7 @@ export default function CaregiverServiceRequestsPage() {
     };
   }, [scheduleDialog.isCalendarOpen]);
 
-  const fetchServiceRequests = async () => {
-    try {
-      const response = await authenticatedGet("/api/service-requests", user);
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch service requests");
-      }
-
-      const data = await response.json();
-      setServiceRequests(data.serviceRequests);
-    } catch (error) {
-      console.error("Error fetching service requests:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load service requests",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleScheduleRequest = (request: ServiceRequest) => {
     setScheduleDialog({
@@ -236,7 +222,7 @@ export default function CaregiverServiceRequestsPage() {
         outcome: "",
       });
 
-      fetchServiceRequests();
+      refetch();
     } catch (error) {
       console.error("Error completing service request:", error);
       toast({
@@ -336,7 +322,7 @@ export default function CaregiverServiceRequestsPage() {
         notes: "",
         isCalendarOpen: false,
       });
-      fetchServiceRequests();
+      refetch();
     } catch (error) {
       console.error("Error scheduling service request:", error);
       toast({
@@ -398,20 +384,20 @@ export default function CaregiverServiceRequestsPage() {
       switch (statusFilter) {
         case "pending":
           filtered = filtered.filter(
-            (req) => req.status === "PENDING" || req.status === "APPROVED"
+            (req: ServiceRequest) => req.status === "PENDING" || req.status === "APPROVED"
           );
           break;
         case "scheduled":
           filtered = filtered.filter(
-            (req) => req.status === "SCHEDULED" || req.status === "IN_PROGRESS"
+            (req: ServiceRequest) => req.status === "SCHEDULED" || req.status === "IN_PROGRESS"
           );
           break;
         case "completed":
-          filtered = filtered.filter((req) => req.status === "COMPLETED");
+          filtered = filtered.filter((req: ServiceRequest) => req.status === "COMPLETED");
           break;
         case "cancelled":
           filtered = filtered.filter(
-            (req) => req.status === "CANCELLED" || req.status === "REJECTED"
+            (req: ServiceRequest) => req.status === "CANCELLED" || req.status === "REJECTED"
           );
           break;
       }
@@ -420,7 +406,7 @@ export default function CaregiverServiceRequestsPage() {
     // Filter by priority
     if (priorityFilter !== "all") {
       filtered = filtered.filter(
-        (req) => req.priority === priorityFilter.toUpperCase()
+        (req: ServiceRequest) => req.priority === priorityFilter.toUpperCase()
       );
     }
 
@@ -428,7 +414,7 @@ export default function CaregiverServiceRequestsPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (req) =>
+        (req: ServiceRequest) =>
           req.serviceType?.name.toLowerCase().includes(query) ||
           req.patient.user.firstName.toLowerCase().includes(query) ||
           req.patient.user.lastName.toLowerCase().includes(query) ||
@@ -437,7 +423,7 @@ export default function CaregiverServiceRequestsPage() {
     }
 
     // Sort
-    filtered.sort((a, b) => {
+    filtered.sort((a: ServiceRequest, b: ServiceRequest) => {
       let aValue: any;
       let bValue: any;
 
@@ -639,7 +625,7 @@ export default function CaregiverServiceRequestsPage() {
               <div className="text-2xl font-bold text-orange-600">
                 {
                   serviceRequests.filter(
-                    (req) =>
+                    (req: ServiceRequest) =>
                       req.status === "PENDING" || req.status === "APPROVED"
                   ).length
                 }
@@ -652,7 +638,7 @@ export default function CaregiverServiceRequestsPage() {
               <div className="text-2xl font-bold text-blue-600">
                 {
                   serviceRequests.filter(
-                    (req) =>
+                    (req: ServiceRequest) =>
                       req.status === "SCHEDULED" || req.status === "IN_PROGRESS"
                   ).length
                 }
@@ -664,7 +650,7 @@ export default function CaregiverServiceRequestsPage() {
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-green-600">
                 {
-                  serviceRequests.filter((req) => req.status === "COMPLETED")
+                  serviceRequests.filter((req: ServiceRequest) => req.status === "COMPLETED")
                     .length
                 }
               </div>
@@ -676,7 +662,7 @@ export default function CaregiverServiceRequestsPage() {
               <div className="text-2xl font-bold text-gray-600">
                 {
                   serviceRequests.filter(
-                    (req) =>
+                    (req: ServiceRequest) =>
                       req.status === "CANCELLED" || req.status === "REJECTED"
                   ).length
                 }
@@ -813,7 +799,7 @@ export default function CaregiverServiceRequestsPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredRequests.map((request) => (
+                    filteredRequests.map((request: ServiceRequest) => (
                       <TableRow
                         key={request.id}
                         className="hover:bg-muted/50 h-12"

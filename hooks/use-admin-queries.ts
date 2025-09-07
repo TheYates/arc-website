@@ -91,19 +91,19 @@ export function usePatientManagement(page = 1, limit = 50) {
     pagination: patientsQuery.data?.pagination,
     availableStaff: staffQuery.data || { caregivers: [], reviewers: [] },
     workloadStats: workloadQuery.data || { caregivers: [], reviewers: [] },
-    
+
     // Loading states
     isLoading: patientsQuery.isLoading || staffQuery.isLoading || workloadQuery.isLoading,
     isPatientsLoading: patientsQuery.isLoading,
     isStaffLoading: staffQuery.isLoading,
     isWorkloadLoading: workloadQuery.isLoading,
-    
+
     // Error states
     error: patientsQuery.error || staffQuery.error || workloadQuery.error,
     patientsError: patientsQuery.error,
     staffError: staffQuery.error,
     workloadError: workloadQuery.error,
-    
+
     // Refetch functions
     refetchPatients: patientsQuery.refetch,
     refetchStaff: staffQuery.refetch,
@@ -116,15 +116,69 @@ export function usePatientManagement(page = 1, limit = 50) {
   };
 }
 
+// Optimized hook for patient management page with fast endpoints
+export function useOptimizedPatientManagement(page = 1, limit = 50) {
+  const { user } = useAuth();
+
+  // Single optimized query that fetches patients and staff data together
+  const fastQuery = useQuery({
+    queryKey: ['admin', 'patients', 'fast', page, limit],
+    queryFn: async () => {
+      const [patientsResponse, staffResponse] = await Promise.all([
+        fetch(`/api/admin/patients/fast?page=${page}&limit=${limit}`),
+        fetch('/api/admin/staff/fast')
+      ]);
+
+      const [patientsData, staffData] = await Promise.all([
+        patientsResponse.json(),
+        staffResponse.json()
+      ]);
+
+      return {
+        patients: patientsData.patients || [],
+        pagination: patientsData.pagination,
+        stats: patientsData.stats,
+        availableStaff: {
+          caregivers: staffData.caregivers || [],
+          reviewers: staffData.reviewers || []
+        },
+        loadTime: Math.max(patientsData.meta?.loadTime || 0, staffData.meta?.loadTime || 0)
+      };
+    },
+    enabled: !!user,
+    staleTime: 30000, // Cache for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+  });
+
+  return {
+    // Data
+    patients: fastQuery.data?.patients || [],
+    pagination: fastQuery.data?.pagination,
+    availableStaff: fastQuery.data?.availableStaff || { caregivers: [], reviewers: [] },
+    stats: fastQuery.data?.stats,
+    loadTime: fastQuery.data?.loadTime,
+
+    // Loading states
+    isLoading: fastQuery.isLoading,
+
+    // Error states
+    error: fastQuery.error,
+
+    // Refetch functions
+    refetchAll: fastQuery.refetch,
+  };
+}
+
 // Mutations for patient management
 export function usePatientMutations() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Assign patient to caregiver
   const assignCaregiver = useMutation({
     mutationFn: ({ patientId, caregiverId }: { patientId: string; caregiverId: string }) =>
-      assignPatientToCaregiver(patientId, caregiverId),
+      assignPatientToCaregiver(patientId, caregiverId, user?.id || 'system'),
     onSuccess: (data, variables) => {
       // Invalidate and refetch related queries
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.patients.all });
@@ -147,7 +201,7 @@ export function usePatientMutations() {
   // Assign patient to reviewer
   const assignReviewer = useMutation({
     mutationFn: ({ patientId, reviewerId }: { patientId: string; reviewerId: string }) =>
-      assignPatientToReviewer(patientId, reviewerId),
+      assignPatientToReviewer(patientId, reviewerId, user?.id || 'system'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.patients.all });
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.staff.workload() });
@@ -244,12 +298,57 @@ export function usePatientMutations() {
     removePatientAssignment,
     updatePatient: updatePatientMutation,
     deletePatient: deletePatientMutation,
-    
+
     // Loading states
     isAssigningCaregiver: assignCaregiver.isPending,
     isAssigningReviewer: assignReviewer.isPending,
     isRemovingAssignment: removePatientAssignment.isPending,
     isUpdatingPatient: updatePatientMutation.isPending,
     isDeletingPatient: deletePatientMutation.isPending,
+  };
+}
+
+// Optimized hook for patient details page
+export function useOptimizedPatientDetails(patientId: string) {
+  const { user } = useAuth();
+
+  // Single optimized query that fetches patient details and staff data together
+  const fastQuery = useQuery({
+    queryKey: ['admin', 'patients', 'details', 'fast', patientId],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/patients/${patientId}/fast`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch patient details');
+      }
+
+      return {
+        patient: data.patient,
+        availableStaff: data.availableStaff || { caregivers: [], reviewers: [] },
+        stats: data.stats,
+        loadTime: data.meta?.loadTime || 0
+      };
+    },
+    enabled: !!user && !!patientId,
+    staleTime: 30000, // Cache for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+  });
+
+  return {
+    // Data
+    patient: fastQuery.data?.patient || null,
+    availableStaff: fastQuery.data?.availableStaff || { caregivers: [], reviewers: [] },
+    stats: fastQuery.data?.stats,
+    loadTime: fastQuery.data?.loadTime,
+
+    // Loading states
+    isLoading: fastQuery.isLoading,
+
+    // Error states
+    error: fastQuery.error,
+
+    // Refetch functions
+    refetch: fastQuery.refetch,
   };
 }

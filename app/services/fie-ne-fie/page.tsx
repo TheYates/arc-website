@@ -35,6 +35,7 @@ import Testimonials from "@/components/testimonials";
 import Image from "next/image";
 import { HeroImage } from "@/components/ui/optimized-image";
 import { IMAGES, ALT_TEXTS } from "@/lib/constants/images";
+import ComingSoonPage from "@/components/coming-soon-page";
 
 // Utility function to format price
 const formatPrice = (price: number): string => {

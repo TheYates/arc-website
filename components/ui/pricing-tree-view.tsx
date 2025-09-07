@@ -4,7 +4,7 @@ import { useState } from "react"
 import { ChevronDown, ChevronRight, Plus, Edit, Trash2, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import type { PricingItem } from "@/lib/types/pricing"
+import type { PricingItem } from "@/lib/types/packages"
 
 interface TreeViewProps {
   items: PricingItem[]
@@ -35,7 +35,7 @@ const TreeNode = ({ item, level, onAdd, onEdit, onDelete, onClone }: TreeNodePro
         return "bg-purple-100 text-purple-800"
       case "feature":
         return "bg-orange-100 text-orange-800"
-      case "subFeature":
+      case "addon":
         return "bg-green-100 text-green-800"
       default:
         return "bg-gray-100 text-gray-800"
@@ -49,11 +49,11 @@ const TreeNode = ({ item, level, onAdd, onEdit, onDelete, onClone }: TreeNodePro
       case "plan":
         return "feature"
       case "feature":
-        return "subFeature"
-      case "subFeature":
-        return "subFeature"
+        return "addon"
+      case "addon":
+        return "addon"
       default:
-        return "subFeature"
+        return "addon"
     }
   }
 

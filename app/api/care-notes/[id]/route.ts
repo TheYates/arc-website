@@ -65,11 +65,9 @@ export async function PUT(
     } = body;
 
     const note = await updateCareNote(id, {
-      title,
       content,
       priority,
       status,
-      tags,
       isPrivate,
       followUpRequired,
       followUpDate,

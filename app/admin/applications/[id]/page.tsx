@@ -43,7 +43,7 @@ import {
 } from "@/lib/api/applications";
 import { ApplicationData } from "@/lib/types/applications";
 import { useAuth } from "@/lib/auth";
-import { AdminApplicationDetailMobile } from "@/components/mobile/admin-application-detail";
+
 import { InvoiceManagement } from "@/components/admin/invoice-management";
 import {
   Calendar,
@@ -320,12 +320,7 @@ export default function ApplicationDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <AdminApplicationDetailMobile id={id} />
-      </div>
-
-      <div className="hidden md:flex justify-between items-center">
+      <div className="flex justify-between items-center">
         <Button
           variant="ghost"
           className="flex items-center"

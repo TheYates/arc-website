@@ -9,18 +9,4 @@ Patients can request for their caregiver to come and "services" them e.g wound d
 
 
 
-Add database indexes for common queries
-Implement React Query for client-side caching
-Optimize API routes to reduce database calls
-Add error boundaries for better error handling
-Monitor performance with logging
-Bottom Line: The app can handle 50-100 concurrent users comfortably with the current setup. For more users, you'd need infrastructure upgrades and performance optimizations.
 
-Would you like me to implement any of these optimizations or help you set up performance monitoring?
-
-1. remove the search from the caregiver and reviewer header
-2. if caregiver/schedules and caregiver/notifications has no tanstack query, add it
-3. i dont see header text for caregiver/notifications
-
-
-what about redis, tanstack, zustand and ssr, csr and isr? do i need any of these?

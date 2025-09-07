@@ -144,6 +144,14 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL(redirectPath, request.url))
     }
 
+    // Super admin only paths
+    const superAdminOnlyPaths = ['/admin/rate-limiting', '/admin/redis']
+    if (superAdminOnlyPaths.some(path => pathname.startsWith(path)) && userRole !== 'super_admin') {
+      console.log(`🚫 Middleware: Unauthorized access attempt to super admin path ${pathname} by role ${userRole}`)
+      // Redirect to admin dashboard
+      return NextResponse.redirect(new URL('/admin', request.url))
+    }
+
     // Role-based access control for caregiver paths
     if (pathname.startsWith('/caregiver') && userRole !== 'caregiver') {
       console.log(`🚫 Middleware: Unauthorized access attempt to ${pathname} by role ${userRole}`)

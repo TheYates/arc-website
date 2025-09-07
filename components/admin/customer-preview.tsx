@@ -66,7 +66,7 @@ export const CustomerPreview = ({ isOpen, onClose, services = [] }: CustomerPrev
 
   const renderService = (service: PricingItem) => {
     const selectedPlanId = getSelectedPlanForService(service.id)
-    const totalPrice = calculateTotalPrice(service, selectedPlans, selectedFeatures)
+    const totalPrice = calculateTotalPrice(service, selectedFeatures)
 
     return (
       <div key={service.id} className="mb-12">

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/database/postgresql'
 import { MedicationCatalog, Prescription, MedicationAdministration, PrescriptionStatus, MedicationAdministrationStatus } from '@prisma/client'
+import { Medication } from '@/lib/types/medications'
 
 export interface CreateMedicationData {
   name: string
@@ -64,9 +65,9 @@ export async function getAllMedications(): Promise<MedicationCatalog[]> {
 }
 
 // Get medication by ID
-export async function getMedicationById(id: string): Promise<Medication | null> {
+export async function getMedicationById(id: string): Promise<MedicationCatalog | null> {
   try {
-    return await prisma.medication.findUnique({
+    return await prisma.medicationCatalog.findUnique({
       where: { id },
     })
   } catch (error) {
@@ -290,6 +291,9 @@ export async function createPrescription(data: CreatePrescriptionData): Promise<
       patientId: data.patientId,
       medicationId: data.medicationId,
       prescribedById: data.prescribedById,
+      dosage: 'To be determined', // Required field - TODO: Add to CreatePrescriptionData interface
+      frequency: 'To be determined', // Required field - TODO: Add to CreatePrescriptionData interface
+      route: 'oral', // Required field - TODO: Add to CreatePrescriptionData interface
       instructions: data.instructions || '',
       startDate: data.startDate,
       endDate: data.endDate,
@@ -298,7 +302,7 @@ export async function createPrescription(data: CreatePrescriptionData): Promise<
       monitoringInstructions: data.monitoringInstructions,
       costEstimate: data.costEstimate,
       insuranceCovered: data.insuranceCovered ?? true,
-      status: 'DRAFT',
+      status: 'DRAFT' as PrescriptionStatus,
     }
 
     return await prisma.prescription.create({
@@ -363,28 +367,12 @@ export async function getMedicationAdministrationsByPatient(patientId: string): 
   try {
     return await prisma.medicationAdministration.findMany({
       where: { patientId },
-      select: {
-        id: true,
-        prescriptionId: true,
-        scheduledTime: true,
-        administeredTime: true,
-        status: true,
-        dosageGiven: true,
-        notes: true,
-        sideEffectsObserved: true,
-        createdAt: true,
+      // Removed select to return full MedicationAdministration objects
+      include: {
         prescription: {
-          select: {
-            id: true,
-            instructions: true,
-            medication: {
-              select: {
-                id: true,
-                name: true,
-                generic_name: true,
-              }
-            },
-          },
+          include: {
+            medication: true,
+          }
         },
         administeredBy: {
           select: {

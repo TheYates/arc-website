@@ -71,7 +71,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AdminUsersMobile } from "@/components/mobile/admin-users";
+
 import { PasswordResetDialog } from "@/components/admin/password-reset-dialog";
 
 export default function UsersPage() {
@@ -289,14 +289,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Mobile View */}
-      <div className="md:hidden">
-        <AdminUsersMobile
-          loader={loader}
-          title="User Management"
-          subtitle="Manage platform users and their roles"
-        />
-      </div>
+
 
       {/* Desktop View */}
       <div className="hidden md:block space-y-6">

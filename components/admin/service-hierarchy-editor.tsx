@@ -33,7 +33,14 @@ import {
   Diamond,
   Square,
 } from "lucide-react";
-import { ServiceItem, ServiceCategory } from "@/lib/api/services-sqlite";
+import { ServiceItem } from "@prisma/client";
+
+// Define ServiceCategory type since it's not in Prisma
+interface ServiceCategory {
+  id: string;
+  name: string;
+  items?: ServiceItem[];
+}
 
 interface HierarchyItem {
   id: string;
@@ -121,8 +128,8 @@ export default function ServiceHierarchyEditor({
       const hierarchyItem: HierarchyItem = {
         id: item.id,
         name: item.name,
-        isOptional: item.isOptional,
-        itemLevel: item.itemLevel,
+        isOptional: !item.isRequired, // Convert isRequired to isOptional
+        itemLevel: item.level, // Use level instead of itemLevel
         sortOrder: item.sortOrder,
         children: [],
         isExpanded: true,
@@ -133,8 +140,8 @@ export default function ServiceHierarchyEditor({
     // Build parent-child relationships
     items.forEach((item) => {
       const hierarchyItem = itemMap.get(item.id)!;
-      if (item.parentItemId) {
-        const parent = itemMap.get(item.parentItemId);
+      if (item.parentId) {
+        const parent = itemMap.get(item.parentId);
         if (parent) {
           parent.children.push(hierarchyItem);
         } else {

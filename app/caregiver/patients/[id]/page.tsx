@@ -61,7 +61,7 @@ import { RoleHeader } from "@/components/role-header";
 import { useToast } from "@/hooks/use-toast";
 
 import { PatientSymptomReportForm } from "@/components/medical/patient-symptom-report-form";
-import { CaregiverPatientMobile } from "@/components/mobile/caregiver-patient-detail";
+
 import {
   CareNotesForm,
   CareNotesHistory,
@@ -236,13 +236,8 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
     <div className="min-h-screen bg-background">
       <RoleHeader role="caregiver" />
 
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <CaregiverPatientMobile patientId={resolvedParams.id} />
-      </div>
-
-      {/* Desktop */}
-      <div className="hidden md:block container mx-auto px-4 py-6 space-y-6">
+      {/* Responsive UI */}
+      <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Back Button */}
         <div className="mb-6">
           <Button

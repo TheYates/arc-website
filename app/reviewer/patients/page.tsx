@@ -23,7 +23,7 @@ import {
 import { CommandSearch } from "@/components/ui/command-search";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
-import { ReviewerPatientsMobile } from "@/components/mobile/reviewer-patients";
+
 import { useAuth } from "@/lib/auth";
 import { useReviewerPatients, useReviewerPatientManagement } from "@/hooks/use-reviewer-queries";
 import { useToast } from "@/hooks/use-toast";
@@ -165,9 +165,11 @@ export default function ReviewerPatientsPage() {
     <div className="min-h-screen bg-background">
       <RoleHeader role="reviewer" />
 
-      {/* Mobile (distinct UI) */}
+      {/* Mobile UI - TODO: Implement mobile-specific component */}
       <div className="md:hidden">
-        <ReviewerPatientsMobile />
+        <div className="p-4 text-center text-muted-foreground">
+          Mobile view coming soon
+        </div>
       </div>
 
       {/* Desktop */}

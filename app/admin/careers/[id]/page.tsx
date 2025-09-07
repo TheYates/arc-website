@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+
 import {
   Card,
   CardContent,
@@ -34,7 +34,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
 import { toast } from "sonner";
 import {
   getCareerApplicationById,
@@ -58,7 +57,6 @@ import {
   Phone,
   Calendar,
   GraduationCap,
-  BookOpen,
   Award,
   Briefcase,
   Paperclip,
@@ -66,13 +64,11 @@ import {
   User,
   CheckCircle,
   XCircle,
-  Clock,
-  CalendarIcon,
   Loader2,
   UserPlus,
   Copy,
 } from "lucide-react";
-import { AdminCareerApplicationDetailMobile } from "@/components/mobile/admin-career-application-detail";
+
 
 export default function ApplicationDetailPage({
   params,
@@ -98,7 +94,7 @@ export default function ApplicationDetailPage({
   } | null>(null);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const { user } = useAuth();
-  const { toast } = useToast();
+
   const router = useRouter();
 
   useEffect(() => {
@@ -126,11 +122,7 @@ export default function ApplicationDetailPage({
         }
       } catch (error) {
         console.error("Failed to fetch application:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load application details",
-          variant: "destructive",
-        });
+        toast.error("Failed to load application details");
       } finally {
         setIsLoading(false);
       }
@@ -180,11 +172,7 @@ export default function ApplicationDetailPage({
       // Check if user already exists
       const userExists = await checkUserExists(application.email);
       if (userExists) {
-        toast({
-          title: "Account Exists",
-          description: "An account with this email already exists.",
-          variant: "destructive",
-        });
+        toast.error("An account with this email already exists.");
         setIsCreatingAccount(false);
         return;
       }
@@ -205,25 +193,13 @@ export default function ApplicationDetailPage({
           password: result.password,
         });
 
-        toast({
-          title: "Account Created",
-          description: `Account created successfully for ${result.user.firstName} ${result.user.lastName}`,
-          variant: "default",
-        });
+        toast.success(`Account created successfully for ${result.user.firstName} ${result.user.lastName}`);
       } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to create account",
-          variant: "destructive",
-        });
+        toast.error(result.error || "Failed to create account");
       }
     } catch (error) {
       console.error("Failed to create account:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create account. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to create account. Please try again.");
     } finally {
       setIsCreatingAccount(false);
     }
@@ -286,17 +262,7 @@ export default function ApplicationDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <AdminCareerApplicationDetailMobile
-          id={id}
-          application={application}
-          jobPosition={jobPosition}
-          isLoading={isLoading}
-        />
-      </div>
-
-      <div className="hidden md:flex justify-between items-center">
+      <div className="flex justify-between items-center">
         <Button
           variant="ghost"
           className="flex items-center"

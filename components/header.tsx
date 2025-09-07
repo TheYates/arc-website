@@ -159,12 +159,12 @@ export default function Header() {
                   Services
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[900px] xl:w-[900px] lg:w-[700px] p-4 lg:p-6">
+                  <div className="w-[900px] xl:w-[900px] lg:w-[700px] p-4 lg:p-6 bg-white border border-slate-200 rounded-lg shadow-lg">
                     <div className="grid grid-cols-3 gap-4 lg:gap-8">
                       {/* First Column - Home Care Service */}
                       <div className="space-y-3">
                         <div>
-                          <h4 className="font-semibold  text-sm mb-3 pb-2 border-b border-slate-200">
+                          <h4 className="font-semibold text-slate-900 text-sm mb-3 pb-2 border-b border-slate-200">
                             Home Care Service
                           </h4>
                         </div>
@@ -176,7 +176,7 @@ export default function Header() {
                                 className="block p-3 opacity-60 cursor-not-allowed rounded-lg border border-transparent bg-gray-50"
                               >
                                 <div className="flex items-center justify-between mb-1">
-                                  <div className="font-medium text-sm">
+                                  <div className="font-medium text-sm text-slate-700">
                                     {service.name}
                                   </div>
                                   <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
@@ -184,7 +184,7 @@ export default function Header() {
                                     Coming Soon
                                   </Badge>
                                 </div>
-                                <div className="text-xs leading-tight">
+                                <div className="text-xs text-slate-600 leading-tight">
                                   {service.description}
                                 </div>
                               </div>
@@ -194,10 +194,10 @@ export default function Header() {
                                 href={service.href}
                                 className="block p-3 hover:bg-slate-50 transition-colors rounded-lg border border-transparent hover:border-teal-200"
                               >
-                                <div className="font-medium text-sm mb-1">
+                                <div className="font-medium text-sm text-slate-900 mb-1">
                                   {service.name}
                                 </div>
-                                <div className="text-xs leading-tight">
+                                <div className="text-xs text-slate-600 leading-tight">
                                   {service.description}
                                 </div>
                               </Link>
@@ -209,7 +209,7 @@ export default function Header() {
                       {/* Second Column - Nanny Service */}
                       <div className="space-y-3">
                         <div>
-                          <h4 className="font-semibold  text-sm mb-3 pb-2 border-b border-slate-200">
+                          <h4 className="font-semibold text-slate-900 text-sm mb-3 pb-2 border-b border-slate-200">
                             Nanny Service
                           </h4>
                         </div>
@@ -221,7 +221,7 @@ export default function Header() {
                                 className="block p-3 opacity-60 cursor-not-allowed rounded-lg border border-transparent bg-gray-50"
                               >
                                 <div className="flex items-center justify-between mb-1">
-                                  <div className="font-medium text-sm">
+                                  <div className="font-medium text-sm text-slate-700">
                                     {service.name}
                                   </div>
                                   <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
@@ -229,7 +229,7 @@ export default function Header() {
                                     Coming Soon
                                   </Badge>
                                 </div>
-                                <div className="text-xs leading-tight">
+                                <div className="text-xs text-slate-600 leading-tight">
                                   {service.description}
                                 </div>
                               </div>
@@ -239,10 +239,10 @@ export default function Header() {
                                 href={service.href}
                                 className="block p-3 hover:bg-slate-50 transition-colors rounded-lg border border-transparent hover:border-teal-200"
                               >
-                                <div className="font-medium text-sm mb-1">
+                                <div className="font-medium text-sm text-slate-900 mb-1">
                                   {service.name}
                                 </div>
-                                <div className="text-xs leading-tight">
+                                <div className="text-xs text-slate-600 leading-tight">
                                   {service.description}
                                 </div>
                               </Link>
@@ -254,7 +254,7 @@ export default function Header() {
                       {/* Third Column - Event Medical Services */}
                       <div className="space-y-3">
                         <div>
-                          <h4 className="font-semibold  text-sm mb-3 pb-2 border-b border-slate-200">
+                          <h4 className="font-semibold text-slate-900 text-sm mb-3 pb-2 border-b border-slate-200">
                             Event Medical Services
                           </h4>
                         </div>
@@ -266,7 +266,7 @@ export default function Header() {
                                 className="block p-3 opacity-60 cursor-not-allowed rounded-lg border border-transparent bg-gray-50"
                               >
                                 <div className="flex items-center justify-between mb-1">
-                                  <div className="font-medium text-sm">
+                                  <div className="font-medium text-sm text-slate-700">
                                     {service.name}
                                   </div>
                                   <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
@@ -274,7 +274,7 @@ export default function Header() {
                                     Coming Soon
                                   </Badge>
                                 </div>
-                                <div className="text-xs leading-tight">
+                                <div className="text-xs text-slate-600 leading-tight">
                                   {service.description}
                                 </div>
                               </div>
@@ -284,10 +284,10 @@ export default function Header() {
                                 href={service.href}
                                 className="block p-3 hover:bg-slate-50 transition-colors rounded-lg border border-transparent hover:border-teal-200"
                               >
-                                <div className="font-medium text-sm mb-1">
+                                <div className="font-medium text-sm text-slate-900 mb-1">
                                   {service.name}
                                 </div>
-                                <div className="text-xs leading-tight">
+                                <div className="text-xs text-slate-600 leading-tight">
                                   {service.description}
                                 </div>
                               </Link>
@@ -302,7 +302,7 @@ export default function Header() {
 
               <NavigationMenuItem>
                 <Link href="/about" legacyBehavior passHref>
-                  <NavigationMenuLink className=" hover:text-teal-600 font-medium transition-colors px-4 py-2">
+                  <NavigationMenuLink className="text-slate-900 hover:text-teal-600 font-medium transition-colors px-4 py-2">
                     About
                   </NavigationMenuLink>
                 </Link>
@@ -310,7 +310,7 @@ export default function Header() {
 
               <NavigationMenuItem>
                 <Link href="/contact" legacyBehavior passHref>
-                  <NavigationMenuLink className=" hover:text-teal-600 font-medium transition-colors px-4 py-2">
+                  <NavigationMenuLink className="text-slate-900 hover:text-teal-600 font-medium transition-colors px-4 py-2">
                     Contact
                   </NavigationMenuLink>
                 </Link>
@@ -318,7 +318,7 @@ export default function Header() {
 
               <NavigationMenuItem>
                 <Link href="/careers" legacyBehavior passHref>
-                  <NavigationMenuLink className="text-teal-600 hover:text-black font-medium transition-colors px-4 py-2">
+                  <NavigationMenuLink className="text-teal-600 hover:text-teal-700 font-medium transition-colors px-4 py-2">
                     Work With Us
                   </NavigationMenuLink>
                 </Link>
@@ -384,16 +384,16 @@ export default function Header() {
             <div className="space-y-4">
               <Link
                 href="/"
-                className="block py-2  font-medium"
+                className="block py-2 text-slate-900 font-medium hover:text-teal-600 transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Home
               </Link>
               <div className="space-y-2">
-                <div className="py-2  font-medium">Services</div>
+                <div className="py-2 text-slate-900 font-medium">Services</div>
                 {serviceCategories.map((category) => (
                   <div key={category.category} className="space-y-1">
-                    <div className="pl-2 py-1 text-sm font-medium ">
+                    <div className="pl-2 py-1 text-sm font-medium text-slate-800">
                       {category.category}
                     </div>
                     {category.services.map((service) => (
@@ -402,7 +402,7 @@ export default function Header() {
                           key={service.name}
                           className="flex items-center justify-between pl-6 py-1 opacity-60 cursor-not-allowed"
                         >
-                          <span>{service.name}</span>
+                          <span className="text-slate-600">{service.name}</span>
                           <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs mr-4">
                             <Clock className="h-3 w-3 mr-1" />
                             Coming Soon
@@ -412,7 +412,7 @@ export default function Header() {
                         <Link
                           key={service.name}
                           href={service.href}
-                          className="block pl-6 py-1"
+                          className="block pl-6 py-1 text-slate-700 hover:text-teal-600 transition-colors"
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
                           {service.name}
@@ -425,21 +425,21 @@ export default function Header() {
 
               <Link
                 href="/about"
-                className="block py-2  font-medium"
+                className="block py-2 text-slate-900 font-medium hover:text-teal-600 transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 About
               </Link>
               <Link
                 href="/contact"
-                className="block py-2  font-medium"
+                className="block py-2 text-slate-900 font-medium hover:text-teal-600 transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Contact
               </Link>
               <Link
                 href="/careers"
-                className="block py-2 text-teal-600 font-medium"
+                className="block py-2 text-teal-600 font-medium hover:text-teal-700 transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Work With Us

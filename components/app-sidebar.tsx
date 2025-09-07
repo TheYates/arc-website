@@ -48,26 +48,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 // Admin sidebar data
-const getAdminData = (user: any, pathname: string) => ({
-  user: {
-    name: user ? `${user.firstName} ${user.lastName}` : "Admin User",
-    email: user?.email || "admin@example.com",
-    avatar: "", // Use empty string to fallback to initials
-  },
-  teams: [
-    {
-      name: "Alpha Rescue Consult",
-      logo: () => (
-        <img
-          src="/images/logos/arc_logo.svg"
-          alt="ARC Logo"
-          className="size-4"
-        />
-      ),
-      plan: "Admin Panel",
-    },
-  ],
-  navMain: [
+const getAdminData = (user: any, pathname: string) => {
+  const isSuperAdmin = user?.role === "super_admin";
+
+  // Base navigation items available to all admins
+  const baseNavMain = [
     {
       title: "Dashboard",
       url: "/admin",
@@ -123,24 +108,25 @@ const getAdminData = (user: any, pathname: string) => ({
       isActive: pathname.startsWith("/admin/users"),
     },
     {
-      title: "Rate Limiting",
-      url: "/admin/rate-limiting",
-      icon: Shield,
-      isActive: pathname.startsWith("/admin/rate-limiting"),
-    },
-    {
       title: "Settings",
       url: "/admin/settings",
       icon: Settings,
       isActive: pathname.startsWith("/admin/settings"),
     },
-  ],
-  projects: [
+  ];
+
+  // Super admin only navigation items
+  const superAdminNavItems = [
     {
-      name: "Redis Cache",
-      url: "/admin/redis",
-      icon: Database,
+      title: "Rate Limiting",
+      url: "/admin/rate-limiting",
+      icon: Shield,
+      isActive: pathname.startsWith("/admin/rate-limiting"),
     },
+  ];
+
+  // Base projects available to all admins
+  const baseProjects = [
     {
       name: "System Analytics",
       url: "/admin/analytics",
@@ -156,20 +142,52 @@ const getAdminData = (user: any, pathname: string) => ({
       url: "/admin/audit",
       icon: Shield,
     },
-  ],
-  navSecondary: [
+  ];
+
+  // Super admin only projects
+  const superAdminProjects = [
     {
-      title: "Settings",
-      url: "/admin/settings",
-      icon: Settings,
+      name: "Redis Cache",
+      url: "/admin/redis",
+      icon: Database,
     },
-    {
-      title: "Support",
-      url: "/admin/support",
-      icon: LifeBuoy,
+  ];
+
+  return {
+    user: {
+      name: user ? `${user.firstName} ${user.lastName}` : "Admin User",
+      email: user?.email || "admin@example.com",
+      avatar: "", // Use empty string to fallback to initials
     },
-  ],
-});
+    teams: [
+      {
+        name: "Alpha Rescue Consult",
+        logo: () => (
+          <img
+            src="/images/logos/arc_logo.svg"
+            alt="ARC Logo"
+            className="size-4"
+          />
+        ),
+        plan: "Admin Panel",
+      },
+    ],
+    navMain: isSuperAdmin ? [...baseNavMain, ...superAdminNavItems] : baseNavMain,
+    projects: isSuperAdmin ? [...baseProjects, ...superAdminProjects] : baseProjects,
+    navSecondary: [
+      {
+        title: "Settings",
+        url: "/admin/settings",
+        icon: Settings,
+      },
+      {
+        title: "Support",
+        url: "/admin/support",
+        icon: LifeBuoy,
+      },
+    ],
+  };
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();

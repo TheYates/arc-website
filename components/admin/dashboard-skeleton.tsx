@@ -310,46 +310,4 @@ export function TabletDashboardSkeleton() {
   );
 }
 
-export function MobileDashboardSkeleton() {
-  return (
-    <div className="px-4 py-4 space-y-4">
-      <div>
-        <Skeleton className="h-7 w-32 mb-2" />
-        <Skeleton className="h-4 w-40" />
-      </div>
 
-      {/* Quick Stats Skeleton */}
-      <div className="grid grid-cols-2 gap-3">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <Skeleton className="h-3 w-12 mb-1" />
-                <Skeleton className="h-6 w-8" />
-              </div>
-              <Skeleton className="h-5 w-5" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Primary Actions Skeleton */}
-      <div className="grid grid-cols-2 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full" />
-        ))}
-      </div>
-
-      {/* Recents Skeleton */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-8 w-16" />
-          </div>
-          <Skeleton className="h-4 w-48 mt-2" />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}

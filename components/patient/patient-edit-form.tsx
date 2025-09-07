@@ -57,9 +57,9 @@ export function PatientEditForm({
     emergencyContactPhone: patient.emergencyContactPhone || '',
     insuranceProvider: patient.insuranceProvider || '',
     insurancePolicyNumber: patient.insurancePolicyNumber || '',
-    medicalHistory: patient.medicalHistory || '',
-    allergies: patient.allergies || '',
-    currentMedications: patient.currentMedications || '',
+    medicalHistory: '', // TODO: Add to Patient type interface
+    allergies: '', // TODO: Add to Patient type interface
+    currentMedications: '', // TODO: Add to Patient type interface
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

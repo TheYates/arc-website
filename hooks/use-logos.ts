@@ -70,8 +70,8 @@ export function useLogos(activeOnly: boolean = false) {
 
   const updateLogo = async (logoData: UpdateLogoRequest): Promise<{ success: boolean; error?: string; data?: Logo }> => {
     try {
-      let updateData = { ...logoData };
-      
+      let updateData: any = { ...logoData };
+
       // Upload new file if provided
       if (logoData.file) {
         const uploadResult = await uploadFile(logoData.file);

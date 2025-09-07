@@ -116,12 +116,16 @@ async function getRecentViolations(hours: number, limit: number) {
     
     for (const key of keys.slice(0, limit)) {
       const violationData = await CacheService.get(key);
-      if (violationData) {
-        const violation = JSON.parse(violationData);
-        const violationTime = new Date(violation.timestamp).getTime();
-        
-        if (violationTime >= cutoffTime) {
-          violations.push(violation);
+      if (violationData && typeof violationData === 'string') {
+        try {
+          const violation = JSON.parse(violationData);
+          const violationTime = new Date(violation.timestamp).getTime();
+
+          if (violationTime >= cutoffTime) {
+            violations.push(violation);
+          }
+        } catch (error) {
+          console.error('Failed to parse violation data:', error);
         }
       }
     }
@@ -143,29 +147,36 @@ async function getRateLimitStats(hours: number) {
   try {
     const violations = await getRecentViolations(hours, 1000);
     
-    const stats = {
+    const stats: {
+      totalViolations: number;
+      uniqueIPs: number;
+      uniqueEndpoints: number;
+      violationsByEndpoint: Record<string, number>;
+      violationsByHour: Record<number, number>;
+      topUserAgents: Record<string, number>;
+    } = {
       totalViolations: violations.length,
-      uniqueIPs: new Set(violations.map(v => v.ip)).size,
-      uniqueEndpoints: new Set(violations.map(v => v.endpoint)).size,
+      uniqueIPs: new Set(violations.map((v: any) => v.ip)).size,
+      uniqueEndpoints: new Set(violations.map((v: any) => v.endpoint)).size,
       violationsByEndpoint: {},
       violationsByHour: {},
       topUserAgents: {}
     };
 
     // Group violations by endpoint
-    violations.forEach(violation => {
+    violations.forEach((violation: any) => {
       const endpoint = violation.endpoint;
       stats.violationsByEndpoint[endpoint] = (stats.violationsByEndpoint[endpoint] || 0) + 1;
     });
 
     // Group violations by hour
-    violations.forEach(violation => {
+    violations.forEach((violation: any) => {
       const hour = new Date(violation.timestamp).getHours();
       stats.violationsByHour[hour] = (stats.violationsByHour[hour] || 0) + 1;
     });
 
     // Top user agents
-    violations.forEach(violation => {
+    violations.forEach((violation: any) => {
       const ua = violation.userAgent || 'unknown';
       stats.topUserAgents[ua] = (stats.topUserAgents[ua] || 0) + 1;
     });
@@ -190,9 +201,15 @@ async function getRateLimitStats(hours: number) {
 async function getTopViolators(hours: number) {
   try {
     const violations = await getRecentViolations(hours, 1000);
-    const violatorCounts = {};
+    const violatorCounts: Record<string, {
+      ip: string;
+      count: number;
+      endpoints: Set<string>;
+      firstViolation: string;
+      lastViolation: string;
+    }> = {};
 
-    violations.forEach(violation => {
+    violations.forEach((violation: any) => {
       const ip = violation.ip;
       if (!violatorCounts[ip]) {
         violatorCounts[ip] = {
@@ -203,14 +220,14 @@ async function getTopViolators(hours: number) {
           lastViolation: violation.timestamp
         };
       }
-      
+
       violatorCounts[ip].count++;
       violatorCounts[ip].endpoints.add(violation.endpoint);
-      
+
       if (new Date(violation.timestamp) < new Date(violatorCounts[ip].firstViolation)) {
         violatorCounts[ip].firstViolation = violation.timestamp;
       }
-      
+
       if (new Date(violation.timestamp) > new Date(violatorCounts[ip].lastViolation)) {
         violatorCounts[ip].lastViolation = violation.timestamp;
       }
@@ -219,7 +236,10 @@ async function getTopViolators(hours: number) {
     // Convert sets to arrays and sort by count
     const topViolators = Object.values(violatorCounts)
       .map(violator => ({
-        ...violator,
+        ip: violator.ip,
+        count: violator.count,
+        firstViolation: violator.firstViolation,
+        lastViolation: violator.lastViolation,
         endpoints: Array.from(violator.endpoints)
       }))
       .sort((a, b) => b.count - a.count)

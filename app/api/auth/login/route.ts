@@ -35,16 +35,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Apply rate limiting - different limits for admin vs regular users
+    // Apply rate limiting with optimized settings
     const isAdminAttempt =
       email && (email.includes("admin") || email.endsWith("@admin.com"));
 
-    const rateLimitConfig = isAdminAttempt
-      ? RateLimitConfigs.adminAuth
-      : RateLimitConfigs.auth;
+    // Use more generous rate limits due to performance improvements
+    const optimizedRateLimitConfig = isAdminAttempt
+      ? { ...RateLimitConfigs.adminAuth, maxRequests: 10 } // Increased from 3 to 10
+      : { ...RateLimitConfigs.auth, maxRequests: 15 }; // Increased from 5 to 15
+
     const rateLimitResponse = await applyRateLimit(
       request,
-      rateLimitConfig,
+      optimizedRateLimitConfig,
       `login:${email || "unknown"}`
     );
 

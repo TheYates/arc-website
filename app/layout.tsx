@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   description:
     "Ghana's trusted partner for professional home care and nanny services",
   generator: "v0.dev",
+  icons: {
+    icon: "/arc_logo.svg",
+  },
 };
 
 export default function RootLayout({

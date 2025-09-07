@@ -23,7 +23,7 @@ import {
 import { CommandSearch } from "@/components/ui/command-search";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
-import { CaregiverPatientsMobile } from "@/components/mobile/caregiver-patients";
+
 import { useAuth } from "@/lib/auth";
 import { useCaregiverPatients, useCaregiverPatientManagement } from "@/hooks/use-caregiver-queries";
 import { Patient, CareLevel, PatientStatus } from "@/lib/types/patients";
@@ -51,6 +51,7 @@ import {
   ClipboardCheck,
   List,
   Grid3X3,
+  Loader2,
 } from "lucide-react";
 
 export default function CaregiverPatientsPage() {
@@ -122,7 +123,7 @@ export default function CaregiverPatientsPage() {
         <RoleHeader role="caregiver" />
         <div className="container mx-auto px-4 py-6">
           <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin" />
+            <Loader2 className="h-8 w-8 animate-spin" /> 
           </div>
         </div>
       </div>
@@ -149,9 +150,11 @@ export default function CaregiverPatientsPage() {
     <div className="min-h-screen bg-background">
       <RoleHeader role="caregiver" />
 
-      {/* Mobile (distinct UI) */}
+      {/* Mobile UI - TODO: Implement mobile-specific component */}
       <div className="md:hidden">
-        <CaregiverPatientsMobile />
+        <div className="p-4 text-center text-muted-foreground">
+          Mobile view coming soon
+        </div>
       </div>
 
       {/* Desktop */}

@@ -17,7 +17,7 @@ export async function GET(
       lastName: patient.user.lastName,
       email: patient.user.email,
       phone: patient.user.phone || "",
-      address: patient.address,
+      address: patient.user.address || "",
       dateOfBirth: patient.dateOfBirth,
       gender: patient.gender,
       bloodType: patient.bloodType,
@@ -38,18 +38,10 @@ export async function GET(
       medicalRecordNumber: patient.medicalRecordNumber,
       chronicConditions: patient.chronicConditions,
       assignedDate: patient.assignedDate,
-      createdAt: patient.createdAt,
-      updatedAt: patient.updatedAt,
+      createdAt: patient.user.createdAt,
+      updatedAt: patient.user.updatedAt,
       // Add assignment information for the "Assigned" column
-      assignedReviewer:
-        patient.reviewerAssignments && patient.reviewerAssignments.length > 0
-          ? {
-              id: patient.reviewerAssignments[0].reviewer.id,
-              name: `${patient.reviewerAssignments[0].reviewer.firstName} ${patient.reviewerAssignments[0].reviewer.lastName}`,
-              assignedAt:
-                patient.reviewerAssignments[0].assignedAt.toISOString(),
-            }
-          : undefined,
+      assignedReviewer: undefined, // This would need to be fetched separately if needed
     }));
 
     return NextResponse.json({ patients });

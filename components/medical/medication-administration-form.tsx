@@ -148,6 +148,7 @@ export function MedicationAdministrationForm({
     try {
       const administrationData = {
         medicationId: formData.medicationId,
+        prescriptionId: formData.medicationId || "unknown", // Using medicationId as prescriptionId for now
         patientId,
         caregiverId,
         scheduledTime: formData.scheduledTime,
@@ -156,9 +157,7 @@ export function MedicationAdministrationForm({
         status: formData.status,
         dosageGiven: formData.dosageGiven.trim() || undefined,
         notes: formData.notes.trim() || undefined,
-        sideEffectsObserved: formData.sideEffectsObserved.trim()
-          ? formData.sideEffectsObserved.split(",").map((s) => s.trim())
-          : undefined,
+        sideEffectsObserved: formData.sideEffectsObserved.trim() || undefined,
         patientResponse:
           formData.status === "administered"
             ? formData.patientResponse
@@ -169,7 +168,7 @@ export function MedicationAdministrationForm({
       const newAdministration =
         recordMedicationAdministration(administrationData);
 
-      const statusMessages = {
+      const statusMessages: Record<string, string> = {
         administered: "Medication administration recorded successfully.",
         partial: "Partial medication administration recorded.",
         missed: "Missed dose recorded.",
@@ -177,11 +176,12 @@ export function MedicationAdministrationForm({
         delayed: "Delayed administration recorded.",
         cancelled: "Cancelled administration recorded.",
         pending: "Administration status updated to pending.",
+        PENDING: "Administration status updated to pending.",
       };
 
       toast({
         title: "Administration Recorded",
-        description: statusMessages[formData.status],
+        description: statusMessages[formData.status] || "Administration status updated.",
         variant:
           formData.status === "missed" || formData.status === "refused"
             ? "destructive"

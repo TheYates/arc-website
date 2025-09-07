@@ -456,7 +456,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(result.user);
       setSession(newSession);
       setSessionExpiresAt(result.tokens.expiresAt);
-      setIsAuthenticated(true);
       setIsLoading(false);
 
       // Setup session monitoring after state updates

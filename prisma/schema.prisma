@@ -3,10 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
-
 model User {
   id                            String                     @id @default(uuid())
   email                         String                     @unique
@@ -1052,4 +1052,17 @@ model Banner {
   @@index([createdAt])
   @@index([isActive, sortOrder])
   @@map("banners")
+}
+
+model ContactInfo {
+  id           String   @id @default(uuid())
+  primaryPhone String   @map("primary_phone")
+  secondaryPhone String? @map("secondary_phone")
+  email        String
+  address      String
+  supportHours String   @map("support_hours")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("contact_info")
 }

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Service } from "@/lib/api/services-sqlite";
+import { Service } from "@prisma/client";
 import { Loader2 } from "lucide-react";
 import ServiceHierarchyEditor from "./service-hierarchy-editor";
 
@@ -71,11 +71,11 @@ export default function ServiceFormModal({
         displayName: service.displayName,
         description: service.description || "",
         shortDescription: service.shortDescription || "",
-        category: service.category,
-        basePriceDaily: service.basePriceDaily?.toString() || "",
-        basePriceMonthly: service.basePriceMonthly?.toString() || "",
-        basePriceHourly: service.basePriceHourly?.toString() || "",
-        priceDisplay: service.priceDisplay || "",
+        category: service.category.toLowerCase().replace('_', '_') as "home_care" | "nanny" | "emergency" | "custom",
+        basePriceDaily: "", // TODO: Add pricing fields to Prisma Service model
+        basePriceMonthly: "", // TODO: Add pricing fields to Prisma Service model
+        basePriceHourly: "", // TODO: Add pricing fields to Prisma Service model
+        priceDisplay: "", // TODO: Add pricing fields to Prisma Service model
         isActive: service.isActive,
         isPopular: service.isPopular,
         sortOrder: service.sortOrder.toString(),

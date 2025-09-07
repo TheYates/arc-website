@@ -17,7 +17,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { RoleBottomNav } from "@/components/mobile/role-bottom-nav";
+
 import { Toaster } from "@/components/ui/toaster";
 import { ModeToggle } from "@/components/mode-toggle";
 
@@ -120,8 +120,7 @@ export function AdminLayout({ children, breadcrumbs }: AdminLayoutProps) {
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
         </SidebarInset>
       </SidebarProvider>
-      {/* Mobile bottom nav */}
-      <RoleBottomNav role="admin" />
+
       {/* Toast notifications */}
       <Toaster />
     </div>

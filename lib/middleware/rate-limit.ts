@@ -127,8 +127,8 @@ export class RateLimiter {
       return cfConnectingIP;
     }
 
-    // Fallback to request IP
-    return request.ip || 'unknown';
+    // Fallback to unknown IP
+    return 'unknown';
   }
 
   /**

@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Pill, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
-import { CaregiverMedicationsMobile } from "@/components/mobile/caregiver-medications";
+
 
 interface PageProps {
   params: Promise<{ patientId: string }>;
@@ -104,9 +104,11 @@ export default function CaregiverMedicationsPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Mobile (distinct UI) */}
+      {/* Mobile UI - TODO: Implement mobile-specific component */}
       <div className="md:hidden">
-        <CaregiverMedicationsMobile patientId={resolvedParams.patientId} />
+        <div className="p-4 text-center text-muted-foreground">
+          Mobile view coming soon
+        </div>
       </div>
 
       {/* Header (Desktop) */}

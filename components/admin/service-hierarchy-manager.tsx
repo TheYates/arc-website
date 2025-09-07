@@ -487,7 +487,7 @@ export function ServiceHierarchyManager({
               <Checkbox
                 id="optional"
                 checked={newItemOptional}
-                onCheckedChange={setNewItemOptional}
+                onCheckedChange={(checked) => setNewItemOptional(checked === true)}
               />
               <Label htmlFor="optional">Optional item</Label>
             </div>

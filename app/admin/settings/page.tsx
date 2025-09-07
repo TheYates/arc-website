@@ -31,10 +31,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -51,7 +51,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { validatePhoneNumbers } from "@/lib/utils/phone-validation";
 import {
   authenticatedGet,
   authenticatedPost,
@@ -64,7 +66,6 @@ import {
   Save,
   AlertCircle,
   Loader2,
-  CheckCircle,
   Clock,
   Users,
   Bell,
@@ -72,8 +73,10 @@ import {
   Plus,
   Edit,
   Trash2,
-  XCircle,
   List,
+  Phone,
+  Mail,
+  MapPin,
 } from "lucide-react";
 
 interface AdminSetting {
@@ -100,6 +103,16 @@ interface ServiceType {
   updatedAt: string;
 }
 
+interface ContactInfo {
+  id?: string;
+  primaryPhone: string;
+  secondaryPhone?: string;
+  email: string;
+  address: string;
+  supportHours: string;
+  updatedAt?: string;
+}
+
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<SettingsByCategory>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -123,6 +136,17 @@ export default function AdminSettingsPage() {
     category: "",
     isActive: true,
   });
+
+  // Contact Info state
+  const [contactInfo, setContactInfo] = useState<ContactInfo>({
+    primaryPhone: "+233 XX XXX XXXX",
+    secondaryPhone: "",
+    email: "info@alpharescue.com",
+    address: "Accra, Ghana",
+    supportHours: "Mon-Fri, 8AM-6PM",
+  });
+  const [isContactLoading, setIsContactLoading] = useState(false);
+  const [isContactSaving, setIsContactSaving] = useState(false);
 
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -317,6 +341,74 @@ export default function AdminSettingsPage() {
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
+  };
+
+  // Contact Info Functions
+  const fetchContactInfo = async () => {
+    setIsContactLoading(true);
+    try {
+      const response = await authenticatedGet("/api/admin/contact-info", user);
+      if (!response.ok) {
+        throw new Error("Failed to fetch contact info");
+      }
+      const data = await response.json();
+      setContactInfo(data.contactInfo);
+    } catch (error) {
+      console.error("Error fetching contact info:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load contact information",
+        variant: "destructive",
+      });
+    } finally {
+      setIsContactLoading(false);
+    }
+  };
+
+  const handleContactInputChange = (field: keyof ContactInfo, value: string) => {
+    setContactInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveContactInfo = async () => {
+    // Validate phone numbers before saving
+    const phoneValidation = validatePhoneNumbers(contactInfo.primaryPhone, contactInfo.secondaryPhone);
+    if (!phoneValidation.isValid) {
+      sonnerToast.error("Invalid phone numbers", {
+        description: phoneValidation.errors.join(', ')
+      });
+      return;
+    }
+
+    setIsContactSaving(true);
+    try {
+      const response = await authenticatedPut("/api/admin/contact-info", user, contactInfo);
+      if (!response.ok) {
+        throw new Error("Failed to save contact info");
+      }
+
+      const data = await response.json();
+
+      // Update local state with formatted phone numbers
+      setContactInfo(prev => ({
+        ...prev,
+        primaryPhone: data.contactInfo.primaryPhone,
+        secondaryPhone: data.contactInfo.secondaryPhone || ""
+      }));
+
+      sonnerToast.success("Contact information updated successfully", {
+        description: "Changes have been saved and will be reflected across the platform"
+      });
+    } catch (error) {
+      console.error("Error saving contact info:", error);
+      sonnerToast.error("Failed to save contact information", {
+        description: "Please try again or contact support if the problem persists"
+      });
+    } finally {
+      setIsContactSaving(false);
+    }
   };
 
   // Service Types Functions
@@ -525,21 +617,23 @@ export default function AdminSettingsPage() {
             Configure service request and scheduling system behavior
           </p>
         </div>
-        {hasChanges && (
-          <Button onClick={handleSaveSettings} disabled={isSaving}>
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {hasChanges && (
+            <Button onClick={handleSaveSettings} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Settings Tabs */}
@@ -571,6 +665,18 @@ export default function AdminSettingsPage() {
           >
             <List className="h-5 w-5" />
             <span className="hidden sm:inline">Service Types</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="contact"
+            className="flex items-center gap-2"
+            onClick={() => {
+              if (!contactInfo.id) {
+                fetchContactInfo();
+              }
+            }}
+          >
+            <Phone className="h-5 w-5" />
+            <span className="hidden sm:inline">Contact</span>
           </TabsTrigger>
         </TabsList>
 
@@ -847,6 +953,174 @@ export default function AdminSettingsPage() {
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Contact Tab */}
+        <TabsContent value="contact">
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold">Contact Information</h3>
+                <p className="text-sm text-muted-foreground">
+                  Manage contact details displayed across the platform
+                </p>
+              </div>
+              <Button onClick={handleSaveContactInfo} disabled={isContactSaving}>
+                {isContactSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {isContactLoading ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid gap-6">
+                {/* Single Contact Information Form */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Phone className="h-5 w-5 text-blue-600" />
+                      Contact Information
+                    </CardTitle>
+                    <CardDescription>
+                      This information will be displayed across the platform (emergency contacts, support, footer, etc.)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="primaryPhone">Primary Phone Number *</Label>
+                        <Input
+                          id="primaryPhone"
+                          value={contactInfo.primaryPhone}
+                          onChange={(e) => handleContactInputChange("primaryPhone", e.target.value)}
+                          placeholder="+233 XX XXX XXXX or 024 XXX XXXX"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Format: "+233 XX XXX XXXX" or "024 XXX XXXX"
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="secondaryPhone">Secondary Phone Number</Label>
+                        <Input
+                          id="secondaryPhone"
+                          value={contactInfo.secondaryPhone || ""}
+                          onChange={(e) => handleContactInputChange("secondaryPhone", e.target.value)}
+                          placeholder="+233 XX XXX XXXX or 024 XXX XXXX (Optional)"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Optional additional contact number
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={contactInfo.email}
+                          onChange={(e) => handleContactInputChange("email", e.target.value)}
+                          placeholder="info@alpharescue.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="supportHours">Support Hours</Label>
+                        <Input
+                          id="supportHours"
+                          value={contactInfo.supportHours}
+                          onChange={(e) => handleContactInputChange("supportHours", e.target.value)}
+                          placeholder="Mon-Fri, 8AM-6PM"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Textarea
+                        id="address"
+                        value={contactInfo.address}
+                        onChange={(e) => handleContactInputChange("address", e.target.value)}
+                        placeholder="Full address"
+                        rows={3}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Preview Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Preview</CardTitle>
+                    <CardDescription>
+                      Preview how the contact information will appear across the platform
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Emergency Contact Preview */}
+                    <div>
+                      <h4 className="font-semibold mb-3">Emergency Contact (Caregiver Dashboard)</h4>
+                      <div className="flex items-center gap-3 p-4 border rounded-lg bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800">
+                        <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-full">
+                          <Phone className="h-5 w-5 text-red-600 dark:text-red-400" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-red-900 dark:text-red-100">Emergency</p>
+                          <p className="text-sm text-red-700 dark:text-red-300">{contactInfo.primaryPhone}</p>
+                          {contactInfo.secondaryPhone && (
+                            <p className="text-sm text-red-700 dark:text-red-300">{contactInfo.secondaryPhone}</p>
+                          )}
+                          <p className="text-xs text-red-600 dark:text-red-400">24/7 Emergency Line</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Footer Preview */}
+                    <div>
+                      <h4 className="font-semibold mb-3">Website Footer</h4>
+                      <div className="bg-slate-900 text-white p-6 rounded-lg">
+                        <h3 className="text-xl font-bold mb-4">Alpha Rescue Consult</h3>
+                        <p className="text-slate-300 mb-4">
+                          Professional home care and nanny services across Ghana.
+                          Providing compassionate, reliable care for your family.
+                        </p>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-3">
+                            <Phone className="h-5 w-5 text-teal-400" />
+                            <div className="flex flex-col">
+                              <span className="text-slate-300">{contactInfo.primaryPhone}</span>
+                              {contactInfo.secondaryPhone && (
+                                <span className="text-slate-400 text-sm">{contactInfo.secondaryPhone}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <Mail className="h-5 w-5 text-teal-400" />
+                            <span className="text-slate-300">{contactInfo.email}</span>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <MapPin className="h-5 w-5 text-teal-400" />
+                            <span className="text-slate-300">{contactInfo.address}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </div>

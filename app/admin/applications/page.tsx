@@ -34,7 +34,7 @@ import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useApplications, useApplicationMutations } from "@/hooks/use-admin-application-queries";
 import { Loader2, Search, Filter, Calendar, Clock, Plus, AlertCircle, RefreshCw, Eye } from "lucide-react";
-import { AdminApplicationsMobile } from "@/components/mobile/admin-applications";
+
 
 export default function ApplicationsPage() {
   // UI State
@@ -109,13 +109,8 @@ export default function ApplicationsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Mobile View */}
-      <div className="md:hidden">
-        <AdminApplicationsMobile />
-      </div>
-
-      {/* Desktop View */}
-      <div className="hidden md:block space-y-6">
+      {/* Main View */}
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

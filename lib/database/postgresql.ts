@@ -9,20 +9,14 @@ declare global {
 export const prisma =
   globalThis.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+    log: process.env.NODE_ENV === "development" ? ["error"] : ["error"],
     datasources: {
       db: {
-        url: process.env.DATABASE_URL + (process.env.DATABASE_URL?.includes('?') ? '&' : '?') +
-             'connection_limit=3&pool_timeout=60&connect_timeout=60',
+        url: process.env.DATABASE_URL,
       },
     },
-    // Optimize connection pool for Supabase
-    __internal: {
-      engine: {
-        connectionTimeout: 60000, // 60 seconds
-        poolTimeout: 60000, // 60 seconds
-      },
-    },
+    // Note: Connection timeouts are now handled via URL parameters
+    // in the DATABASE_URL environment variable
   });
 
 if (process.env.NODE_ENV !== "production") globalThis.prisma = prisma;
@@ -104,38 +98,48 @@ export async function resetDatabaseConnection() {
   try {
     console.log("🔄 Resetting database connection...");
     await prisma.$disconnect();
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
-    await prisma.$connect();
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds
 
-    // Test the connection
-    await prisma.$queryRaw`SELECT 1`;
+    // Test connection with timeout
+    const connectionPromise = prisma.$connect().then(() => prisma.$queryRaw`SELECT 1`);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Connection timeout')), 10000)
+    );
+
+    await Promise.race([connectionPromise, timeoutPromise]);
     console.log("✅ Connection reset and tested successfully");
     return { success: true, message: "Connection reset successfully" };
   } catch (error) {
-    console.error("❌ Connection reset failed:", error);
+    console.error("❌ Primary connection reset failed:", error);
 
     // Try fallback connection if available
     if (process.env.DATABASE_FALLBACK_URL) {
       console.log("🔄 Attempting fallback connection...");
       try {
-        // Temporarily switch to fallback URL
         const fallbackPrisma = new PrismaClient({
           datasources: {
             db: {
               url: process.env.DATABASE_FALLBACK_URL,
             },
           },
+          log: ["error"],
         });
 
-        await fallbackPrisma.$connect();
-        await fallbackPrisma.$queryRaw`SELECT 1`;
+        const fallbackConnectionPromise = fallbackPrisma.$connect().then(() =>
+          fallbackPrisma.$queryRaw`SELECT 1`
+        );
+        const fallbackTimeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Fallback timeout')), 10000)
+        );
+
+        await Promise.race([fallbackConnectionPromise, fallbackTimeoutPromise]);
         await fallbackPrisma.$disconnect();
 
-        console.log("✅ Fallback connection works - consider switching");
+        console.log("✅ Fallback connection works - primary may be down");
         return {
           success: false,
           message: "Primary connection failed but fallback works",
-          suggestion: "Consider switching to fallback URL",
+          suggestion: "Primary database may be paused or unreachable",
         };
       } catch (fallbackError) {
         console.error("❌ Fallback connection also failed:", fallbackError);
@@ -144,7 +148,7 @@ export async function resetDatabaseConnection() {
 
     return {
       success: false,
-      message: `Connection reset failed: ${
+      message: `All connection attempts failed: ${
         error instanceof Error ? error.message : "Unknown error"
       }`,
     };

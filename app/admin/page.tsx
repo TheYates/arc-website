@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, memo, Suspense, lazy } from "react";
+import React, { useState, useMemo, useCallback, memo } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -32,20 +32,9 @@ import {
 import { useAuth } from "@/lib/auth";
 import {
   DashboardSkeleton,
-  MobileDashboardSkeleton,
-  TabletDashboardSkeleton,
 } from "@/components/admin/dashboard-skeleton";
 import { useDashboard } from "@/hooks/use-admin-dashboard-queries";
 import { useOptimizedAuth } from "@/hooks/use-optimized-auth";
-import { TabletDashboard } from "@/components/admin/tablet-dashboard";
-import { useDeviceType } from "@/hooks/use-device-type";
-
-// Lazy load mobile dashboard for better performance
-const AdminMobileDashboard = lazy(() =>
-  import("@/components/mobile/admin-dashboard").then((module) => ({
-    default: module.AdminMobileDashboard,
-  }))
-);
 
 // Memoized components for better performance
 const StatCard = memo(({ stat }: { stat: any }) => (
@@ -87,23 +76,23 @@ const ApplicationItem = memo(
     getStatusBadge,
   }: {
     application: any;
-    getStatusBadge: (status: string) => JSX.Element;
+    getStatusBadge: (status: string) => React.ReactElement;
   }) => (
     <div className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors">
       <div className="flex items-center gap-3">
         <Avatar className="h-10 w-10">
-          <AvatarImage src={application.avatar} alt={application.name} />
-          <AvatarFallback>{application.name.charAt(0)}</AvatarFallback>
+          <AvatarImage src={application.avatar} alt={application.name || "User"} />
+          <AvatarFallback>{application.name?.charAt(0) || "?"}</AvatarFallback>
         </Avatar>
         <div>
-          <p className="font-medium">{application.name}</p>
-          <p className="text-sm text-muted-foreground">{application.service}</p>
+          <p className="font-medium">{application.name || "Unknown User"}</p>
+          <p className="text-sm text-muted-foreground">{application.service || "No service"}</p>
         </div>
       </div>
       <div className="flex flex-col items-end">
-        {getStatusBadge(application.status)}
+        {getStatusBadge(application.status || "unknown")}
         <span className="text-xs text-muted-foreground mt-1">
-          {application.date}
+          {application.date || "No date"}
         </span>
       </div>
     </div>
@@ -119,22 +108,22 @@ const ActivityItem = memo(
     getActivityIcon,
   }: {
     activity: any;
-    getActivityIcon: (type: string) => JSX.Element;
+    getActivityIcon: (type: string) => React.ReactElement;
   }) => (
     <div className="flex gap-3 p-2 rounded-lg hover:bg-accent transition-colors">
       <div className="mt-1">{getActivityIcon(activity.type)}</div>
       <div className="flex-grow">
         <div className="flex items-center justify-between">
-          <p className="font-medium">{activity.action}</p>
-          <span className="text-xs text-muted-foreground">{activity.time}</span>
+          <p className="font-medium">{activity.action || "Unknown action"}</p>
+          <span className="text-xs text-muted-foreground">{activity.time || "No time"}</span>
         </div>
-        <p className="text-sm text-muted-foreground">{activity.description}</p>
+        <p className="text-sm text-muted-foreground">{activity.description || "No description"}</p>
         <div className="flex items-center mt-1">
           <Avatar className="h-5 w-5 mr-1">
-            <AvatarImage src={activity.avatar} alt={activity.user} />
-            <AvatarFallback>{activity.user.charAt(0)}</AvatarFallback>
+            <AvatarImage src={activity.avatar} alt={activity.user || "User"} />
+            <AvatarFallback>{activity.user?.charAt(0) || "?"}</AvatarFallback>
           </Avatar>
-          <span className="text-xs text-muted-foreground">{activity.user}</span>
+          <span className="text-xs text-muted-foreground">{activity.user || "Unknown user"}</span>
         </div>
       </div>
     </div>
@@ -155,7 +144,7 @@ export default function AdminDashboardPage() {
     error,
     refetchAll,
   } = useDashboard();
-  const { deviceType, isTablet, isMobile } = useDeviceType();
+
   // Removed selectedTab state - no longer using tabs
 
   // Memoized stats with icons - using TanStack Query data
@@ -205,6 +194,82 @@ export default function AdminDashboardPage() {
   // Use activities from TanStack Query
   const recentActivities = activities;
 
+  // Mock data for missing variables (these would come from API in real implementation)
+  const recentApplications = [
+    {
+      id: "1",
+      firstName: "John",
+      lastName: "Doe",
+      name: "John Doe",
+      service: "Home Care",
+      status: "pending",
+      date: "2 hours ago",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "2",
+      firstName: "Jane",
+      lastName: "Smith",
+      name: "Jane Smith",
+      service: "Medical Review",
+      status: "approved",
+      date: "1 day ago",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "3",
+      firstName: "Bob",
+      lastName: "Johnson",
+      name: "Bob Johnson",
+      service: "Emergency Care",
+      status: "pending",
+      date: "3 hours ago",
+      createdAt: new Date().toISOString(),
+    },
+  ];
+
+  const upcomingConsultations = [
+    {
+      id: "1",
+      patientName: "Alice Brown",
+      time: "10:00 AM",
+      type: "Follow-up",
+      careGiver: "Dr. Smith",
+      date: "Today",
+      duration: "30 min",
+    },
+    {
+      id: "2",
+      patientName: "Charlie Wilson",
+      time: "2:00 PM",
+      type: "Initial Consultation",
+      careGiver: "Dr. Johnson",
+      date: "Today",
+      duration: "45 min",
+    },
+  ];
+
+  const taskCompletion = [
+    {
+      title: "Patient Reviews",
+      completed: 8,
+      total: 12,
+      percentage: 67,
+    },
+    {
+      title: "Service Requests",
+      completed: 15,
+      total: 20,
+      percentage: 75,
+    },
+    {
+      title: "Medical Assessments",
+      completed: 5,
+      total: 8,
+      percentage: 63,
+    },
+  ];
+
   const getStatusBadge = useCallback((status: string) => {
     switch (status) {
       case "pending":
@@ -235,22 +300,7 @@ export default function AdminDashboardPage() {
 
   // Show loading skeleton while auth or data is loading
   if (authLoading || dataLoading) {
-    return (
-      <div className="space-y-6">
-        {/* Mobile Loading */}
-        <div className="md:hidden">
-          <MobileDashboardSkeleton />
-        </div>
-        {/* Tablet Loading */}
-        <div className="hidden md:block lg:hidden">
-          <TabletDashboardSkeleton />
-        </div>
-        {/* Desktop Loading */}
-        <div className="hidden lg:block">
-          <DashboardSkeleton />
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   // Show error state if data failed to load
@@ -275,27 +325,6 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Mobile View (< 768px) */}
-      <div className="md:hidden">
-        <Suspense fallback={<MobileDashboardSkeleton />}>
-          <AdminMobileDashboard />
-        </Suspense>
-      </div>
-      {/* Tablet View (768px - 1024px) */}
-      <div className="hidden md:block lg:hidden">
-        <TabletDashboard
-          userProfile={userProfile}
-          stats={stats}
-          recentApplications={recentApplications}
-          recentActivities={recentActivities}
-          upcomingConsultations={upcomingConsultations}
-          taskCompletion={taskCompletion}
-          getStatusBadge={getStatusBadge}
-          getActivityIcon={getActivityIcon}
-        />
-      </div>
-      {/* Desktop View (> 1024px) */}
-      <div className="hidden lg:block">
         {/* Header & Welcome */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -345,7 +374,7 @@ export default function AdminDashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentApplications.slice(0, 3).map((application, index) => (
+                  {recentApplications.slice(0, 3).map((application) => (
                     <ApplicationItem
                       key={application.id}
                       application={application}
@@ -458,7 +487,7 @@ export default function AdminDashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActivities.map((activity, index) => (
+                  {recentActivities.map((activity) => (
                     <ActivityItem
                       key={activity.id}
                       activity={activity}
@@ -470,8 +499,6 @@ export default function AdminDashboardPage() {
             </Card>
           </div>
         </div>
-      </div>{" "}
-      {/* End Desktop View */}
     </div>
   );
 }

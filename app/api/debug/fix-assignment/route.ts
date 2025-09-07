@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       where: {
         firstName: "Arna",
         lastName: "Wach",
-        role: "caregiver"
+        role: "CAREGIVER"
       }
     });
 

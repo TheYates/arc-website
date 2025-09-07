@@ -22,8 +22,7 @@ import {
 import { CommandSearch } from "@/components/ui/command-search";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
-import { ReviewerMobileDashboard } from "@/components/mobile/reviewer-dashboard";
-import { RoleBottomNav } from "@/components/mobile/role-bottom-nav";
+
 import { ActivityFeed } from "@/components/activity-feed/activity-feed";
 import { useAuth } from "@/lib/auth";
 import { useReviewerDashboard } from "@/hooks/use-reviewer-queries";
@@ -120,13 +119,8 @@ export default function ReviewerPage() {
     <div className="min-h-screen bg-background">
       <RoleHeader role="reviewer" />
 
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <ReviewerMobileDashboard />
-      </div>
-
-      {/* Desktop */}
-      <div className="hidden md:block container mx-auto px-4 py-6 space-y-6">
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Welcome Header */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">

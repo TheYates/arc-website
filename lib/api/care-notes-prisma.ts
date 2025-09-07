@@ -122,14 +122,14 @@ export async function updateCareNote(
       updatedAt: new Date(),
     };
 
-    if (updateData.title !== undefined) updateFields.title = updateData.title;
+    // title removed - not part of UpdateCareNoteRequest interface
     if (updateData.content !== undefined)
       updateFields.content = updateData.content;
     if (updateData.priority !== undefined)
       updateFields.priority = updateData.priority.toUpperCase();
     if (updateData.status !== undefined)
       updateFields.status = updateData.status.toUpperCase();
-    if (updateData.tags !== undefined) updateFields.tags = updateData.tags;
+    // tags removed - not part of UpdateCareNoteRequest interface
     if (updateData.isPrivate !== undefined)
       updateFields.isPrivate = updateData.isPrivate;
     if (updateData.followUpRequired !== undefined)

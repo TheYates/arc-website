@@ -32,7 +32,7 @@ export function TrustedPartners() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-              Trusted by Leading Organizations
+              Trusted Partners
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               We're proud to partner with these organizations to provide
@@ -59,7 +59,7 @@ export function TrustedPartners() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-            Trusted by Leading Organizations
+            Trusted Partners
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             We're proud to partner with these organizations to provide
@@ -105,7 +105,7 @@ export function TrustedPartnersMinimal() {
       <section className="py-8 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-6">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">
-            Trusted by Leading Organizations
+            Trusted Partners
           </p>
         </div>
         <div className="w-full overflow-hidden bg-gray-50 py-8">
@@ -126,7 +126,7 @@ export function TrustedPartnersMinimal() {
     <section className="py-8 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-6">
         <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">
-          Trusted by Leading Organizations
+          Trusted Partners
         </p>
       </div>
 

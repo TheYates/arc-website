@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { PricingItem } from "@/lib/types/pricing";
+import type { PricingItem } from "@/lib/types/packages";
 
 // Sample data for demonstration
 // const sampleData: PricingItem[] = [
@@ -175,7 +175,11 @@ export default function ServicesPricingPage() {
       isRequired: formData.isRequired,
       isRecurring: formData.isRecurring,
       isMutuallyExclusive: formData.isMutuallyExclusive,
+      parentId: null, // TODO: Set proper parent ID
+      sortOrder: 0, // TODO: Set proper sort order
       children: editingItem?.children || [],
+      createdAt: editingItem?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     if (editingItem) {

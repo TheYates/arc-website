@@ -47,7 +47,15 @@ export async function POST(
 
     // Calculate total amount (base price + selected features)
     let totalAmount = basePrice;
-    const invoiceItems = [];
+    const invoiceItems: Array<{
+      itemType: string;
+      itemName: string;
+      description?: string;
+      quantity: number;
+      unitPrice: number;
+      totalPrice: number;
+      sortOrder: number;
+    }> = [];
 
     // Add base service item
     invoiceItems.push({

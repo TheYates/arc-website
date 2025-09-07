@@ -11,7 +11,14 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "20");
     const commonOnly = searchParams.get("commonOnly") === "true";
 
-    let medications;
+    let medications: Array<{
+      id: string;
+      name: string;
+      generic_name: string | null;
+      drug_class: string | null;
+      category: string | null;
+      is_common: boolean;
+    }> = [];
 
     try {
       // Try to use MedicationCatalog table first

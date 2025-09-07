@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -27,38 +27,79 @@ import {
   Download,
   Upload,
 } from "lucide-react";
-import { AdminServicesMobile } from "@/components/mobile/admin-services";
+
 import { useAuth } from "@/lib/auth";
-import { PricingCardView } from "@/components/admin/pricing-card-view";
-import PricingItemFormModal from "@/components/admin/pricing-item-form-modal";
+
+// Lazy load heavy components for better initial load time
+const PricingCardView = lazy(() => import("@/components/admin/pricing-card-view").then(m => ({ default: m.PricingCardView })));
+const PricingItemFormModal = lazy(() => import("@/components/admin/pricing-item-form-modal"));
 
 import type { PricingItem } from "@/lib/types/packages";
 
 export default function AdminPackagesPage() {
   const { user } = useAuth();
 
+  // Performance monitoring
+  const [loadStartTime] = useState(() => Date.now());
+  const [loadTime, setLoadTime] = useState<number | null>(null);
+
   // Services data state - loaded from PostgreSQL database
   const [pricingItems, setPricingItems] = useState<PricingItem[]>([]);
   const [originalPricingItems, setOriginalPricingItems] = useState<PricingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load services from database
+  // Optimized data loading with caching and parallel requests
   useEffect(() => {
     const loadServices = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/admin/pricing");
+
+        // Check cache first
+        const cacheKey = 'admin_services_data';
+        const cached = sessionStorage.getItem(cacheKey);
+        const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
+
+        // Use cache if less than 30 seconds old
+        if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < 30000) {
+          const cachedData = JSON.parse(cached);
+          setPricingItems(cachedData);
+          setOriginalPricingItems([...cachedData]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Fetch with timeout for faster failure
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch("/api/admin/pricing/fast", {
+          signal: controller.signal,
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+
+        clearTimeout(timeoutId);
         const result = await response.json();
 
         if (result.success && result.data) {
           setPricingItems(result.data);
-          setOriginalPricingItems([...result.data]); // Store original data for change detection
+          setOriginalPricingItems([...result.data]);
+
+          // Cache the result
+          sessionStorage.setItem(cacheKey, JSON.stringify(result.data));
+          sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+
+          // Track performance
+          const totalLoadTime = Date.now() - loadStartTime;
+          setLoadTime(totalLoadTime);
+          console.log(`⚡ Services loaded in ${totalLoadTime}ms`);
         } else {
           console.error("Failed to load services:", result.error);
           setPricingItems([]);
         }
       } catch (error) {
-        console.error("Error loading services:", error);
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error("Error loading services:", error);
+        }
         setPricingItems([]);
       } finally {
         setIsLoading(false);
@@ -348,111 +389,62 @@ export default function AdminPackagesPage() {
     input.click();
   }, []);
 
-  // Debug useEffect to track hasUnsavedChanges changes
+  // Optimized safety mechanism (production-ready)
   useEffect(() => {
-    console.log("hasUnsavedChanges changed to:", hasUnsavedChanges);
-  }, [hasUnsavedChanges]);
-
-  // Debug useEffect to track modal state
-  useEffect(() => {
-    console.log("isPricingItemDialogOpen changed to:", isPricingItemDialogOpen);
-  }, [isPricingItemDialogOpen]);
-
-  // Safety mechanism: detect and fix frozen states
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Check if save button should be enabled but might be stuck
-      if (hasUnsavedChanges && !isSaving && !isPricingItemDialogOpen) {
-        console.log("Save button safety check: button should be clickable");
-      }
-
-      // Check for potential frozen modal state
-      if (isPricingItemDialogOpen && !isSaving) {
-        console.log("Modal safety check: modal is open");
-
-        // Check if modal has been open for too long (more than 5 minutes)
-        const modalOpenTime = Date.now() - (window as any).modalOpenTimestamp;
-        if ((window as any).modalOpenTimestamp && modalOpenTime > 300000) {
-          console.warn(
-            "Modal has been open for more than 5 minutes, might be frozen"
-          );
+    if (process.env.NODE_ENV === 'development') {
+      const interval = setInterval(() => {
+        // Only run safety checks in development
+        if (hasUnsavedChanges && !isSaving && !isPricingItemDialogOpen) {
+          console.log("Save button safety check: button should be clickable");
         }
-      }
-    }, 5000); // Check every 5 seconds
+      }, 10000); // Check every 10 seconds instead of 5
 
-    return () => clearInterval(interval);
+      return () => clearInterval(interval);
+    }
   }, [hasUnsavedChanges, isSaving, isPricingItemDialogOpen]);
 
-  // Track modal open time for safety checks
+  // Optimized keyboard shortcuts (production-ready)
   useEffect(() => {
-    if (isPricingItemDialogOpen) {
-      (window as any).modalOpenTimestamp = Date.now();
-      console.log("Modal opened at:", new Date().toISOString());
-    } else {
-      delete (window as any).modalOpenTimestamp;
-      console.log("Modal closed at:", new Date().toISOString());
-    }
-  }, [isPricingItemDialogOpen]);
-
-  // Global cleanup effect to prevent UI freezing (simplified)
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Emergency escape: Ctrl+Alt+R to force reset UI state
-      if (e.ctrlKey && e.altKey && e.key === "r") {
-        e.preventDefault();
-        console.log("🚨 Emergency UI reset triggered");
-
-        // Force close all dialogs
-        setIsPricingItemDialogOpen(false);
-        setSelectedPricingItem(null);
-        setParentItemId(null);
-        setNotificationDialog((prev) => ({ ...prev, open: false }));
-
-        // Force cleanup styles only (no DOM manipulation)
-        setTimeout(() => {
-          document.body.style.pointerEvents = "auto";
-          document.body.style.overflow = "auto";
-          console.log("🚨 Emergency UI reset completed");
-        }, 100);
-      }
-    };
-
-    document.addEventListener("keydown", handleGlobalKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleGlobalKeyDown);
-    };
-  }, []);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl+S to save
-      if (event.ctrlKey && event.key === "s") {
-        event.preventDefault();
+      if (e.ctrlKey && e.key === "s") {
+        e.preventDefault();
         if (hasUnsavedChanges && !isSaving) {
           handleSavePricingData();
         }
       }
       // Escape to close modal
-      if (event.key === "Escape") {
-        if (isPricingItemDialogOpen) {
-          event.preventDefault();
-          setIsPricingItemDialogOpen(false);
-          setSelectedPricingItem(null);
-          setParentItemId(null);
-        }
+      else if (e.key === "Escape" && isPricingItemDialogOpen) {
+        e.preventDefault();
+        setIsPricingItemDialogOpen(false);
+        setSelectedPricingItem(null);
+        setParentItemId(null);
+      }
+      // Emergency reset (development only)
+      else if (process.env.NODE_ENV === 'development' && e.ctrlKey && e.altKey && e.key === "r") {
+        e.preventDefault();
+        setIsPricingItemDialogOpen(false);
+        setSelectedPricingItem(null);
+        setParentItemId(null);
+        setNotificationDialog((prev) => ({ ...prev, open: false }));
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [
-    hasUnsavedChanges,
-    isSaving,
-    handleSavePricingData,
-    isPricingItemDialogOpen,
-  ]);
+  }, [hasUnsavedChanges, isSaving, handleSavePricingData, isPricingItemDialogOpen]);
+
+
+
+  // Memoized stats calculation for better performance
+  const stats = useMemo(() => {
+    const services = pricingItems.filter((item) => item.type === "service").length;
+    const features = pricingItems.filter((item) => item.type === "feature").length;
+    const addons = pricingItems.filter((item) => item.type === "addon").length;
+    const total = pricingItems.length;
+
+    return { services, features, addons, total };
+  }, [pricingItems]);
 
   // Check if user is admin (using consistent lowercase roles)
   if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
@@ -869,23 +861,7 @@ export default function AdminPackagesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <AdminServicesMobile
-          onCreateService={() => {
-            setParentItemId(null);
-            setDefaultItemType("service");
-            setSelectedPricingItem(null);
-            setPricingItemMode("create");
-            setIsPricingItemDialogOpen(true);
-          }}
-          onEditService={(service) => {
-            setSelectedPricingItem(service);
-            setPricingItemMode("edit");
-            setIsPricingItemDialogOpen(true);
-          }}
-        />
-      </div>
+
 
       {/* Desktop UI */}
       <div className="hidden md:block space-y-6">
@@ -898,9 +874,19 @@ export default function AdminPackagesPage() {
             <p className="text-muted-foreground">
               Configure and manage your healthcare service offerings
             </p>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-green-600">Database Connected</span>
+            <div className="flex items-center gap-4 mt-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-green-600">Database Connected</span>
+              </div>
+              {loadTime && (
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${loadTime < 2000 ? 'bg-green-500' : loadTime < 5000 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+                  <span className={`text-sm ${loadTime < 2000 ? 'text-green-600' : loadTime < 5000 ? 'text-yellow-600' : 'text-red-600'}`}>
+                    Loaded in {loadTime}ms
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -915,9 +901,7 @@ export default function AdminPackagesPage() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {pricingItems.filter((item) => item.type === "service").length}
-              </div>
+              <div className="text-2xl font-bold">{stats.services}</div>
               <p className="text-xs text-muted-foreground">Root services</p>
             </CardContent>
           </Card>
@@ -927,9 +911,7 @@ export default function AdminPackagesPage() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {pricingItems.filter((item) => item.type === "feature").length}
-              </div>
+              <div className="text-2xl font-bold">{stats.features}</div>
               <p className="text-xs text-muted-foreground">Service features</p>
             </CardContent>
           </Card>
@@ -939,9 +921,7 @@ export default function AdminPackagesPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {pricingItems.filter((item) => item.type === "addon").length}
-              </div>
+              <div className="text-2xl font-bold">{stats.addons}</div>
               <p className="text-xs text-muted-foreground">Available add-ons</p>
             </CardContent>
           </Card>
@@ -951,7 +931,7 @@ export default function AdminPackagesPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{pricingItems.length}</div>
+              <div className="text-2xl font-bold">{stats.total}</div>
               <p className="text-xs text-muted-foreground">All pricing items</p>
             </CardContent>
           </Card>
@@ -1076,51 +1056,57 @@ export default function AdminPackagesPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="space-y-6">
-                <Skeleton className="h-32 w-full rounded-lg" />
-                <Skeleton className="h-32 w-full rounded-lg" />
-                <Skeleton className="h-32 w-full rounded-lg" />
-                <div className="text-center">
-                  <Skeleton className="h-10 w-48 mx-auto rounded-md" />
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <Skeleton className="h-48 w-full rounded-lg" />
+                  <Skeleton className="h-48 w-full rounded-lg" />
+                  <Skeleton className="h-48 w-full rounded-lg" />
+                </div>
+                <div className="flex justify-center">
+                  <Skeleton className="h-10 w-32 rounded-md" />
                 </div>
               </div>
             ) : (
-              <PricingCardView
-                items={pricingItems}
-                onAdd={handleAddPricingItem}
-                onEdit={handleEditPricingItem}
-                onDelete={handleDeletePricingItem}
-                onClone={handleClonePricingItem}
-                onToggleComingSoon={handleToggleComingSoon}
-                onReorder={handleReorderPricingItems}
-              />
+              <Suspense fallback={<Skeleton className="h-64 w-full rounded-lg" />}>
+                <PricingCardView
+                  items={pricingItems}
+                  onAdd={handleAddPricingItem}
+                  onEdit={handleEditPricingItem}
+                  onDelete={handleDeletePricingItem}
+                  onClone={handleClonePricingItem}
+                  onToggleComingSoon={handleToggleComingSoon}
+                  onReorder={handleReorderPricingItems}
+                />
+              </Suspense>
             )}
           </CardContent>
         </Card>
 
         {/* Pricing Item Form Modal */}
-        <PricingItemFormModal
-          isOpen={isPricingItemDialogOpen}
-          onClose={() => {
-            console.log("Modal onClose called - forcing cleanup");
-            setIsPricingItemDialogOpen(false);
-            setSelectedPricingItem(null);
-            setParentItemId(null);
+        <Suspense fallback={null}>
+          <PricingItemFormModal
+            isOpen={isPricingItemDialogOpen}
+            onClose={() => {
+              console.log("Modal onClose called - forcing cleanup");
+              setIsPricingItemDialogOpen(false);
+              setSelectedPricingItem(null);
+              setParentItemId(null);
 
-            // Force cleanup of styles only (let React handle DOM)
-            setTimeout(() => {
-              // Ensure body is scrollable and interactive
-              document.body.style.overflow = "auto";
-              document.body.style.pointerEvents = "auto";
-              console.log("Modal cleanup completed");
-            }, 100);
-          }}
-          onSave={handleSavePricingItem}
-          item={selectedPricingItem}
-          mode={pricingItemMode}
-          parentId={parentItemId}
-          defaultType={defaultItemType}
-        />
+              // Force cleanup of styles only (let React handle DOM)
+              setTimeout(() => {
+                // Ensure body is scrollable and interactive
+                document.body.style.overflow = "auto";
+                document.body.style.pointerEvents = "auto";
+                console.log("Modal cleanup completed");
+              }, 100);
+            }}
+            onSave={handleSavePricingItem}
+            item={selectedPricingItem}
+            mode={pricingItemMode}
+            parentId={parentItemId}
+            defaultType={defaultItemType}
+          />
+        </Suspense>
 
         {/* Confirmation Dialog for Coming Soon Toggle */}
         <Dialog

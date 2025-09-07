@@ -14,16 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuth, hasPermission } from "@/lib/auth";
-import { getPatientById } from "@/lib/api/patients";
-import {
-  getAvailableStaff,
-  assignPatientToCaregiver,
-  assignPatientToReviewer,
-  removeAssignment,
-  getWorkloadStats,
-} from "@/lib/api/assignments";
 import { Patient, CareLevel, PatientStatus } from "@/lib/types/patients";
 import { User } from "@/lib/auth";
+import { useOptimizedPatientDetails, usePatientMutations } from "@/hooks/use-admin-queries";
 import {
   ArrowLeft,
   User as UserIcon,
@@ -62,7 +55,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { AdminPatientMobile } from "@/components/mobile/admin-patient-detail";
+
 
 export default function AdminPatientDetailPage({
   params,
@@ -72,47 +65,28 @@ export default function AdminPatientDetailPage({
   const { id } = use(params);
   const { user } = useAuth();
   const router = useRouter();
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
-  const [availableStaff, setAvailableStaff] = useState<{
-    caregivers: User[];
-    reviewers: User[];
-  }>({ caregivers: [], reviewers: [] });
-  const [workloadStats, setWorkloadStats] = useState<{
-    caregivers: Array<{ user: User; patientCount: number }>;
-    reviewers: Array<{ user: User; patientCount: number }>;
-  }>({ caregivers: [], reviewers: [] });
   const [selectedCaregiver, setSelectedCaregiver] = useState<string>("");
   const [selectedReviewer, setSelectedReviewer] = useState<string>("");
-  const [isAssigning, setIsAssigning] = useState(false);
+
+  // Performance monitoring
+  const [loadStartTime] = useState(() => Date.now());
+  const [loadTime, setLoadTime] = useState<number | null>(null);
+
   const { toast } = useToast();
 
-  // Authentication is handled by admin layout - no need for individual checks
+  // Use optimized data fetching
+  const { patient, availableStaff, stats, isLoading, error, refetch, loadTime: dataLoadTime } = useOptimizedPatientDetails(id);
+  const { assignCaregiver, assignReviewer, isAssigningCaregiver, isAssigningReviewer } = usePatientMutations();
 
+  // Track total load time when data is ready
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const [patientData, staffData, statsData] = await Promise.all([
-          getPatientById(id),
-          getAvailableStaff(),
-          getWorkloadStats(),
-        ]);
-        setPatient(patientData);
-        setAvailableStaff(staffData);
-        setWorkloadStats(statsData);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (id) {
-      fetchData();
+    if (!isLoading && dataLoadTime && !loadTime) {
+      const totalTime = Date.now() - loadStartTime;
+      setLoadTime(totalTime);
+      console.log(`⚡ Patient details page loaded in ${totalTime}ms (API: ${dataLoadTime}ms)`);
     }
-  }, [id]);
+  }, [isLoading, dataLoadTime, loadTime, loadStartTime]);
 
   const getCareLevelBadge = (careLevel?: CareLevel) => {
     switch (careLevel) {
@@ -162,72 +136,28 @@ export default function AdminPatientDetailPage({
     setShowAssignmentDialog(true);
   };
 
-  const handleAssignment = async () => {
-    if (!patient || !user) return;
+  const handleAssignCaregiver = async () => {
+    if (!patient || !selectedCaregiver) return;
+    await assignCaregiver.mutateAsync({
+      patientId: patient.id,
+      caregiverId: selectedCaregiver,
+    });
+    setSelectedCaregiver("");
+    setSelectedReviewer("");
+    setShowAssignmentDialog(false);
+    refetch(); // Refresh data
+  };
 
-    setIsAssigning(true);
-    try {
-      let success = true;
-
-      // Handle caregiver assignment
-      if (
-        selectedCaregiver &&
-        selectedCaregiver !== "none" &&
-        selectedCaregiver !== patient.assignedCaregiverId
-      ) {
-        success = await assignPatientToCaregiver(
-          patient.id,
-          selectedCaregiver,
-          user.id
-        );
-        if (!success) throw new Error("Failed to assign caregiver");
-      } else if (
-        (selectedCaregiver === "none" || !selectedCaregiver) &&
-        patient.assignedCaregiverId
-      ) {
-        success = await removeAssignment(patient.id, "caregiver");
-        if (!success) throw new Error("Failed to remove caregiver assignment");
-      }
-
-      // Handle reviewer assignment
-      if (
-        selectedReviewer &&
-        selectedReviewer !== "none" &&
-        selectedReviewer !== patient.assignedReviewerId
-      ) {
-        success = await assignPatientToReviewer(
-          patient.id,
-          selectedReviewer,
-          user.id
-        );
-        if (!success) throw new Error("Failed to assign reviewer");
-      } else if (
-        (selectedReviewer === "none" || !selectedReviewer) &&
-        patient.assignedReviewerId
-      ) {
-        success = await removeAssignment(patient.id, "reviewer");
-        if (!success) throw new Error("Failed to remove reviewer assignment");
-      }
-
-      // Refresh patient data
-      const updatedPatient = await getPatientById(id);
-      setPatient(updatedPatient);
-
-      setShowAssignmentDialog(false);
-      toast({
-        title: "Assignment Updated",
-        description: `Patient assignments have been updated successfully.`,
-      });
-    } catch (error) {
-      console.error("Assignment error:", error);
-      toast({
-        title: "Assignment Failed",
-        description: "Failed to update patient assignments. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAssigning(false);
-    }
+  const handleAssignReviewer = async () => {
+    if (!patient || !selectedReviewer) return;
+    await assignReviewer.mutateAsync({
+      patientId: patient.id,
+      reviewerId: selectedReviewer,
+    });
+    setSelectedCaregiver("");
+    setSelectedReviewer("");
+    setShowAssignmentDialog(false);
+    refetch(); // Refresh data
   };
 
   if (isLoading) {
@@ -263,13 +193,8 @@ export default function AdminPatientDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <AdminPatientMobile patientId={id} />
-      </div>
-
-      {/* Desktop View */}
-      <div className="hidden md:block space-y-6">
+      {/* Main View */}
+      <div className="space-y-6">
         {/* Header */}
         <div className="space-y-4">
           {/* Back Button */}
@@ -292,6 +217,14 @@ export default function AdminPatientDetailPage({
               <p className="text-muted-foreground">
                 Patient Details & Management
               </p>
+              {loadTime && (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className={`w-2 h-2 rounded-full ${loadTime < 2000 ? 'bg-green-500' : loadTime < 5000 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+                  <span className={`text-sm ${loadTime < 2000 ? 'text-green-600' : loadTime < 5000 ? 'text-yellow-600' : 'text-red-600'}`}>
+                    Loaded in {loadTime}ms
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -690,11 +623,8 @@ export default function AdminPatientDetailPage({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No Assignment</SelectItem>
-                      {availableStaff.caregivers.map((caregiver) => {
-                        const workload =
-                          workloadStats.caregivers.find(
-                            (w) => w.user.id === caregiver.id
-                          )?.patientCount || 0;
+                      {availableStaff.caregivers.map((caregiver: any) => {
+                        const workload = caregiver.patientCount || 0;
                         return (
                           <SelectItem key={caregiver.id} value={caregiver.id}>
                             <div className="flex items-center justify-between w-full">
@@ -724,11 +654,8 @@ export default function AdminPatientDetailPage({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No Assignment</SelectItem>
-                      {availableStaff.reviewers.map((reviewer) => {
-                        const workload =
-                          workloadStats.reviewers.find(
-                            (w) => w.user.id === reviewer.id
-                          )?.patientCount || 0;
+                      {availableStaff.reviewers.map((reviewer: any) => {
+                        const workload = reviewer.patientCount || 0;
                         return (
                           <SelectItem key={reviewer.id} value={reviewer.id}>
                             <div className="flex items-center justify-between w-full">
@@ -751,23 +678,21 @@ export default function AdminPatientDetailPage({
                 <Button
                   variant="outline"
                   onClick={() => setShowAssignmentDialog(false)}
-                  disabled={isAssigning}
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleAssignment} disabled={isAssigning}>
-                  {isAssigning ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Update Assignments
-                    </>
-                  )}
-                </Button>
+                {selectedCaregiver && (
+                  <Button onClick={handleAssignCaregiver} disabled={isAssigningCaregiver}>
+                    {isAssigningCaregiver && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Assign Caregiver
+                  </Button>
+                )}
+                {selectedReviewer && (
+                  <Button onClick={handleAssignReviewer} disabled={isAssigningReviewer}>
+                    {isAssigningReviewer && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Assign Reviewer
+                  </Button>
+                )}
               </DialogFooter>
             </DialogContent>
           </Dialog>

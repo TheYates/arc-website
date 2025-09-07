@@ -141,7 +141,7 @@ export default function ServiceCustomizePage() {
               <CardTitle>Select Billing Period</CardTitle>
             </CardHeader>
             <CardContent>
-              <Select value={billingPeriod} onValueChange={setBillingPeriod}>
+              <Select value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as "daily" | "monthly" | "hourly")}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select billing period" />
                 </SelectTrigger>

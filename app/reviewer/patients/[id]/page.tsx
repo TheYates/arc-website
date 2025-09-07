@@ -56,7 +56,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { RoleHeader } from "@/components/role-header";
-import { ReviewerPatientMobile } from "@/components/mobile/reviewer-patient-detail";
+
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 
@@ -252,9 +252,11 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
     <div className="min-h-screen bg-background">
       <RoleHeader role="reviewer" />
 
-      {/* Mobile (distinct UI) */}
+      {/* Mobile UI - TODO: Implement mobile-specific component */}
       <div className="md:hidden">
-        <ReviewerPatientMobile patientId={resolvedParams.id} />
+        <div className="p-4 text-center text-muted-foreground">
+          Mobile view coming soon
+        </div>
       </div>
 
       {/* Desktop */}

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Shield, Loader2, CheckCircle } from "lucide-react"
-import { useAuth } from "@/lib/auth"
+// Note: useAuth removed as resetPassword method is not available
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -17,7 +17,7 @@ export default function ForgotPasswordPage() {
   const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const { resetPassword } = useAuth()
+  // Note: resetPassword method not available in auth context
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,12 +31,19 @@ export default function ForgotPasswordPage() {
     }
 
     try {
-      const result = await resetPassword(email)
+      // TODO: Implement password reset API endpoint
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
 
-      if (result.success) {
+      if (response.ok) {
         setSuccess(true)
       } else {
-        setError(result.error || "Failed to send reset email")
+        setError("Failed to send reset email")
       }
     } catch (err) {
       setError("An unexpected error occurred")

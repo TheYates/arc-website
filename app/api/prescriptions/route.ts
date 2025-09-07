@@ -213,8 +213,12 @@ export async function GET(request: NextRequest) {
         patient: {
           select: {
             id: true,
-            firstName: true,
-            lastName: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              }
+            }
           },
         },
       },

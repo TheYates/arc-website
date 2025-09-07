@@ -1,11 +1,17 @@
+"use client";
+
 import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Phone, Mail, MapPin, Clock } from "lucide-react"
+import { useContactInfo } from "@/hooks/use-contact-info"
 
 export default function ContactPage() {
+  // Get contact information
+  const { contactInfo } = useContactInfo();
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
@@ -103,8 +109,10 @@ export default function ContactPage() {
                     <Phone className="h-6 w-6 text-teal-600 mt-1" />
                     <div>
                       <h3 className="font-semibold text-slate-900">Phone</h3>
-                      <p className="text-slate-600">+233 24 123 4567</p>
-                      <p className="text-slate-600">+233 20 987 6543</p>
+                      <p className="text-slate-600">{contactInfo?.primaryPhone || "+233 XX XXX XXXX"}</p>
+                      {contactInfo?.secondaryPhone && (
+                        <p className="text-slate-600">{contactInfo.secondaryPhone}</p>
+                      )}
                     </div>
                   </div>
 
@@ -112,8 +120,7 @@ export default function ContactPage() {
                     <Mail className="h-6 w-6 text-teal-600 mt-1" />
                     <div>
                       <h3 className="font-semibold text-slate-900">Email</h3>
-                      <p className="text-slate-600">info@alpharescueconsult.com</p>
-                      <p className="text-slate-600">care@alpharescueconsult.com</p>
+                      <p className="text-slate-600">{contactInfo?.email || "info@alpharescue.com"}</p>
                     </div>
                   </div>
 
@@ -121,7 +128,7 @@ export default function ContactPage() {
                     <MapPin className="h-6 w-6 text-teal-600 mt-1" />
                     <div>
                       <h3 className="font-semibold text-slate-900">Office Location</h3>
-                      <p className="text-slate-600">123 Liberation Road</p>
+                      <p className="text-slate-600">{contactInfo?.address || "Accra, Ghana"}</p>
                       <p className="text-slate-600">East Legon, Accra</p>
                       <p className="text-slate-600">Ghana</p>
                     </div>
@@ -131,9 +138,8 @@ export default function ContactPage() {
                     <Clock className="h-6 w-6 text-teal-600 mt-1" />
                     <div>
                       <h3 className="font-semibold text-slate-900">Business Hours</h3>
-                      <p className="text-slate-600">Monday - Friday: 8:00 AM - 6:00 PM</p>
-                      <p className="text-slate-600">Saturday: 9:00 AM - 4:00 PM</p>
-                      <p className="text-slate-600">Sunday: Emergency calls only</p>
+                      <p className="text-slate-600">{contactInfo?.supportHours || "Mon-Fri, 8AM-6PM"}</p>
+                      <p className="text-slate-600">Emergency calls: 24/7</p>
                     </div>
                   </div>
                 </CardContent>
@@ -148,7 +154,10 @@ export default function ContactPage() {
                     For urgent care needs or emergencies, our 24/7 hotline is always available.
                   </p>
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <p className="text-red-800 font-semibold text-lg">Emergency Hotline: +233 24 911 0000</p>
+                    <p className="text-red-800 font-semibold text-lg">Emergency Hotline: {contactInfo?.primaryPhone || "+233 XX XXX XXXX"}</p>
+                    {contactInfo?.secondaryPhone && (
+                      <p className="text-red-700 font-medium">Alternative: {contactInfo.secondaryPhone}</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

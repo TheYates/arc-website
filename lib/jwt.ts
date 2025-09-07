@@ -26,26 +26,12 @@ export interface SessionTokens {
  * Generate JWT access token and refresh token for a user
  */
 export async function generateTokens(user: any): Promise<SessionTokens> {
+  const startTime = Date.now();
+
   // Generate a session ID (will be stored in database when available)
   const sessionId = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
-  
-  // Try to create session record in database (graceful fallback if table doesn't exist)
-  try {
-    await prisma.userSession.create({
-      data: {
-        id: sessionId,
-        userId: user.id,
-        sessionToken: generateSessionToken(),
-        expiresAt: new Date(Date.now() + parseExpirationTime(REFRESH_TOKEN_EXPIRES_IN)),
-      },
-    });
-    console.log("✅ Session stored in database");
-  } catch (error: any) {
-    console.log("⚠️ Database session storage not available, using in-memory session:", error.message);
-    // Continue without database storage for now
-  }
 
-  // Create JWT payload
+  // Create JWT payload first (synchronous operation)
   const payload: JWTPayload = {
     userId: user.id,
     email: user.email,
@@ -53,14 +39,13 @@ export async function generateTokens(user: any): Promise<SessionTokens> {
     sessionId: sessionId,
   };
 
-  // Generate access token (short-lived)
+  // Generate tokens synchronously (faster)
   const accessToken = jwt.sign(payload, JWT_SECRET as string, {
     expiresIn: JWT_EXPIRES_IN,
     issuer: 'arc-website',
     audience: 'arc-users',
   } as jwt.SignOptions);
 
-  // Generate refresh token (long-lived) 
   const refreshToken = jwt.sign(
     { userId: user.id, sessionId: sessionId },
     JWT_SECRET as string,
@@ -70,6 +55,31 @@ export async function generateTokens(user: any): Promise<SessionTokens> {
       audience: 'arc-refresh',
     } as jwt.SignOptions
   );
+
+  // Store session in database asynchronously (don't wait for it)
+  setImmediate(async () => {
+    try {
+      await Promise.race([
+        prisma.userSession.create({
+          data: {
+            id: sessionId,
+            userId: user.id,
+            sessionToken: generateSessionToken(),
+            expiresAt: new Date(Date.now() + parseExpirationTime(REFRESH_TOKEN_EXPIRES_IN)),
+          },
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Session storage timeout')), 1000)
+        )
+      ]);
+      console.log("✅ Session stored in database");
+    } catch (error: any) {
+      console.log("⚠️ Database session storage failed:", error.message);
+    }
+  });
+
+  const tokenTime = Date.now() - startTime;
+  console.log(`🎟️ Tokens generated in ${tokenTime}ms`);
 
   return {
     accessToken,

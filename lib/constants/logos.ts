@@ -1,4 +1,4 @@
-import { Logo } from "@/components/ui/scrolling-logos";
+import { Logo } from "@/lib/types/logos";
 
 // Partner/Client Logos Configuration
 // To add real logos:
@@ -13,6 +13,8 @@ export const PARTNER_LOGOS: Logo[] = [
     alt: "UTB - University of Technology and Business",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 1,
   },
   {
     name: "NOVA",
@@ -20,6 +22,8 @@ export const PARTNER_LOGOS: Logo[] = [
     alt: "NOVA Corporation",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 2,
   },
   {
     name: "Pastosa",
@@ -27,6 +31,8 @@ export const PARTNER_LOGOS: Logo[] = [
     alt: "Pastosa Company",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 3,
   },
   {
     name: "Biobe",
@@ -34,6 +40,8 @@ export const PARTNER_LOGOS: Logo[] = [
     alt: "Biobe Solutions",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 4,
   },
   {
     name: "Rabito",
@@ -41,6 +49,8 @@ export const PARTNER_LOGOS: Logo[] = [
     alt: "Rabito Services",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 5,
   },
   {
     name: "District 4",
@@ -48,6 +58,8 @@ export const PARTNER_LOGOS: Logo[] = [
     alt: "District 4 Organization",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 6,
   },
   {
     name: "Labianca",
@@ -55,6 +67,8 @@ export const PARTNER_LOGOS: Logo[] = [
     alt: "Labianca Company",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 7,
   },
   {
     name: "Polytank",
@@ -62,6 +76,8 @@ export const PARTNER_LOGOS: Logo[] = [
     alt: "Polytank Industries",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 8,
   },
   {
     name: "Woodify",
@@ -69,6 +85,8 @@ export const PARTNER_LOGOS: Logo[] = [
     alt: "Woodify Solutions",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 9,
   },
   {
     name: "Decorzone",
@@ -76,6 +94,8 @@ export const PARTNER_LOGOS: Logo[] = [
     alt: "Decorzone Design",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 10,
   },
 ];
 
@@ -87,6 +107,8 @@ export const PLACEHOLDER_LOGOS: Logo[] = [
     alt: "UTB Logo",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 1,
   },
   {
     name: "NOVA",
@@ -94,6 +116,8 @@ export const PLACEHOLDER_LOGOS: Logo[] = [
     alt: "NOVA Logo",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 2,
   },
   {
     name: "Pastosa",
@@ -101,6 +125,8 @@ export const PLACEHOLDER_LOGOS: Logo[] = [
     alt: "Pastosa Logo",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 3,
   },
   {
     name: "Biobe",
@@ -108,6 +134,8 @@ export const PLACEHOLDER_LOGOS: Logo[] = [
     alt: "Biobe Logo",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 4,
   },
   {
     name: "Rabito",
@@ -115,6 +143,8 @@ export const PLACEHOLDER_LOGOS: Logo[] = [
     alt: "Rabito Logo",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 5,
   },
   {
     name: "District 4",
@@ -122,6 +152,8 @@ export const PLACEHOLDER_LOGOS: Logo[] = [
     alt: "District 4 Logo",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 6,
   },
   {
     name: "Labianca",
@@ -129,6 +161,8 @@ export const PLACEHOLDER_LOGOS: Logo[] = [
     alt: "Labianca Logo",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 7,
   },
   {
     name: "Polytank",
@@ -136,6 +170,8 @@ export const PLACEHOLDER_LOGOS: Logo[] = [
     alt: "Polytank Logo",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 8,
   },
   {
     name: "Woodify",
@@ -143,6 +179,8 @@ export const PLACEHOLDER_LOGOS: Logo[] = [
     alt: "Woodify Logo",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 9,
   },
   {
     name: "Decorzone",
@@ -150,6 +188,8 @@ export const PLACEHOLDER_LOGOS: Logo[] = [
     alt: "Decorzone Logo",
     width: 120,
     height: 60,
+    isActive: true,
+    sortOrder: 10,
   },
 ];
 

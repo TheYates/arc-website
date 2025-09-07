@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Pill, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ReviewerMedicationsMobile } from "@/components/mobile/reviewer-medications";
+
 
 interface PageProps {
   params: Promise<{ patientId: string }>;
@@ -81,9 +81,11 @@ export default function ReviewerMedicationsPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Mobile (distinct UI) */}
+      {/* Mobile UI - TODO: Implement mobile-specific component */}
       <div className="md:hidden">
-        <ReviewerMedicationsMobile patientId={resolvedParams.patientId} />
+        <div className="p-4 text-center text-muted-foreground">
+          Mobile view coming soon
+        </div>
       </div>
 
       {/* Desktop */}

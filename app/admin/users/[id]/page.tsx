@@ -36,7 +36,7 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { AdminUserDetailMobile } from "@/components/mobile/admin-user-detail";
+
 
 export default function UserDetailsPage({
   params,
@@ -226,10 +226,7 @@ export default function UserDetailsPage({
 
   return (
     <div className="space-y-6">
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <AdminUserDetailMobile id={id} />
-      </div>
+
 
       {/* Header */}
       <div className="hidden md:block space-y-4">
@@ -343,7 +340,7 @@ export default function UserDetailsPage({
                 <div>
                   <Label htmlFor="username">Username</Label>
                   <div className="mt-1 p-2 bg-muted rounded-md text-muted-foreground">
-                    @{userDetails.username}
+                    @{userDetails.email.split('@')[0]}
                   </div>
                 </div>
                 <div>

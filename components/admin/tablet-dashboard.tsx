@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, memo } from "react";
+import React, { useMemo, useCallback, memo } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -67,7 +67,7 @@ const TabletStatCard = memo(({ stat }: { stat: any }) => (
 
 TabletStatCard.displayName = "TabletStatCard";
 
-const TabletApplicationItem = memo(({ application, getStatusBadge }: { application: any; getStatusBadge: (status: string) => JSX.Element }) => (
+const TabletApplicationItem = memo(({ application, getStatusBadge }: { application: any; getStatusBadge: (status: string) => React.JSX.Element }) => (
   <div className="flex items-center justify-between p-3 rounded-lg hover:bg-accent transition-colors border">
     <div className="flex items-center gap-3">
       <Avatar className="h-10 w-10">
@@ -88,7 +88,7 @@ const TabletApplicationItem = memo(({ application, getStatusBadge }: { applicati
 
 TabletApplicationItem.displayName = "TabletApplicationItem";
 
-const TabletActivityItem = memo(({ activity, getActivityIcon }: { activity: any; getActivityIcon: (type: string) => JSX.Element }) => (
+const TabletActivityItem = memo(({ activity, getActivityIcon }: { activity: any; getActivityIcon: (type: string) => React.JSX.Element }) => (
   <div className="flex gap-3 p-3 rounded-lg hover:bg-accent transition-colors border">
     <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
     <div className="flex-grow min-w-0">
@@ -117,8 +117,8 @@ interface TabletDashboardProps {
   recentActivities: any[];
   upcomingConsultations: any[];
   taskCompletion: any[];
-  getStatusBadge: (status: string) => JSX.Element;
-  getActivityIcon: (type: string) => JSX.Element;
+  getStatusBadge: (status: string) => React.JSX.Element;
+  getActivityIcon: (type: string) => React.JSX.Element;
 }
 
 export function TabletDashboard({

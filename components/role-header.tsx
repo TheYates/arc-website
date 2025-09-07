@@ -253,7 +253,7 @@ export function RoleHeader({ role }: RoleHeaderProps) {
   const navigationItems = getNavigationItems();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
+    <header className="sticky top-0 z-[100] w-full border-b bg-background/95 backdrop-blur">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Left side - Logo and Navigation */}
         <div className="flex items-center space-x-6">
@@ -319,7 +319,7 @@ export function RoleHeader({ role }: RoleHeaderProps) {
               align="end"
               sideOffset={8}
               side="bottom"
-              style={{ zIndex: 9999 }}
+              style={{ zIndex: 10000 }}
               avoidCollisions={true}
               collisionPadding={8}
             >
@@ -334,17 +334,7 @@ export function RoleHeader({ role }: RoleHeaderProps) {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/profile")}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push(`/${role}/settings`)}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {/* Profile and Settings disabled - managed by admin */}
               <DropdownMenuItem
                 onClick={logout}
                 className="text-red-600 focus:text-red-600 focus:bg-red-50"

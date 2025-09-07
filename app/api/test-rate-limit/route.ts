@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     success: true,
     message: 'Request successful',
     timestamp: new Date().toISOString(),
-    ip: request.ip || 'unknown'
+    ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
   });
 }
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     success: true,
     message: 'POST request successful',
     timestamp: new Date().toISOString(),
-    ip: request.ip || 'unknown',
+    ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
     body
   });
 }

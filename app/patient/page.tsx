@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/auth";
 import { RoleHeader } from "@/components/role-header";
-import { PatientMobileDashboard } from "@/components/mobile/patient-dashboard";
+
 import {
   Calendar,
   Clock,
@@ -122,13 +122,8 @@ export default function PatientDashboard() {
       {/* Header Navigation */}
       <RoleHeader role="patient" />
 
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <PatientMobileDashboard />
-      </div>
-
-      {/* Desktop */}
-      <main className="hidden md:block container mx-auto px-4 py-6 w-full max-w-7xl">
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6 w-full max-w-7xl">
         {/* Welcome Header */}
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">

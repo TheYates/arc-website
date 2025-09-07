@@ -16,7 +16,7 @@ import { VitalSigns } from "@/lib/types/vitals";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CaregiverVitalsMobile } from "@/components/mobile/caregiver-vitals";
+
 import { useToast } from "@/hooks/use-toast";
 
 interface PageProps {
@@ -146,13 +146,8 @@ export default function CaregiverVitalsPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <CaregiverVitalsMobile patientId={resolvedParams.patientId} />
-      </div>
-
-      {/* Header (Desktop) */}
-      <div className="hidden md:flex items-center space-x-4">
+      {/* Header */}
+      <div className="flex items-center space-x-4">
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>

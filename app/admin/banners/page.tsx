@@ -29,8 +29,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useLogos } from "@/hooks/use-logos";
 import { Logo, CreateLogoRequest, UpdateLogoRequest } from "@/lib/types/logos";
-import { TabletLogosManagement } from "@/components/admin/tablet-logos-management";
-import { useDeviceType } from "@/hooks/use-device-type";
+
+
 import {
   Plus,
   Edit,
@@ -48,7 +48,7 @@ export default function BannersManagementPage() {
   const { logos, isLoading, createLogo, updateLogo, deleteLogo, reorderLogos } =
     useLogos();
   const { toast } = useToast();
-  const { isTablet } = useDeviceType();
+
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -234,18 +234,7 @@ export default function BannersManagementPage() {
     );
   }
 
-  // Tablet view
-  if (isTablet) {
-    return (
-      <TabletLogosManagement
-        logos={logos}
-        isLoading={isLoading}
-        createLogo={createLogo}
-        updateLogo={updateLogo}
-        deleteLogo={deleteLogo}
-      />
-    );
-  }
+
 
   return (
     <div className="space-y-6">

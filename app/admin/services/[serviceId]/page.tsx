@@ -14,7 +14,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { ServiceHierarchyManager } from "@/components/admin/service-hierarchy-manager";
-import { AdminServiceDetailMobile } from "@/components/mobile/admin-service-detail";
+
 
 interface Service {
   id: string;
@@ -149,10 +149,7 @@ export default function ServiceManagementPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <AdminServiceDetailMobile serviceId={serviceId} />
-      </div>
+
 
       {/* Header */}
       <div className="hidden md:flex items-center justify-between">

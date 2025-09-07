@@ -8,8 +8,12 @@ import Link from "next/link";
 import { HeroImage, ServiceCardImage } from "@/components/ui/optimized-image";
 import { IMAGES, ALT_TEXTS } from "@/lib/constants/images";
 import { TrustedPartnersMinimal } from "@/components/sections/trusted-partners";
+import { useContactInfo } from "@/hooks/use-contact-info";
 
 export default function HomePage() {
+  // Get contact information
+  const { contactInfo } = useContactInfo();
+
   const services = [
     {
       name: "Event Medical Coverage",
@@ -301,7 +305,12 @@ export default function HomePage() {
               </p>
               <div className="flex space-x-4">
                 <Phone className="h-5 w-5 text-teal-400" />
-                <span className="text-slate-300">+233 XX XXX XXXX</span>
+                <div className="flex flex-col">
+                  <span className="text-slate-300">{contactInfo?.primaryPhone || "+233 XX XXX XXXX"}</span>
+                  {contactInfo?.secondaryPhone && (
+                    <span className="text-slate-400 text-sm">{contactInfo.secondaryPhone}</span>
+                  )}
+                </div>
               </div>
             </div>
 

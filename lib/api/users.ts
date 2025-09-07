@@ -45,17 +45,7 @@ function generateTemporaryPassword(): string {
   return password;
 }
 
-// Generate username from name
-function generateUsername(firstName: string, lastName: string): string {
-  const base = (firstName.toLowerCase() + lastName.toLowerCase()).replace(
-    /[^a-z0-9]/g,
-    ""
-  );
-  const suffix = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return base + suffix;
-}
+// generateUsername function removed - username not part of User model
 
 // Determine role based on job category
 function determineRoleFromJobCategory(jobCategory: string): UserRole {
@@ -86,7 +76,7 @@ export async function checkUserExists(email: string): Promise<boolean> {
 export async function createAccountFromApplication(
   application: CareerApplication,
   jobCategory: string,
-  createdByAdmin: string
+  _createdByAdmin: string
 ): Promise<{
   success: boolean;
   user?: User;
@@ -108,17 +98,14 @@ export async function createAccountFromApplication(
 
         // Generate account details
         const tempPassword = generateTemporaryPassword();
-        const username = generateUsername(
-          application.firstName,
-          application.lastName
-        );
+        // username generation removed - not part of User model
         const role = determineRoleFromJobCategory(jobCategory);
 
         // Create user object
         const newUser: User = {
           id: uuidv4(),
           email: application.email,
-          username: username,
+          // username removed - not part of User model
           firstName: application.firstName,
           lastName: application.lastName,
           phone: application.phone || "",
@@ -167,8 +154,8 @@ export async function getUserAccount(
       const users = getFromStorage<UserAccount[]>(USERS_STORAGE_KEY, []);
       const account = users.find(
         (acc) =>
-          acc.user.email === emailOrUsername ||
-          acc.user.username === emailOrUsername
+          acc.user.email === emailOrUsername
+          // username removed - not part of User model
       );
       resolve(account || null);
     }, 200);
@@ -177,8 +164,8 @@ export async function getUserAccount(
 
 // Send account creation email (mock implementation)
 export async function sendAccountCreationEmail(
-  user: User,
-  password: string
+  _user: User,
+  _password: string
 ): Promise<{ success: boolean; error?: string }> {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -202,7 +189,7 @@ export function integrateWithAuth() {
     "Created user accounts:",
     users.map((acc) => ({
       email: acc.user.email,
-      username: acc.user.username,
+      // username removed - not part of User model
       role: acc.user.role,
     }))
   );

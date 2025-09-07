@@ -23,7 +23,7 @@ export default function AuthTestPage() {
       const data = await response.json();
       setResult(data);
     } catch (error) {
-      setResult({ error: error.message });
+      setResult({ error: error instanceof Error ? error.message : 'Unknown error occurred' });
     } finally {
       setLoading(false);
     }
@@ -41,7 +41,7 @@ export default function AuthTestPage() {
       const data = await response.json();
       setResult(data);
     } catch (error) {
-      setResult({ error: error.message });
+      setResult({ error: error instanceof Error ? error.message : 'Unknown error occurred' });
     } finally {
       setLoading(false);
     }

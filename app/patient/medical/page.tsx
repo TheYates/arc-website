@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { VitalsChart } from "@/components/medical/vitals-chart";
 import { PatientSymptomReportForm } from "@/components/medical/patient-symptom-report-form";
 import { RoleHeader } from "@/components/role-header";
-import { PatientMobileDashboard } from "@/components/mobile/patient-dashboard";
+
 import {
   getMedications,
   getMedicationAdministrations,
@@ -150,9 +150,11 @@ export default function PatientMedicalPage() {
       {/* Header Navigation */}
       <RoleHeader role="patient" />
 
-      {/* Mobile (distinct UI) */}
+      {/* Mobile UI - TODO: Implement mobile-specific component */}
       <div className="md:hidden">
-        <PatientMobileDashboard />
+        <div className="p-4 text-center text-muted-foreground">
+          Mobile view coming soon
+        </div>
       </div>
 
       {/* Desktop */}

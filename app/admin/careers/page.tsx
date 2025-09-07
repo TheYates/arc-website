@@ -159,7 +159,7 @@ import {
   Tag,
   Settings,
 } from "lucide-react";
-import { AdminCareersMobile } from "@/components/mobile/admin-careers";
+
 
 export default function JobManagementPage() {
   const { user } = useAuth();
@@ -208,27 +208,7 @@ export default function JobManagementPage() {
 
   const router = useRouter();
 
-  // Viewport detection to prevent desktop Dialog from rendering on mobile
-  const [isMdUp, setIsMdUp] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mql = window.matchMedia("(min-width: 768px)");
-    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
-      // Support both event and initial list
-      // @ts-ignore
-      setIsMdUp(e.matches !== undefined ? e.matches : mql.matches);
-    };
-    handler(mql as unknown as MediaQueryList);
-    mql.addEventListener?.(
-      "change",
-      handler as (e: MediaQueryListEvent) => void
-    );
-    return () =>
-      mql.removeEventListener?.(
-        "change",
-        handler as (e: MediaQueryListEvent) => void
-      );
-  }, []);
+
 
   // Fetch data on component mount with enhanced caching
   useEffect(() => {
@@ -591,296 +571,12 @@ export default function JobManagementPage() {
 
   return (
     <div className="space-y-6">
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <AdminCareersMobile
-          title="Job Management"
-          subtitle="Manage job positions and review applications"
-          onOpenCreate={() => setShowCreateDialog(true)}
-          onOpenCategories={() => setShowCategoryDialog(true)}
-          onEdit={(job) => {
-            setEditingJob(job);
-            setFormData({
-              title: job.title,
-              type: job.type,
-              location: job.location,
-              description: job.description,
-              requirements: Array.isArray(job.requirements)
-                ? job.requirements.join("\n")
-                : job.requirements,
 
-              category: job.category,
-              status: job.status,
-              publicationDate: job.publicationDate || "",
-              expirationDate: job.expirationDate || "",
-              applicationDeadline: job.applicationDeadline || "",
-              numberOfPositions: job.numberOfPositions || 1,
-              remoteWorkOptions: job.remoteWorkOptions || "",
-              benefits: Array.isArray(job.benefits)
-                ? job.benefits.join("\n")
-                : job.benefits || "",
-            });
-            setShowEditDialog(true);
-          }}
-        />
-        {/* Mobile Create Job Sheet */}
-        {!isMdUp && (
-          <Sheet open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <SheetContent side="bottom" className="p-4">
-              <SheetHeader>
-                <SheetTitle>Create New Job Position</SheetTitle>
-                <SheetDescription>
-                  Job will be created as draft - you can publish it later
-                </SheetDescription>
-              </SheetHeader>
-              <div className="grid gap-3 py-4">
-                <div>
-                  <Label htmlFor="m-title">Job Title *</Label>
-                  <Input
-                    id="m-title"
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
-                    placeholder="e.g., Senior Nurse Practitioner"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="m-category">Category *</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, category: value })
-                      }
-                    >
-                      <SelectTrigger id="m-category">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="m-type">Employment Type</Label>
-                    <Input
-                      id="m-type"
-                      value={formData.type}
-                      onChange={(e) =>
-                        setFormData({ ...formData, type: e.target.value })
-                      }
-                      placeholder="e.g., Full-time"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="m-location">Location</Label>
-                    <Input
-                      id="m-location"
-                      value={formData.location}
-                      onChange={(e) =>
-                        setFormData({ ...formData, location: e.target.value })
-                      }
-                      placeholder="e.g., Accra or Remote"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="m-description">Job Description</Label>
-                  <Textarea
-                    id="m-description"
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    rows={3}
-                    placeholder="Brief description of the role..."
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="m-reqs">Requirements (one per line)</Label>
-                  <Textarea
-                    id="m-reqs"
-                    value={
-                      Array.isArray(formData.requirements)
-                        ? formData.requirements.join("\n")
-                        : formData.requirements
-                    }
-                    onChange={(e) =>
-                      setFormData({ ...formData, requirements: e.target.value })
-                    }
-                    rows={3}
-                    placeholder={"e.g., Bachelor's degree\n2+ years experience"}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="m-benefits">Benefits (one per line)</Label>
-                  <Textarea
-                    id="m-benefits"
-                    value={
-                      Array.isArray(formData.benefits)
-                        ? formData.benefits.join("\n")
-                        : formData.benefits
-                    }
-                    onChange={(e) =>
-                      setFormData({ ...formData, benefits: e.target.value })
-                    }
-                    rows={3}
-                    placeholder={"e.g., Health insurance\nPaid vacation"}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pb-[env(safe-area-inset-bottom)]">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowCreateDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateJob}>Create Draft</Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-        )}
 
-        {/* Mobile Edit Job Sheet */}
-        {!isMdUp && (
-          <Sheet open={showEditDialog} onOpenChange={setShowEditDialog}>
-            <SheetContent side="bottom" className="p-4">
-              <SheetHeader>
-                <SheetTitle>Edit Job Position</SheetTitle>
-                <SheetDescription>Update job position details</SheetDescription>
-              </SheetHeader>
-              <div className="grid gap-3 py-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="me-title">Job Title *</Label>
-                    <Input
-                      id="me-title"
-                      value={formData.title}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="me-status">Status</Label>
-                    <Select
-                      value={formData.status}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, status: value })
-                      }
-                    >
-                      <SelectTrigger id="me-status">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="published">Published</SelectItem>
-                        <SelectItem value="archived">Archived</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="me-category">Category *</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, category: value })
-                      }
-                    >
-                      <SelectTrigger id="me-category">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="me-type">Employment Type</Label>
-                    <Input
-                      id="me-type"
-                      value={formData.type}
-                      onChange={(e) =>
-                        setFormData({ ...formData, type: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="me-location">Location</Label>
-                    <Input
-                      id="me-location"
-                      value={formData.location}
-                      onChange={(e) =>
-                        setFormData({ ...formData, location: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="me-description">Job Description</Label>
-                  <Textarea
-                    id="me-description"
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="me-reqs">Requirements (one per line)</Label>
-                  <Textarea
-                    id="me-reqs"
-                    value={
-                      Array.isArray(formData.requirements)
-                        ? formData.requirements.join("\n")
-                        : formData.requirements
-                    }
-                    onChange={(e) =>
-                      setFormData({ ...formData, requirements: e.target.value })
-                    }
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="me-benefits">Benefits (one per line)</Label>
-                  <Textarea
-                    id="me-benefits"
-                    value={
-                      Array.isArray(formData.benefits)
-                        ? formData.benefits.join("\n")
-                        : formData.benefits
-                    }
-                    onChange={(e) =>
-                      setFormData({ ...formData, benefits: e.target.value })
-                    }
-                    rows={3}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pb-[env(safe-area-inset-bottom)]">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowEditDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleUpdateJob}>Update Job</Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-        )}
-      </div>
+
+
+
+
 
       <div className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -892,7 +588,7 @@ export default function JobManagementPage() {
         <div className="flex gap-3">
           {/* Desktop dialog only when md+ to avoid portal bleed on mobile */}
           <div className="hidden md:block">
-            {isMdUp && (
+            {true && (
               <Dialog
                 open={showCreateDialog}
                 onOpenChange={setShowCreateDialog}
@@ -1091,7 +787,7 @@ export default function JobManagementPage() {
 
           {/* Desktop Categories Dialog; on mobile we use a sheet below */}
           <Dialog
-            open={showCategoryDialog && isMdUp}
+            open={showCategoryDialog && true}
             onOpenChange={setShowCategoryDialog}
           >
             <DialogTrigger asChild>
@@ -1155,7 +851,7 @@ export default function JobManagementPage() {
           </Dialog>
           {/* Mobile Categories Sheet */}
           <Sheet
-            open={showCategoryDialog && !isMdUp}
+            open={showCategoryDialog && false}
             onOpenChange={setShowCategoryDialog}
           >
             <SheetContent side="bottom" className="p-4">
@@ -1576,7 +1272,7 @@ export default function JobManagementPage() {
       </Tabs>
 
       {/* Edit Job Dialog */}
-      {isMdUp && (
+      {true && (
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>

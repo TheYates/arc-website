@@ -2,15 +2,7 @@
 
 import { memo, useState } from "react";
 import Image from "next/image";
-
-interface Logo {
-  name: string;
-  src: string;
-  alt: string;
-  url?: string;
-  width?: number;
-  height?: number;
-}
+import { Logo } from "@/lib/types/logos";
 
 interface ScrollingLogosProps {
   logos: Logo[];
@@ -28,10 +20,11 @@ const ScrollingLogos = memo(
   }: ScrollingLogosProps) => {
     const [isPaused, setIsPaused] = useState(false);
 
-    const animationDuration = {
-      slow: "60s",
-      normal: "40s",
-      fast: "20s",
+    // Map speed to Tailwind animation classes
+    const animationClass = {
+      slow: "animate-scroll-slow",
+      normal: "animate-scroll",
+      fast: "animate-scroll-fast",
     }[speed];
 
     const handleMouseEnter = () => setIsPaused(true);
@@ -45,16 +38,14 @@ const ScrollingLogos = memo(
       >
         <div className="relative">
           <div
-            className="flex"
+            className={`flex w-[200%] ${animationClass}`}
             style={{
-              width: "200%",
-              animation: `scroll-left ${animationDuration} linear infinite`,
               animationDirection: direction === "right" ? "reverse" : "normal",
               animationPlayState: isPaused ? "paused" : "running",
             }}
           >
             {/* First set of logos */}
-            <div className="flex items-center justify-around w-1/2 px-4">
+            <div className="flex items-center w-1/2">
               {logos.map((logo, index) => {
                 const LogoContent = (
                   <div
@@ -102,7 +93,7 @@ const ScrollingLogos = memo(
             </div>
 
             {/* Duplicate set for seamless loop */}
-            <div className="flex items-center justify-around w-1/2 px-4">
+            <div className="flex items-center w-1/2">
               {logos.map((logo, index) => {
                 const LogoContent = (
                   <div
@@ -158,4 +149,4 @@ const ScrollingLogos = memo(
 ScrollingLogos.displayName = "ScrollingLogos";
 
 export { ScrollingLogos };
-export type { Logo, ScrollingLogosProps };
+export type { ScrollingLogosProps };

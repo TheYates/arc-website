@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceItem } from "@/lib/api/services-sqlite";
+import { createServiceItem } from "@/lib/api/services-prisma";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; categoryId: string }> }
 ) {
   try {
-    const { id: serviceId, categoryId } = await params;
+    const { id: serviceId } = await params;
     const itemData = await request.json();
 
     if (!itemData.name) {
@@ -17,16 +17,14 @@ export async function POST(
     }
 
     const item = createServiceItem({
-      categoryId,
-      parentItemId: itemData.parentItemId || undefined,
+      serviceId: serviceId, // Use service ID from URL params
+      parentId: itemData.parentItemId || undefined,
       name: itemData.name,
       description: itemData.description || undefined,
-      isOptional: itemData.isOptional || false,
-      itemLevel: itemData.itemLevel || 1,
+      isRequired: !(itemData.isOptional || false), // Convert isOptional to isRequired
+      level: itemData.itemLevel || 1,
       sortOrder: itemData.sortOrder || 0,
-      priceHourly: itemData.priceHourly || 0,
-      priceDaily: itemData.priceDaily || 0,
-      priceMonthly: itemData.priceMonthly || 0,
+      // Pricing properties removed - not part of CreateServiceItemData interface
     });
 
     return NextResponse.json({ item });

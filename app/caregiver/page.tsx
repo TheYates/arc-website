@@ -22,11 +22,11 @@ import {
 import { CommandSearch } from "@/components/ui/command-search";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RoleHeader } from "@/components/role-header";
-import { CaregiverMobileDashboard } from "@/components/mobile/caregiver-dashboard";
-import { RoleBottomNav } from "@/components/mobile/role-bottom-nav";
+
 import { ActivityFeed } from "@/components/activity-feed/activity-feed";
 import { useAuth, hasPermission } from "@/lib/auth";
-import { useCaregiverDashboard } from "@/hooks/use-caregiver-queries";
+import { useCaregiverDashboard, useCaregiverSchedules } from "@/hooks/use-caregiver-queries";
+import { useContactInfo } from "@/hooks/use-contact-info";
 import { Patient } from "@/lib/types/patients";
 import { formatDate } from "@/lib/utils";
 import {
@@ -53,7 +53,9 @@ import {
   MessageSquare,
   Eye,
   Stethoscope,
+  Plus,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function CaregiverPage() {
   const { user, logout } = useAuth();
@@ -68,6 +70,16 @@ export default function CaregiverPage() {
     error,
     refetchAll,
   } = useCaregiverDashboard();
+
+  // 🚀 TanStack Query - Get today's schedules
+  const {
+    data: schedules = [],
+    isLoading: isLoadingSchedules,
+    error: schedulesError,
+  } = useCaregiverSchedules();
+
+  // 🚀 Get contact information
+  const { contactInfo } = useContactInfo();
 
   // Update time every minute
   useEffect(() => {
@@ -106,6 +118,21 @@ export default function CaregiverPage() {
     });
   };
 
+  // Filter today's schedules
+  const getTodaysSchedules = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    return schedules.filter((schedule: any) => {
+      const scheduleDate = new Date(schedule.scheduledDate);
+      return scheduleDate >= today && scheduleDate < tomorrow;
+    });
+  };
+
+  const todaysSchedules = getTodaysSchedules();
+
   if (!user || user.role !== "caregiver") {
     return (
       <div className="min-h-screen bg-background">
@@ -127,13 +154,8 @@ export default function CaregiverPage() {
       {/* Header Navigation */}
       <RoleHeader role="caregiver" />
 
-      {/* Mobile (distinct UI) */}
-      <div className="md:hidden">
-        <CaregiverMobileDashboard />
-      </div>
-
-      {/* Desktop */}
-      <div className="hidden md:block container mx-auto px-4 py-6 space-y-6">
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -380,26 +402,104 @@ export default function CaregiverPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <Calendar className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  No appointments scheduled
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  You don't have any patient appointments or tasks scheduled for
-                  today.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button variant="outline">
-                    <Clock className="h-4 w-4 mr-2" />
-                    View Full Schedule
-                  </Button>
-                  <Button>
-                    <Users className="h-4 w-4 mr-2" />
-                    Browse Available Shifts
-                  </Button>
+              {isLoadingSchedules ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
+                      <div className="h-8 w-8 bg-gray-200 rounded animate-pulse" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+                        <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
+                      </div>
+                      <div className="h-6 w-16 bg-gray-200 rounded animate-pulse" />
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : todaysSchedules.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">
+                    No appointments scheduled
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    You don't have any patient appointments or tasks scheduled for today.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button variant="outline" asChild>
+                      <Link href="/caregiver/schedules">
+                        <Clock className="h-4 w-4 mr-2" />
+                        View Full Schedule
+                      </Link>
+                    </Button>
+                    <Button asChild>
+                      <Link href="/caregiver/schedules">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add New Schedule
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {todaysSchedules.slice(0, 4).map((schedule: any) => (
+                    <div key={schedule.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <div className="p-2 bg-teal-100 dark:bg-teal-900/20 rounded-full">
+                        <Calendar className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
+                          {schedule.title}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {new Date(schedule.scheduledDate).toLocaleTimeString("en-US", {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}
+                          {schedule.patient && ` • ${schedule.patient.firstName} ${schedule.patient.lastName}`}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <Badge
+                          variant={
+                            schedule.status === "SCHEDULED" ? "default" :
+                            schedule.status === "IN_PROGRESS" ? "secondary" :
+                            schedule.status === "COMPLETED" ? "outline" :
+                            "destructive"
+                          }
+                          className="text-xs"
+                        >
+                          {schedule.status === "SCHEDULED" ? "Scheduled" :
+                           schedule.status === "IN_PROGRESS" ? "In Progress" :
+                           schedule.status === "COMPLETED" ? "Completed" :
+                           schedule.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+
+                  {todaysSchedules.length > 4 && (
+                    <div className="pt-2">
+                      <Button variant="outline" size="sm" className="w-full" asChild>
+                        <Link href="/caregiver/schedules">
+                          View All {todaysSchedules.length} Schedules
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+
+                  {todaysSchedules.length > 0 && (
+                    <div className="pt-2 border-t">
+                      <Button size="sm" className="w-full" asChild>
+                        <Link href="/caregiver/schedules">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add New Schedule
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -422,6 +522,7 @@ export default function CaregiverPage() {
                   variant="outline"
                   className="justify-start"
                   onClick={() => router.push("/profile")}
+                  disabled
                 >
                   <User className="h-4 w-4 mr-2" />
                   Update Profile
@@ -485,7 +586,10 @@ export default function CaregiverPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-red-900 dark:text-red-100">Emergency</p>
-                  <p className="text-sm text-red-700 dark:text-red-300">+233 XX XXX XXXX</p>
+                  <p className="text-sm text-red-700 dark:text-red-300">{contactInfo?.primaryPhone || "+233 XX XXX XXXX"}</p>
+                  {contactInfo?.secondaryPhone && (
+                    <p className="text-sm text-red-700 dark:text-red-300">{contactInfo.secondaryPhone}</p>
+                  )}
                   <p className="text-xs text-red-600 dark:text-red-400">24/7 Emergency Line</p>
                 </div>
               </div>
@@ -497,10 +601,10 @@ export default function CaregiverPage() {
                 <div>
                   <p className="font-semibold">Support Team</p>
                   <p className="text-sm text-muted-foreground">
-                    support@alpharescue.com
+                    {contactInfo?.email || "support@alpharescue.com"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Mon-Fri, 8AM-6PM
+                    {contactInfo?.supportHours || "Mon-Fri, 8AM-6PM"}
                   </p>
                 </div>
               </div>
@@ -511,7 +615,7 @@ export default function CaregiverPage() {
                 </div>
                 <div>
                   <p className="font-semibold">Main Office</p>
-                  <p className="text-sm text-muted-foreground">Accra, Ghana</p>
+                  <p className="text-sm text-muted-foreground">{contactInfo?.address || "Accra, Ghana"}</p>
                   <p className="text-xs text-muted-foreground">
                     Regional Headquarters
                   </p>

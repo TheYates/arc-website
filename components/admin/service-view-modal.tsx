@@ -18,20 +18,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Service } from "@/lib/api/services-sqlite";
+// Separator removed - not used in simplified version
+import { Service } from "@prisma/client";
 import {
-  Check,
   Edit,
   Package,
   DollarSign,
   Calendar,
   Tag,
-  Palette,
   BarChart3,
   Loader2,
-  ChevronRight,
-  Diamond,
 } from "lucide-react";
 
 interface ServiceViewModalProps {
@@ -41,76 +37,7 @@ interface ServiceViewModalProps {
   serviceId: string | null;
 }
 
-// Recursive component to render hierarchical service items
-function ServiceItemRenderer({
-  item,
-  level = 0,
-}: {
-  item: any;
-  level?: number;
-}) {
-  const getIcon = (itemLevel: number) => {
-    // Level 1 gets no icon (just bigger text)
-    // Levels 2-4 all get green checkmarks
-    if (itemLevel === 1) {
-      return null;
-    }
-    return <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />;
-  };
-
-  const getIndentation = (itemLevel: number) => {
-    switch (itemLevel) {
-      case 1:
-        return "ml-0";
-      case 2:
-        return "ml-4";
-      case 3:
-        return "ml-8";
-      case 4:
-        return "ml-12";
-      default:
-        return "ml-0";
-    }
-  };
-
-  const getTextStyle = (itemLevel: number) => {
-    if (itemLevel === 1) {
-      return "text-base font-semibold text-gray-900";
-    }
-    return "text-sm text-gray-900";
-  };
-
-  return (
-    <div className="space-y-1">
-      <div
-        className={`flex items-start gap-2 ${getIndentation(item.itemLevel)}`}
-      >
-        {getIcon(item.itemLevel)}
-        <span
-          className={`${getTextStyle(item.itemLevel)} ${
-            item.isOptional ? "text-gray-600" : ""
-          }`}
-        >
-          {item.name}
-          {item.isOptional && (
-            <span className="text-xs text-gray-500 ml-1">(Optional)</span>
-          )}
-        </span>
-      </div>
-      {item.children && item.children.length > 0 && (
-        <div className="space-y-1">
-          {item.children.map((child: any) => (
-            <ServiceItemRenderer
-              key={child.id}
-              item={child}
-              level={level + 1}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// ServiceItemRenderer removed - not used in simplified version
 
 export default function ServiceViewModal({
   isOpen,
@@ -172,26 +99,9 @@ export default function ServiceViewModal({
     }
   };
 
-  const formatPrice = (service: Service) => {
-    if (service.priceDisplay) return service.priceDisplay;
-    if (service.basePriceDaily) return new Intl.NumberFormat("en-GH", {
-      style: "currency",
-      currency: "GHS",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(service.basePriceDaily);
-    if (service.basePriceHourly) return new Intl.NumberFormat("en-GH", {
-      style: "currency",
-      currency: "GHS",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(service.basePriceHourly);
-    if (service.basePriceMonthly) return new Intl.NumberFormat("en-GH", {
-      style: "currency",
-      currency: "GHS",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(service.basePriceMonthly);
+  const formatPrice = (_service: Service) => {
+    // TODO: Add pricing fields to Prisma Service model
+    // For now, return a default message
     return "Contact for pricing";
   };
 
@@ -311,70 +221,37 @@ export default function ServiceViewModal({
                 </div>
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm text-gray-500">
-                    Base Prices
+                    Pricing
                   </h4>
                   <div className="space-y-1 text-sm">
-                    {service.basePriceDaily && (
-                      <p>Daily: GHS {service.basePriceDaily}</p>
-                    )}
-                    {service.basePriceHourly && (
-                      <p>Hourly: GHS {service.basePriceHourly}</p>
-                    )}
-                    {service.basePriceMonthly && (
-                      <p>Monthly: GHS {service.basePriceMonthly}</p>
-                    )}
+                    <p>Contact for pricing details</p>
+                    {/* TODO: Add pricing fields to Prisma Service model */}
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Service Categories and Items */}
-          {service.categories && service.categories.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Service Categories & Items
-                </CardTitle>
-                <CardDescription>
-                  What's included in this service package
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-4">
-                  {service.categories.map((category, index) => (
-                    <div key={category.id}>
-                      {/* Only show category name if it's not a generic wrapper */}
-                      {!category.name.includes("Service Components") &&
-                        !category.name.includes("Main Services") && (
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="w-3 h-3 bg-gray-800 flex-shrink-0"></div>
-                            <h4 className="font-semibold text-lg text-gray-900">
-                              {category.name}
-                            </h4>
-                          </div>
-                        )}
-                      {category.items && category.items.length > 0 ? (
-                        <div className="space-y-1 ml-3">
-                          {category.items.map((item) => (
-                            <ServiceItemRenderer key={item.id} item={item} />
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-500 text-sm ml-3">
-                          No items defined for this category
-                        </p>
-                      )}
-                      {index < service.categories!.length - 1 && (
-                        <Separator className="mt-4" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Service Items */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Service Items
+              </CardTitle>
+              <CardDescription>
+                Components included in this service
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                {/* TODO: Display service items from Prisma ServiceItem model */}
+                <p className="text-gray-500 text-sm">
+                  Service items will be displayed here when the ServiceItem relationship is properly configured.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Configuration & Metadata */}
           <Card>
@@ -429,13 +306,13 @@ export default function ServiceViewModal({
                   <h4 className="font-medium text-sm text-gray-500 mb-1">
                     Created
                   </h4>
-                  <p>{formatDate(service.createdAt)}</p>
+                  <p>{formatDate(service.createdAt.toISOString())}</p>
                 </div>
                 <div>
                   <h4 className="font-medium text-sm text-gray-500 mb-1">
                     Last Updated
                   </h4>
-                  <p>{formatDate(service.updatedAt)}</p>
+                  <p>{formatDate(service.updatedAt.toISOString())}</p>
                 </div>
               </div>
             </CardContent>

@@ -19,72 +19,104 @@ export interface AuthResult {
   error?: string
 }
 
-// Simplified authenticate user with fallback for development
+// Cache for database connection status to avoid repeated connection tests
+let dbConnectionHealthy = true;
+let lastConnectionCheck = 0;
+const CONNECTION_CHECK_INTERVAL = 30000; // 30 seconds
+
+// Optimized authenticate user with performance improvements
 export async function authenticateUser(email: string, password: string): Promise<AuthResult> {
+  const startTime = Date.now();
   try {
     console.log(`🔍 Authentication attempt for email: ${email}`)
 
-    // Quick connection test first
-    try {
-      await Promise.race([
-        prisma.$queryRaw`SELECT 1`,
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Connection test timeout')), 3000)
-        )
-      ]);
-      console.log('✅ Database connection test passed');
-    } catch (connectionError) {
-      console.error('❌ Database connection test failed:', connectionError);
+    // Skip connection test if recently verified (performance optimization)
+    const now = Date.now();
+    if (!dbConnectionHealthy || (now - lastConnectionCheck) > CONNECTION_CHECK_INTERVAL) {
+      try {
+        await Promise.race([
+          prisma.$queryRaw`SELECT 1`,
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Connection test timeout')), 2000) // Balanced timeout
+          )
+        ]);
+        dbConnectionHealthy = true;
+        lastConnectionCheck = now;
+        console.log('✅ Database connection test passed');
+      } catch (connectionError) {
+        dbConnectionHealthy = false;
+        console.error('❌ Database connection test failed:', connectionError);
 
-      // Development fallback
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔧 Using development fallback authentication');
-        return handleDevelopmentAuth(email, password);
+        // Development fallback
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔧 Using development fallback authentication');
+          return handleDevelopmentAuth(email, password);
+        }
+
+        throw new Error('Database connection failed');
       }
-
-      throw new Error('Database connection failed');
     }
 
-    // Database query with shorter timeout
+    // Optimized database query with reduced timeout
     const user = await Promise.race([
       prisma.user.findUnique({
         where: { email },
+        select: {
+          id: true,
+          email: true,
+          passwordHash: true,
+          isActive: true,
+          role: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          mustChangePassword: true,
+          lastLogin: true,
+          createdAt: true,
+          updatedAt: true
+        }
       }),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Database query timeout')), 5000)
+        setTimeout(() => reject(new Error('Database query timeout')), 2000) // Reduced from 5s to 2s
       )
     ]) as any;
 
     if (!user) {
+      console.log(`❌ User not found: ${email}`);
       return { success: false, error: 'Invalid email or password' }
     }
 
     if (!user.isActive) {
+      console.log(`❌ Account deactivated: ${email}`);
       return { success: false, error: 'Account is deactivated' }
     }
 
+    // Password verification (this is CPU intensive but necessary)
     const isValidPassword = await bcrypt.compare(password, user.passwordHash)
     if (!isValidPassword) {
+      console.log(`❌ Invalid password for: ${email}`);
       return { success: false, error: 'Invalid email or password' }
     }
 
-    // Update last login with timeout
-    try {
-      await Promise.race([
-        prisma.user.update({
-          where: { id: user.id },
-          data: { lastLogin: new Date() },
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Update timeout')), 5000)
-        )
-      ]);
-    } catch (updateError) {
-      console.warn('⚠️ Failed to update last login:', updateError);
-      // Don't fail authentication if we can't update last login
-    }
+    // Async update last login (don't wait for it to complete)
+    setImmediate(async () => {
+      try {
+        await Promise.race([
+          prisma.user.update({
+            where: { id: user.id },
+            data: { lastLogin: new Date() },
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Update timeout')), 2000) // Reduced timeout
+          )
+        ]);
+      } catch (updateError) {
+        console.warn('⚠️ Failed to update last login:', updateError);
+      }
+    });
 
-    console.log(`✅ Authentication successful for: ${email}`)
+    const authTime = Date.now() - startTime;
+    console.log(`✅ Authentication successful for: ${email} (${authTime}ms)`);
     return { success: true, user }
 
   } catch (error) {

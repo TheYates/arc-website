@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 model User {
   id                            String                     @id @default(uuid())
@@ -47,6 +46,8 @@ model User {
   userSessions                  UserSession[]
   vitalSignsRecorded            VitalSigns[]
   activityFeedCreated           ActivityFeed[]             @relation("ActivityFeedCreatedBy")
+  tasksCreated                  Task[]                     @relation("TaskCreatedBy")
+  tasksAssigned                 Task[]                     @relation("TaskAssignedTo")
 
   @@map("users")
 }
@@ -101,8 +102,37 @@ model Patient {
   symptomReports               SymptomReport[]
   vitalSigns                   VitalSigns[]
   activityFeed                 ActivityFeed[]
+  tasks                        Task[]
 
   @@map("patients")
+}
+
+model Task {
+  id            String     @id @default(uuid())
+  patientId     String     @map("patient_id")
+  createdById   String     @map("created_by_id")
+  assignedToId  String     @map("assigned_to_id")
+  title         String
+  description   String?
+  priority      Priority   @default(MEDIUM)
+  status        TaskStatus @default(PENDING)
+  dueDate       DateTime?  @map("due_date")
+  completedAt   DateTime?  @map("completed_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @default(now()) @updatedAt @map("updated_at")
+
+  patient       Patient    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  createdBy     User       @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  assignedTo    User       @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([createdAt])
+  @@map("tasks")
 }
 
 model CaregiverAssignment {
@@ -821,6 +851,13 @@ enum Priority {
   MEDIUM   @map("medium")
   HIGH     @map("high")
   CRITICAL @map("critical")
+}
+
+enum TaskStatus {
+  PENDING     @map("pending")
+  IN_PROGRESS @map("in_progress")
+  COMPLETED   @map("completed")
+  CANCELLED   @map("cancelled")
 }
 
 enum Severity {

@@ -531,10 +531,12 @@ export default function CaregiverPage() {
                 <Button
                   variant="outline"
                   className="justify-start"
-                  disabled
+                  asChild
                 >
-                  <ClipboardCheck className="h-4 w-4 mr-2" />
-                  Log Activity
+                  <Link href="/caregiver/tasks">
+                    <ClipboardCheck className="h-4 w-4 mr-2" />
+                    My Tasks
+                  </Link>
                 </Button>
 
                 <Button

@@ -194,7 +194,8 @@ export const PLACEHOLDER_LOGOS: Logo[] = [
 ];
 
 // Use this to switch between real logos and placeholders
-export const USE_PLACEHOLDER_LOGOS = true; // Set to false when you have real logos
+export const USE_PLACEHOLDER_LOGOS = false; // Database has real logos, disable placeholders
+export const USE_API_LOGOS = true; // Database is working, enable API
 
 export const getPartnerLogos = (): Logo[] => {
   return USE_PLACEHOLDER_LOGOS ? PLACEHOLDER_LOGOS : PARTNER_LOGOS;
@@ -202,13 +203,33 @@ export const getPartnerLogos = (): Logo[] => {
 
 // API-based logo fetching (for dynamic management)
 export const fetchPartnerLogos = async (): Promise<Logo[]> => {
+  // If API is disabled, return static logos immediately
+  if (!USE_API_LOGOS) {
+    console.log("API logos disabled, using static logos");
+    return getPartnerLogos();
+  }
+
   try {
     const response = await fetch("/api/admin/logos?active=true");
+
+    // Check if response is ok and content-type is JSON
+    if (!response.ok) {
+      console.warn(`API returned ${response.status}: ${response.statusText}`);
+      return getPartnerLogos();
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      console.warn("API returned non-JSON response:", contentType);
+      return getPartnerLogos();
+    }
+
     const data = await response.json();
 
     if (data.success && Array.isArray(data.data)) {
       return data.data;
     } else {
+      console.warn("API returned unsuccessful response or invalid data format:", data);
       // Fallback to static logos if API fails
       return getPartnerLogos();
     }

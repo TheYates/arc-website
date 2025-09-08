@@ -3,32 +3,77 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import {
-  usePatientBasicInfo,
-  usePatientOverviewData,
-  usePatientMedicationsData,
-  usePatientVitalsData,
-  usePatientMedicalReviewsData,
-  usePatientCareNotesData,
-  useTabPrefetching
-} from "@/hooks/use-patient-tabs";
+import { createMedicalReview } from "@/lib/api/medical-reviews-client";
+import { useReviewerPatientDetail } from "@/hooks/use-reviewer-queries";
 import { Patient } from "@/lib/types/patients";
+import { Medication, MedicationAdministration } from "@/lib/types/medications";
+import { VitalSigns } from "@/lib/types/vitals";
+import { MedicalReview } from "@/lib/types/medical-reviews";
+import { CareNote } from "@/lib/types/care-notes";
+import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatBloodType, formatGender, formatCareLevel, formatPatientStatus } from "@/lib/types/patients";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  ArrowLeft,
+  Calendar,
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  Activity,
+  Pill,
+  FileText,
+  User,
+  Heart,
+  Trash2,
+  Search,
+  Edit,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
 import { RoleHeader } from "@/components/role-header";
 
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 
-import { formatBloodType, formatGender, formatCareLevel, formatPatientStatus } from "@/lib/types/patients";
-
-// Import tab components
+import { PrescriptionDialog } from "@/components/medical/prescription-dialog";
+import { PatientSymptomReportForm } from "@/components/medical/patient-symptom-report-form";
+import {
+  CareNotesForm,
+  CareNotesHistory,
+} from "@/components/medical/care-notes-form";
+import { EditPatientDialog } from "@/components/patient/edit-patient-dialog";
 import { ReviewerMedicationsTab } from "@/components/reviewer/patient-detail/ReviewerMedicationsTab";
 import { ReviewerOverviewTab } from "@/components/reviewer/patient-detail/ReviewerOverviewTab";
 import { ReviewerVitalsTab } from "@/components/reviewer/patient-detail/ReviewerVitalsTab";
@@ -36,80 +81,64 @@ import { ReviewerMedicalReviewsTab } from "@/components/reviewer/patient-detail/
 import { ReviewerNotesTab } from "@/components/reviewer/patient-detail/ReviewerNotesTab";
 import { ReviewerCareNotesTab } from "@/components/reviewer/patient-detail/ReviewerCareNotesTab";
 import { ReviewerTasksTab } from "@/components/reviewer/patient-detail/ReviewerTasksTab";
-import { TabLoading, MedicationsTabLoading, VitalsTabLoading, NotesTabLoading } from "@/components/ui/tab-loading";
-
-// Import dialogs
-import { PrescriptionDialog } from "@/components/medical/prescription-dialog";
-import { EditPatientDialog } from "@/components/patient/edit-patient-dialog";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default function ReviewerPatientDetailPage({ params }: PageProps) {
-  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
+  const resolvedParams = React.use(params);
   const { user, isLoading: authLoading, isHydrated } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
 
-  useEffect(() => {
-    params.then(setResolvedParams);
-  }, [params]);
-
-  // 🚀 Enterprise Lazy Loading - Load data based on active tab
-
-  // Always load basic patient info
+  // 🚀 TanStack Query - Replace manual data fetching
   const {
-    data: patient,
-    isLoading: isPatientLoading,
-    error: patientError,
-    refetch: refetchPatient
-  } = usePatientBasicInfo(resolvedParams?.id || "");
-
-  // Tab-specific data loading
-  const overviewData = usePatientOverviewData(resolvedParams?.id || "", activeTab === 'overview');
-  const medicationsData = usePatientMedicationsData(resolvedParams?.id || "", activeTab === 'medications');
-  const vitalsData = usePatientVitalsData(resolvedParams?.id || "", activeTab === 'vitals');
-  const medicalReviewsData = usePatientMedicalReviewsData(resolvedParams?.id || "", activeTab === 'medical-reviews');
-  const careNotesData = usePatientCareNotesData(
-    resolvedParams?.id || "",
-    activeTab === 'caregiver-notes' || activeTab === 'reviewer-notes'
-  );
-
-  // Enable smart prefetching
-  useTabPrefetching(resolvedParams?.id || "", activeTab);
-
-  // Extract data for backward compatibility
-  const medications = medicationsData.medications || [];
-  const administrations = medicationsData.administrations || [];
-  const vitals = vitalsData.vitals || [];
-  const medicalReviews = medicalReviewsData.medicalReviews || [];
-  const caregiverNotes = careNotesData.caregiverNotes || [];
-  const reviewerNotes = careNotesData.reviewerNotes || [];
-
-  // Loading states
-  const isLoading = isPatientLoading;
-  const isMedicalDataLoading = medicationsData.isLoading || vitalsData.isLoading ||
-                               medicalReviewsData.isLoading || careNotesData.isLoading;
-  const error = patientError || medicationsData.error || vitalsData.error ||
-                medicalReviewsData.error || careNotesData.error;
-
-  // Refetch functions
-  const refetchAll = () => {
-    refetchPatient();
-    if (activeTab === 'overview') overviewData.refetch();
-    if (activeTab === 'medications') medicationsData.refetch();
-    if (activeTab === 'vitals') vitalsData.refetch();
-    if (activeTab === 'medical-reviews') medicalReviewsData.refetch();
-    if (activeTab.includes('notes')) careNotesData.refetch();
-  };
-  const refetchMedications = medicationsData.refetch;
-  const refetchAdministrations = medicationsData.refetch; // Same as medications
+    patient,
+    medications,
+    administrations,
+    vitals,
+    medicalReviews,
+    caregiverNotes,
+    reviewerNotes,
+    isLoading,
+    isMedicalDataLoading,
+    error,
+    refetchAll,
+    refetchMedications,
+    refetchAdministrations,
+  } = useReviewerPatientDetail(resolvedParams.id);
 
   // UI states
   const [showPrescribeDialog, setShowPrescribeDialog] = useState(false);
   const [showPatientEditForm, setShowPatientEditForm] = useState(false);
+
+  // Memoize the transform function to prevent recreation on every render
+  const transformMedicalReviews = useCallback((reviewsData: any[]) => {
+    return reviewsData.map((review) => ({
+      id: review.id,
+      patientId: review.patientId,
+      reviewerId: review.reviewerId || review.createdById,
+      reviewerName: review.reviewer
+        ? `${review.reviewer.firstName} ${review.reviewer.lastName}`
+        : "Unknown",
+      type: review.reviewType.toLowerCase() as any,
+      title: review.title,
+      findings: review.findings || "",
+      assessment: review.description,
+      recommendations: review.recommendations || "",
+      treatmentPlan: "",
+      followUpRequired: review.followUpRequired,
+      followUpDate: review.followUpDate,
+      priority: review.priority.toLowerCase() as any,
+      status: review.status.toLowerCase() as any,
+      createdAt: review.createdAt,
+      updatedAt: review.updatedAt,
+      reviewedDate: review.createdAt,
+      isConfidential: false,
+    }));
+  }, []);
 
   useEffect(() => {
     // Wait for auth to finish loading and hydration before making redirect decisions
@@ -160,8 +189,8 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
     refetchAll();
   }, [refetchAll]);
 
-  // Show loading while auth is loading, not hydrated, params not resolved, or patient data is loading
-  if (authLoading || !isHydrated || !resolvedParams || isLoading) {
+  // Show loading while auth is loading, not hydrated, or patient data is loading
+  if (authLoading || !isHydrated || isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <RoleHeader role="reviewer" />
@@ -316,75 +345,55 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
 
               {/* Vitals Tab */}
               <TabsContent value="vitals" className="space-y-6">
-                {vitalsData.isLoading ? (
-                  <VitalsTabLoading />
-                ) : (
-                  <ReviewerVitalsTab
-                    patient={patient}
-                    user={user}
-                    vitals={vitals}
-                    isMedicalDataLoading={isMedicalDataLoading}
-                  />
-                )}
+                <ReviewerVitalsTab
+                  patient={patient}
+                  user={user}
+                  vitals={vitals}
+                  isMedicalDataLoading={isMedicalDataLoading}
+                />
               </TabsContent>
 
               {/* Medications Tab */}
               <TabsContent value="medications" className="space-y-6">
-                {medicationsData.isLoading ? (
-                  <MedicationsTabLoading />
-                ) : (
-                  <ReviewerMedicationsTab
-                    patient={patient}
-                    user={user}
-                    medications={medications}
-                    administrations={administrations}
-                    isMedicalDataLoading={isMedicalDataLoading}
-                    onMedicationDataRefresh={handleMedicationDataRefresh}
-                    onShowPrescribeDialog={() => setShowPrescribeDialog(true)}
-                  />
-                )}
+                <ReviewerMedicationsTab
+                  patient={patient}
+                  user={user}
+                  medications={medications}
+                  administrations={administrations}
+                  isMedicalDataLoading={isMedicalDataLoading}
+                  onMedicationDataRefresh={handleMedicationDataRefresh}
+                  onShowPrescribeDialog={() => setShowPrescribeDialog(true)}
+                />
               </TabsContent>
 
               {/* Medical Reviews Tab */}
               <TabsContent value="medical-reviews" className="space-y-6">
-                {medicalReviewsData.isLoading ? (
-                  <TabLoading message="Loading medical reviews..." />
-                ) : (
-                  <ReviewerMedicalReviewsTab
-                    patient={patient}
-                    user={user}
-                    medicalReviews={medicalReviews}
-                    onRefresh={handleMedicationDataRefresh}
-                  />
-                )}
+                <ReviewerMedicalReviewsTab
+                  patient={patient}
+                  user={user}
+                  medicalReviews={medicalReviews}
+                  onRefresh={handleMedicationDataRefresh}
+                />
               </TabsContent>
 
               {/* Reviewer Notes Tab */}
               <TabsContent value="reviewer-notes" className="space-y-6">
-                {careNotesData.isLoading ? (
-                  <NotesTabLoading />
-                ) : (
-                  <ReviewerNotesTab
-                    patient={patient}
-                    user={user}
-                    reviewerNotes={reviewerNotes}
-                    onReviewerNoteSaved={handleReviewerNoteSaved}
-                  />
-                )}
+                <ReviewerNotesTab
+                  patient={patient}
+                  user={user}
+                  reviewerNotes={reviewerNotes}
+                  onReviewerNoteSaved={handleReviewerNoteSaved}
+                />
               </TabsContent>
 
               {/* Caregiver Notes Tab */}
               <TabsContent value="caregiver-notes" className="space-y-6">
-                {careNotesData.isLoading ? (
-                  <NotesTabLoading />
-                ) : (
-                  <ReviewerCareNotesTab
-                    patient={patient}
-                    user={user}
-                    caregiverNotes={caregiverNotes}
-                    onRefresh={handleCaregiverNotesRefresh}
-                  />
-                )}
+                <ReviewerCareNotesTab
+                  patient={patient}
+                  user={user}
+                  caregiverNotes={caregiverNotes}
+                  onRefresh={handleCaregiverNotesRefresh}
+                />
               </TabsContent>
 
               {/* Tasks Tab */}
@@ -392,7 +401,7 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                 <ReviewerTasksTab
                   patient={patient}
                   user={user}
-                  onTaskCreated={async () => refetchAll()}
+                  onTaskCreated={refetchAll}
                 />
               </TabsContent>
             </Tabs>
@@ -401,7 +410,7 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
       </div>
 
       {/* Prescription Dialog */}
-      {patient && resolvedParams && (
+      {patient && (
         <PrescriptionDialog
           open={showPrescribeDialog}
           onOpenChange={setShowPrescribeDialog}

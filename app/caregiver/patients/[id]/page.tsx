@@ -1,23 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { recordMedicationAdministrationClient } from "@/lib/api/client";
-import { useCaregiverPatientDetail } from "@/hooks/use-caregiver-queries";
+import {
+  usePatientBasicInfo,
+  usePatientOverviewData,
+  usePatientMedicationsData,
+  usePatientVitalsData,
+  usePatientCareNotesData,
+  useTabPrefetching
+} from "@/hooks/use-patient-tabs";
 import { Patient } from "@/lib/types/patients";
-import { Medication, MedicationAdministration } from "@/lib/types/medications";
-import { VitalSigns } from "@/lib/types/vitals";
-import { MedicalReview } from "@/lib/types/medical-reviews";
-import { CareNote } from "@/lib/types/care-notes";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { Medication } from "@/lib/types/medications";
+import { formatDate } from "@/lib/utils";
 import {
   formatBloodType,
   formatGender,
   formatCareLevel,
   formatPatientStatus,
 } from "@/lib/types/patients";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,44 +32,28 @@ import { CaregiverOverviewTab } from "@/components/caregiver/patient-detail/Care
 import { CaregiverVitalsTab } from "@/components/caregiver/patient-detail/CaregiverVitalsTab";
 import { CaregiverNotesTab } from "@/components/caregiver/patient-detail/CaregiverNotesTab";
 import { CaregiverReviewerNotesTab } from "@/components/caregiver/patient-detail/CaregiverReviewerNotesTab";
+import { CaregiverTasksTab } from "@/components/caregiver/patient-detail/CaregiverTasksTab";
+import { MedicationsTabLoading, VitalsTabLoading, NotesTabLoading } from "@/components/ui/tab-loading";
 
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
-  Plus,
-  Clock,
   AlertTriangle,
   ArrowLeft,
   CheckCircle,
   X,
-  Activity,
   Pill,
 } from "lucide-react";
 import { RoleHeader } from "@/components/role-header";
 import { useToast } from "@/hooks/use-toast";
-
-import { PatientSymptomReportForm } from "@/components/medical/patient-symptom-report-form";
-
-import {
-  CareNotesForm,
-  CareNotesHistory,
-} from "@/components/medical/care-notes-form";
 import { EditPatientDialog } from "@/components/patient/edit-patient-dialog";
 
 interface PageProps {
@@ -74,35 +62,58 @@ interface PageProps {
 
 export default function CaregiverPatientDetailPage({ params }: PageProps) {
   const resolvedParams = React.use(params);
-  const { user, logout, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isHydrated } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
 
-  // 🚀 TanStack Query - Replace manual data fetching
+  // 🚀 Enterprise Lazy Loading - Load data based on active tab
+
+  // Always load basic patient info
   const {
-    patient,
-    medications,
-    administrations,
-    vitals,
-    medicalReviews,
-    caregiverNotes,
-    reviewerNotes,
-    isLoading,
-    isMedicalDataLoading,
-    error,
-    refetchAll,
-    refetchMedications,
-    refetchAdministrations,
-    refetchVitals,
-    refetchMedicalReviews,
-    refetchCareNotes,
-  } = useCaregiverPatientDetail(resolvedParams.id);
+    data: patient,
+    isLoading: isPatientLoading,
+    error: patientError,
+    refetch: refetchPatient
+  } = usePatientBasicInfo(resolvedParams.id);
+
+  // Tab-specific data loading
+  const overviewData = usePatientOverviewData(resolvedParams.id, activeTab === 'overview');
+  const medicationsData = usePatientMedicationsData(resolvedParams.id, activeTab === 'medications');
+  const vitalsData = usePatientVitalsData(resolvedParams.id, activeTab === 'vitals');
+  const careNotesData = usePatientCareNotesData(
+    resolvedParams.id,
+    activeTab === 'caregiver-notes' || activeTab === 'reviewer-notes'
+  );
+
+  // Enable smart prefetching
+  useTabPrefetching(resolvedParams.id, activeTab);
+
+  // Extract data for backward compatibility
+  const medications = medicationsData.medications || [];
+  const administrations = medicationsData.administrations || [];
+  const vitals = vitalsData.vitals || [];
+  const caregiverNotes = careNotesData.caregiverNotes || [];
+  const reviewerNotes = careNotesData.reviewerNotes || [];
+  const medicalReviews: any[] = []; // Not used in caregiver view
+
+  // Loading states
+  const isLoading = isPatientLoading;
+  const isMedicalDataLoading = medicationsData.isLoading || vitalsData.isLoading || careNotesData.isLoading;
+
+  // Refetch functions
+  const refetchAll = () => {
+    refetchPatient();
+    if (activeTab === 'overview') overviewData.refetch();
+    if (activeTab === 'medications') medicationsData.refetch();
+    if (activeTab === 'vitals') vitalsData.refetch();
+    if (activeTab.includes('notes')) careNotesData.refetch();
+  };
+  const refetchAdministrations = medicationsData.refetch; // Same as medications
+  const refetchVitals = vitalsData.refetch;
 
   // UI states
-  const [showSymptomForm, setShowSymptomForm] = useState(false);
   const [showPatientEditForm, setShowPatientEditForm] = useState(false);
-  const [showReviewerNoteHistory, setShowReviewerNoteHistory] = useState(false);
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [selectedMedication, setSelectedMedication] =
     useState<Medication | null>(null);
@@ -113,35 +124,19 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
     notes: "",
   });
 
-  const isCaregiver =
-    user?.role === "caregiver" || user?.role === "super_admin";
-  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+
 
   useEffect(() => {
-    // Wait for auth to finish loading before making redirect decisions
-    if (authLoading) return;
+    // Wait for auth to finish loading and hydration before making redirect decisions
+    if (authLoading || !isHydrated) return;
 
     if (!user || (user.role !== "caregiver" && user.role !== "super_admin")) {
       router.push("/login");
       return;
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, isHydrated, user, router]);
 
-  // Memoized computed values for better performance
-  const activeMedications = useMemo(() => {
-    return medications.filter(
-      (med) =>
-        med.isActive && med.status !== "completed" && med.status !== "COMPLETED"
-    );
-  }, [medications]);
 
-  const recentVitals = useMemo(() => {
-    return vitals.slice(0, 5); // Show only recent 5 vitals
-  }, [vitals]);
-
-  const pendingAdministrations = useMemo(() => {
-    return administrations.filter((admin) => admin.status === "pending");
-  }, [administrations]);
 
   // 🚀 TanStack Query - Simplified refresh handlers
   const handleCaregiverNoteSaved = useCallback(async () => {
@@ -220,8 +215,8 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
     });
   };
 
-  // Show loading only while auth is loading
-  if (authLoading) {
+  // Show loading while auth is loading, not hydrated, or patient data is loading
+  if (authLoading || !isHydrated || isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
@@ -250,19 +245,8 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
           </Button>
         </div>
 
-        {/* Show loading skeleton for patient header while data is loading */}
-        {isLoading ? (
-          <>
-            <div className="flex items-center space-x-4 mb-8">
-              <Skeleton className="h-16 w-16 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </div>
-            <Skeleton className="h-96 w-full" />
-          </>
-        ) : !patient ? (
+        {/* Show patient not found if no patient data */}
+        {!patient ? (
           <div className="flex items-center justify-center py-32">
             <Card className="w-96">
               <CardContent className="p-6 text-center">
@@ -350,7 +334,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
               onValueChange={setActiveTab}
               className="space-y-6"
             >
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="vitals">Vitals</TabsTrigger>
                 <TabsTrigger value="medications">
@@ -360,6 +344,7 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
                   Caregiver Notes
                 </TabsTrigger>
                 <TabsTrigger value="reviewer-notes">Reviewer Notes</TabsTrigger>
+                <TabsTrigger value="tasks">Tasks</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
@@ -380,49 +365,83 @@ export default function CaregiverPatientDetailPage({ params }: PageProps) {
               {/* Vitals Tab */}
               <TabsContent value="vitals" className="space-y-6">
                 {user && (
-                  <CaregiverVitalsTab
-                    patient={patient}
-                    user={user}
-                    vitals={vitals}
-                    onVitalsUpdate={handleVitalsUpdate}
-                  />
+                  <>
+                    {vitalsData.isLoading ? (
+                      <VitalsTabLoading />
+                    ) : (
+                      <CaregiverVitalsTab
+                        patient={patient}
+                        user={user}
+                        vitals={vitals}
+                        onVitalsUpdate={handleVitalsUpdate}
+                      />
+                    )}
+                  </>
                 )}
               </TabsContent>
 
               {/* Medications & Administration Tab */}
               <TabsContent value="medications" className="space-y-6">
                 {user && (
-                  <CaregiverMedicationsTab
-                    patient={patient}
-                    user={user}
-                    medications={medications || []}
-                    administrations={administrations || []}
-                    isMedicalDataLoading={isMedicalDataLoading}
-                    onAdministrationsUpdate={handleAdministrationsUpdate}
-                  />
+                  <>
+                    {medicationsData.isLoading ? (
+                      <MedicationsTabLoading />
+                    ) : (
+                      <CaregiverMedicationsTab
+                        patient={patient}
+                        user={user}
+                        medications={medications || []}
+                        administrations={administrations || []}
+                        isMedicalDataLoading={isMedicalDataLoading}
+                        onAdministrationsUpdate={handleAdministrationsUpdate}
+                      />
+                    )}
+                  </>
                 )}
               </TabsContent>
 
               {/* Caregiver Notes Tab */}
               <TabsContent value="caregiver-notes" className="space-y-6">
                 {user && (
-                  <CaregiverNotesTab
-                    patient={patient}
-                    user={user}
-                    caregiverNotes={caregiverNotes}
-                    onNoteSaved={handleCaregiverNoteSaved}
-                  />
+                  <>
+                    {careNotesData.isLoading ? (
+                      <NotesTabLoading />
+                    ) : (
+                      <CaregiverNotesTab
+                        patient={patient}
+                        user={user}
+                        caregiverNotes={caregiverNotes}
+                        onNoteSaved={handleCaregiverNoteSaved}
+                      />
+                    )}
+                  </>
                 )}
               </TabsContent>
 
               {/* Reviewer Notes Tab (Read-only for Caregivers) */}
               <TabsContent value="reviewer-notes" className="space-y-6">
                 {user && (
-                  <CaregiverReviewerNotesTab
+                  <>
+                    {careNotesData.isLoading ? (
+                      <NotesTabLoading />
+                    ) : (
+                      <CaregiverReviewerNotesTab
+                        patient={patient}
+                        user={user}
+                        reviewerNotes={reviewerNotes}
+                        onRefresh={handleReviewerNotesRefresh}
+                      />
+                    )}
+                  </>
+                )}
+              </TabsContent>
+
+              {/* Tasks Tab */}
+              <TabsContent value="tasks" className="space-y-6">
+                {user && (
+                  <CaregiverTasksTab
                     patient={patient}
                     user={user}
-                    reviewerNotes={reviewerNotes}
-                    onRefresh={handleReviewerNotesRefresh}
                   />
                 )}
               </TabsContent>

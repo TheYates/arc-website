@@ -1,232 +1,45 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, memo } from "react";
-import Link from "next/link";
+import React, { Suspense } from "react";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-// Removed Tabs import - no longer using tabs
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import {
-  Users,
-  ClipboardList,
-  CheckCircle,
-  Clock,
-  CalendarClock,
   AlertCircle,
-  ArrowUpRight,
-  BarChart3,
   Bell,
   Calendar,
-  FileCheck,
   Plus,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import {
   DashboardSkeleton,
 } from "@/components/admin/dashboard-skeleton";
+import {
+  DashboardStats,
+  RecentApplicationsSection,
+  TaskCompletionSection,
+  RecentActivitiesSection
+} from "@/components/admin/dashboard-sections";
 import { useDashboard } from "@/hooks/use-admin-dashboard-queries";
 import { useOptimizedAuth } from "@/hooks/use-optimized-auth";
 
-// Memoized components for better performance
-const StatCard = memo(({ stat }: { stat: any }) => (
-  <Card>
-    <CardContent className="p-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
-            {stat.title}
-          </p>
-          <div className="flex items-baseline">
-            <h3 className="text-3xl font-bold">{stat.value}</h3>
-            {stat.change && (
-              <span
-                className={`ml-2 text-xs font-medium ${
-                  stat.positive ? "text-green-600" : "text-red-600"
-                }`}
-              >
-                {stat.change}
-              </span>
-            )}
-          </div>
-          {stat.changeLabel && (
-            <p className="text-xs text-muted-foreground">{stat.changeLabel}</p>
-          )}
-        </div>
-        <div className="p-2 bg-primary/10 rounded-full">{stat.icon}</div>
-      </div>
-    </CardContent>
-  </Card>
-));
-
-StatCard.displayName = "StatCard";
-
-// Memoized Application Item Component
-const ApplicationItem = memo(
-  ({
-    application,
-    getStatusBadge,
-  }: {
-    application: any;
-    getStatusBadge: (status: string) => React.ReactElement;
-  }) => (
-    <div className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors">
-      <div className="flex items-center gap-3">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={application.avatar} alt={application.name || "User"} />
-          <AvatarFallback>{application.name?.charAt(0) || "?"}</AvatarFallback>
-        </Avatar>
-        <div>
-          <p className="font-medium">{application.name || "Unknown User"}</p>
-          <p className="text-sm text-muted-foreground">{application.service || "No service"}</p>
-        </div>
-      </div>
-      <div className="flex flex-col items-end">
-        {getStatusBadge(application.status || "unknown")}
-        <span className="text-xs text-muted-foreground mt-1">
-          {application.date || "No date"}
-        </span>
-      </div>
-    </div>
-  )
-);
-
-ApplicationItem.displayName = "ApplicationItem";
-
-// Memoized Activity Item Component
-const ActivityItem = memo(
-  ({
-    activity,
-    getActivityIcon,
-  }: {
-    activity: any;
-    getActivityIcon: (type: string) => React.ReactElement;
-  }) => (
-    <div className="flex gap-3 p-2 rounded-lg hover:bg-accent transition-colors">
-      <div className="mt-1">{getActivityIcon(activity.type)}</div>
-      <div className="flex-grow">
-        <div className="flex items-center justify-between">
-          <p className="font-medium">{activity.action || "Unknown action"}</p>
-          <span className="text-xs text-muted-foreground">{activity.time || "No time"}</span>
-        </div>
-        <p className="text-sm text-muted-foreground">{activity.description || "No description"}</p>
-        <div className="flex items-center mt-1">
-          <Avatar className="h-5 w-5 mr-1">
-            <AvatarImage src={activity.avatar} alt={activity.user || "User"} />
-            <AvatarFallback>{activity.user?.charAt(0) || "?"}</AvatarFallback>
-          </Avatar>
-          <span className="text-xs text-muted-foreground">{activity.user || "Unknown user"}</span>
-        </div>
-      </div>
-    </div>
-  )
-);
-
-ActivityItem.displayName = "ActivityItem";
+// Components moved to dashboard-sections.tsx for better streaming support
 
 export default function AdminDashboardPage() {
   const { userProfile, isLoading: authLoading } = useOptimizedAuth();
 
   // 🚀 TanStack Query - Replace manual dashboard data fetching
   const {
-    stats: dashboardStats,
-    activities,
-    health,
     isLoading: dataLoading,
     error,
     refetchAll,
   } = useDashboard();
-
-  // Removed selectedTab state - no longer using tabs
-
-  // Memoized stats with icons - using TanStack Query data
-  const stats = useMemo(() => {
-    if (!dashboardStats) return [];
-
-    return [
-      {
-        title: "Total Users",
-        value: dashboardStats.totalUsers,
-        icon: <Users className="h-5 w-5 text-primary" />,
-        change: "+12%",
-        changeValue: 12,
-        changeLabel: "from last month",
-        positive: true,
-      },
-      {
-        title: "Total Patients",
-        value: dashboardStats.totalPatients,
-        icon: <Users className="h-5 w-5 text-primary" />,
-        change: "+8%",
-        changeValue: 8,
-        changeLabel: "from last month",
-        positive: true,
-      },
-      {
-        title: "Pending Applications",
-        value: dashboardStats.pendingApplications,
-        icon: <Clock className="h-5 w-5 text-primary" />,
-        change: "-5%",
-        changeValue: -5,
-        changeLabel: "from last week",
-        positive: false,
-      },
-      {
-        title: "Active Patients",
-        value: dashboardStats.activePatients,
-        icon: <CheckCircle className="h-5 w-5 text-primary" />,
-        change: "+15%",
-        changeValue: 15,
-        changeLabel: "from last month",
-        positive: true,
-      },
-    ];
-  }, [dashboardStats]);
-
-  // Use activities from TanStack Query
-  const recentActivities = activities;
-
-  // Mock data for missing variables (these would come from API in real implementation)
-  const recentApplications = [
-    {
-      id: "1",
-      firstName: "John",
-      lastName: "Doe",
-      name: "John Doe",
-      service: "Home Care",
-      status: "pending",
-      date: "2 hours ago",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      firstName: "Jane",
-      lastName: "Smith",
-      name: "Jane Smith",
-      service: "Medical Review",
-      status: "approved",
-      date: "1 day ago",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "3",
-      firstName: "Bob",
-      lastName: "Johnson",
-      name: "Bob Johnson",
-      service: "Emergency Care",
-      status: "pending",
-      date: "3 hours ago",
-      createdAt: new Date().toISOString(),
-    },
-  ];
 
   const upcomingConsultations = [
     {
@@ -248,55 +61,6 @@ export default function AdminDashboardPage() {
       duration: "45 min",
     },
   ];
-
-  const taskCompletion = [
-    {
-      title: "Patient Reviews",
-      completed: 8,
-      total: 12,
-      percentage: 67,
-    },
-    {
-      title: "Service Requests",
-      completed: 15,
-      total: 20,
-      percentage: 75,
-    },
-    {
-      title: "Medical Assessments",
-      completed: 5,
-      total: 8,
-      percentage: 63,
-    },
-  ];
-
-  const getStatusBadge = useCallback((status: string) => {
-    switch (status) {
-      case "pending":
-        return <Badge className="bg-amber-100 text-amber-800">Pending</Badge>;
-      case "approved":
-        return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
-      case "rejected":
-        return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  }, []);
-
-  const getActivityIcon = useCallback((type: string) => {
-    switch (type) {
-      case "approval":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "rejection":
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
-      case "onboarding":
-        return <FileCheck className="h-5 w-5 text-blue-500" />;
-      case "assignment":
-        return <Users className="h-5 w-5 text-purple-500" />;
-      default:
-        return <div className="h-5 w-5 rounded-full bg-primary/20" />;
-    }
-  }, []);
 
   // Show loading skeleton while auth or data is loading
   if (authLoading || dataLoading) {
@@ -339,6 +103,11 @@ export default function AdminDashboardPage() {
               <Bell className="h-4 w-4 mr-2" />
               Notifications
             </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/admin/streaming-demo">
+                View Streaming Demo
+              </a>
+            </Button>
             <Button size="sm">
               <Plus className="h-4 w-4 mr-2" />
               New Application
@@ -348,88 +117,29 @@ export default function AdminDashboardPage() {
 
         {/* Dashboard Overview Content */}
         <div className="hidden md:block space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {stats.map((stat, index) => (
-              <StatCard key={index} stat={stat} />
+          {/* Stats Cards with Streaming */}
+          <Suspense fallback={<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-32 bg-gray-100 rounded-lg animate-pulse" />
             ))}
+          </div>}>
+            <DashboardStats />
+          </Suspense>
+
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+            {/* Recent Applications with Streaming */}
+            <Suspense fallback={<div className="lg:col-span-3 h-96 bg-gray-100 rounded-lg animate-pulse" />}>
+              <RecentApplicationsSection />
+            </Suspense>
+
+            {/* Task Completion with Streaming */}
+            <Suspense fallback={<div className="lg:col-span-3 h-96 bg-gray-100 rounded-lg animate-pulse" />}>
+              <TaskCompletionSection />
+            </Suspense>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
-            {/* Recent Applications */}
-            <Card className="lg:col-span-3">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Recent Applications</CardTitle>
-                  <CardDescription>
-                    Latest patient applications submitted
-                  </CardDescription>
-                </div>
-                <Link href="/admin/applications">
-                  <Button variant="ghost" size="sm" className="gap-1">
-                    View all
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentApplications.slice(0, 3).map((application) => (
-                    <ApplicationItem
-                      key={application.id}
-                      application={application}
-                      getStatusBadge={getStatusBadge}
-                    />
-                  ))}
-                </div>
-                <CardFooter className="pt-6 px-0 border-t mt-4">
-                  <div className="flex justify-between items-center w-full text-muted-foreground text-sm">
-                    <div>
-                      Showing 3 of {recentApplications.length} applications
-                    </div>
-                    <Link
-                      href="/admin/applications"
-                      className="flex items-center hover:text-foreground"
-                    >
-                      See all applications{" "}
-                      <ArrowUpRight className="h-4 w-4 ml-1" />
-                    </Link>
-                  </div>
-                </CardFooter>
-              </CardContent>
-            </Card>
-
-            {/* Task Completion */}
-            <Card className="lg:col-span-3">
-              <CardHeader className="pb-2">
-                <CardTitle>Task Completion</CardTitle>
-                <CardDescription>
-                  Your team's progress on key tasks
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                {taskCompletion.map((task, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">{task.title}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {task.completed} of {task.total}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <Progress value={task.percentage} />
-                      <div className="text-xs text-right text-muted-foreground">
-                        {task.percentage}% complete
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
-            {/* Upcoming Consultations */}
+            {/* Upcoming Consultations - Static for now */}
             <Card className="lg:col-span-3">
               <CardHeader className="pb-2">
                 <CardTitle>Upcoming Consultations</CardTitle>
@@ -477,26 +187,10 @@ export default function AdminDashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Recent Activities */}
-            <Card className="lg:col-span-3">
-              <CardHeader className="pb-2">
-                <CardTitle>Recent Activities</CardTitle>
-                <CardDescription>
-                  Latest actions taken in the system
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentActivities.map((activity) => (
-                    <ActivityItem
-                      key={activity.id}
-                      activity={activity}
-                      getActivityIcon={getActivityIcon}
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Recent Activities with Streaming */}
+            <Suspense fallback={<div className="lg:col-span-3 h-96 bg-gray-100 rounded-lg animate-pulse" />}>
+              <RecentActivitiesSection />
+            </Suspense>
           </div>
         </div>
     </div>

@@ -10,18 +10,33 @@ export function useLogos(activeOnly: boolean = false) {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const url = activeOnly ? "/api/admin/logos?active=true" : "/api/admin/logos";
       const response = await fetch(url);
+
+      // Check if response is ok and content-type is JSON
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}: ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("API returned non-JSON response");
+      }
+
       const data: LogoResponse = await response.json();
-      
+
       if (data.success && Array.isArray(data.data)) {
         setLogos(data.data);
       } else {
         setError(data.error || "Failed to fetch logos");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch logos");
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch logos";
+      console.error("Error fetching logos:", errorMessage);
+      setError(errorMessage);
+      // Set empty array as fallback
+      setLogos([]);
     } finally {
       setIsLoading(false);
     }

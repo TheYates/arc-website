@@ -4,7 +4,7 @@ import { authenticateRequest } from "@/lib/api/auth";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await authenticateRequest(request);
@@ -13,7 +13,7 @@ export async function DELETE(
     }
 
     const { user } = authResult;
-    const notificationId = params.id;
+    const { id: notificationId } = await params;
 
     // Verify the notification belongs to the user
     const notification = await prisma.inAppNotification.findFirst({

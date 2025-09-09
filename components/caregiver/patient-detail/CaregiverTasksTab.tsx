@@ -8,11 +8,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/utils";
+
+const formatSmartDate = (date: Date) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const inputDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  
+  const diffTime = today.getTime() - inputDate.getTime();
+  const diffDays = diffTime / (1000 * 60 * 60 * 24);
+  
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "yesterday";
+  return formatDate(date);
+};
 import { usePatientTasks, useTaskMutations } from "@/hooks/use-task-queries";
 import {
   ClipboardList,
-  Calendar,
   Clock,
   User as UserIcon,
   AlertCircle,
@@ -72,20 +86,6 @@ export function CaregiverTasksTab({
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "critical":
-        return "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200";
-      case "high":
-        return "bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200";
-      case "medium":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200";
-      case "low":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -100,12 +100,6 @@ export function CaregiverTasksTab({
     }
   };
 
-  const isOverdue = (task: Task) => {
-    if (!task.dueDate || task.status === "completed" || task.status === "cancelled") {
-      return false;
-    }
-    return new Date(task.dueDate) < new Date();
-  };
 
   if (isLoading) {
     return (
@@ -162,20 +156,35 @@ export function CaregiverTasksTab({
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <Accordion type="multiple" className="space-y-2">
             {tasks.map((task) => (
-              <Card key={task.id} className={`${isOverdue(task) ? "border-red-200 bg-red-50 dark:bg-red-950/20" : ""}`}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h4 className="font-semibold">{task.title}</h4>
-                        <Badge
-                          variant="outline"
-                          className={`capitalize ${getPriorityColor(task.priority)}`}
-                        >
-                          {task.priority}
-                        </Badge>
+              <AccordionItem 
+                key={task.id} 
+                value={task.id}
+                className="border rounded-lg bg-card"
+              >
+                <div className="flex items-center px-4 py-3">
+                  <Checkbox
+                    checked={task.status === "completed"}
+                    onCheckedChange={(checked) => {
+                      if (checked && task.status !== "completed") {
+                        if (task.status === "pending") {
+                          handleStartTask(task.id);
+                          setTimeout(() => handleCompleteTask(task.id), 100);
+                        } else {
+                          handleCompleteTask(task.id);
+                        }
+                      }
+                    }}
+                    disabled={task.status === "completed" || isStartingTask || isCompletingTask}
+                    className="mr-3"
+                  />
+                  <AccordionTrigger className="flex-1 hover:no-underline px-0 py-0">
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center space-x-3">
+                        <span className={`font-medium ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
+                          {task.title}
+                        </span>
                         <div className="flex items-center space-x-2">
                           {getStatusIcon(task.status)}
                           <Badge
@@ -185,70 +194,69 @@ export function CaregiverTasksTab({
                             {task.status.replace("_", " ")}
                           </Badge>
                         </div>
-                        {isOverdue(task) && (
-                          <Badge variant="destructive">
-                            Overdue
-                          </Badge>
+                      </div>
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                        {task.createdBy && (
+                          <div className="flex items-center space-x-1">
+                            <UserIcon className="h-3 w-3" />
+                            <span>{task.createdBy.firstName} {task.createdBy.lastName}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatSmartDate(new Date(task.createdAt))}</span>
+                        </div>
+                        {task.completedAt && (
+                          <div className="flex items-center space-x-1 text-green-600">
+                            <CheckCircle className="h-3 w-3" />
+                            <span>{formatSmartDate(new Date(task.completedAt))}</span>
+                          </div>
                         )}
                       </div>
-                      
-                      {task.description && (
-                        <p className="text-muted-foreground mb-3 text-sm">{task.description}</p>
-                      )}
-                      
-                      <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-                        {task.dueDate && (
-                          <div className="flex items-center space-x-2">
-                            <Calendar className="h-4 w-4" />
-                            <span>Due: {formatDate(new Date(task.dueDate))}</span>
-                          </div>
-                        )}
-                        {task.createdBy && (
-                          <div className="flex items-center space-x-2">
-                            <UserIcon className="h-4 w-4" />
-                            <span>Created by: {task.createdBy.firstName} {task.createdBy.lastName}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center space-x-2">
-                          <Clock className="h-4 w-4" />
-                          <span>Created: {formatDate(new Date(task.createdAt))}</span>
+                    </div>
+                  </AccordionTrigger>
+                </div>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="space-y-4">
+                    {task.description && (
+                      <div>
+                        <h5 className="font-medium mb-2">Task Details:</h5>
+                        <div className="text-sm text-muted-foreground whitespace-pre-line bg-muted p-3 rounded-md">
+                          {task.description}
                         </div>
                       </div>
-                    </div>
+                    )}
                     
-                    <div className="flex items-center space-x-2 ml-4">
-                      {task.status === "pending" && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleStartTask(task.id)}
-                          disabled={isStartingTask}
-                        >
-                          <PlayCircle className="h-4 w-4 mr-2" />
-                          Start
-                        </Button>
-                      )}
-                      {task.status === "in_progress" && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleCompleteTask(task.id)}
-                          disabled={isCompletingTask}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Complete
-                        </Button>
-                      )}
-                      {task.status === "completed" && (
-                        <Badge variant="outline" className="bg-green-50 text-green-700">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Completed
-                        </Badge>
-                      )}
+
+                    <div className="flex items-center justify-start pt-3 border-t">
+                      <div className="flex items-center space-x-2">
+                        {task.status === "pending" && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleStartTask(task.id)}
+                            disabled={isStartingTask}
+                          >
+                            <PlayCircle className="h-4 w-4 mr-2" />
+                            Start Task
+                          </Button>
+                        )}
+                        {task.status === "in_progress" && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleCompleteTask(task.id)}
+                            disabled={isCompletingTask}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Mark Complete
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         )}
       </CardContent>
     </Card>

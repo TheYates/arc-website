@@ -12,14 +12,26 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/utils";
+
+const formatSmartDate = (date: Date) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const inputDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  
+  const diffTime = today.getTime() - inputDate.getTime();
+  const diffDays = diffTime / (1000 * 60 * 60 * 24);
+  
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "yesterday";
+  return formatDate(date);
+};
 import { usePatientTasks, useTaskMutations } from "@/hooks/use-task-queries";
 import {
   ClipboardList,
   Plus,
-  Calendar,
   Clock,
   User as UserIcon,
   AlertCircle,
@@ -95,20 +107,6 @@ export function ReviewerTasksTab({
     }
   };
 
-  const getPriorityColor = (priority: TaskPriority) => {
-    switch (priority) {
-      case "critical":
-        return "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200";
-      case "high":
-        return "bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200";
-      case "medium":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200";
-      case "low":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -202,40 +200,19 @@ export function ReviewerTasksTab({
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Task</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Assigned To</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tasks.map((task) => (
-                  <TableRow key={task.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{task.title}</p>
-                        {task.description && (
-                          <p className="text-sm text-muted-foreground">
-                            {task.description}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={`capitalize ${getPriorityColor(task.priority)}`}
-                      >
-                        {task.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
+          <Accordion type="multiple" className="space-y-2">
+            {tasks.map((task) => (
+              <AccordionItem 
+                key={task.id} 
+                value={task.id}
+                className="border rounded-lg bg-card"
+              >
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex items-center justify-between w-full mr-2">
+                    <div className="flex items-center space-x-3">
+                      <span className={`font-medium ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
+                        {task.title}
+                      </span>
                       <div className="flex items-center space-x-2">
                         {getStatusIcon(task.status)}
                         <Badge
@@ -245,37 +222,48 @@ export function ReviewerTasksTab({
                           {task.status.replace("_", " ")}
                         </Badge>
                       </div>
-                    </TableCell>
-                    <TableCell>
                       {task.assignedTo && (
-                        <div className="flex items-center space-x-2">
-                          <UserIcon className="h-4 w-4" />
-                          <span className="text-sm">
-                            {task.assignedTo.firstName} {task.assignedTo.lastName}
-                          </span>
+                        <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                          <UserIcon className="h-3 w-3" />
+                          <span>{task.assignedTo.firstName} {task.assignedTo.lastName}</span>
                         </div>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      {task.dueDate ? (
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4" />
-                          <span className="text-sm">
-                            {formatDate(new Date(task.dueDate))}
-                          </span>
+                    </div>
+                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{formatSmartDate(new Date(task.createdAt))}</span>
+                      </div>
+                      {task.completedAt && (
+                        <div className="flex items-center space-x-1 text-green-600">
+                          <CheckCircle className="h-3 w-3" />
+                          <span>{formatSmartDate(new Date(task.completedAt))}</span>
                         </div>
-                      ) : (
-                        <span className="text-muted-foreground">No due date</span>
                       )}
-                    </TableCell>
-                    <TableCell>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="space-y-4">
+                    {task.description && (
+                      <div>
+                        <h5 className="font-medium mb-2">Task Details:</h5>
+                        <div className="text-sm text-muted-foreground whitespace-pre-line bg-muted p-3 rounded-md">
+                          {task.description}
+                        </div>
+                      </div>
+                    )}
+                    
+
+                    <div className="flex items-center justify-between pt-3 border-t">
                       <div className="flex items-center space-x-2">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setEditingTask(task)}
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
                         </Button>
                         <Button
                           variant="ghost"
@@ -283,15 +271,16 @@ export function ReviewerTasksTab({
                           onClick={() => handleDeleteTask(task.id)}
                           disabled={isDeletingTask}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         )}
 
         {/* Edit Task Dialog */}
@@ -361,14 +350,18 @@ function TaskForm({ patient, user, task, onSubmit, onSuccess, isSubmitting }: Ta
       </div>
 
       <div>
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">Task List (one task per line)</Label>
         <Textarea
           id="description"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Enter task description (optional)"
-          rows={3}
+          placeholder="Enter tasks, one per line:&#10;• Review patient vitals&#10;• Check medication compliance&#10;• Update care plan"
+          rows={5}
+          className="font-mono text-sm"
         />
+        <p className="text-xs text-muted-foreground mt-1">
+          Tip: Use bullet points (•) or numbers for better organization
+        </p>
       </div>
 
       {!task && (

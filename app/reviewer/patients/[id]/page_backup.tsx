@@ -401,7 +401,7 @@ export default function ReviewerPatientDetailPage({ params }: PageProps) {
                 <ReviewerTasksTab
                   patient={patient}
                   user={user}
-                  onTaskCreated={refetchAll}
+                  onTaskCreated={async () => refetchAll()}
                 />
               </TabsContent>
             </Tabs>

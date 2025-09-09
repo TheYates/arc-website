@@ -326,15 +326,15 @@ export const RecentActivitiesSection = memo(() => {
               <div className="mt-1">{getActivityIcon(activity.type)}</div>
               <div className="flex-grow">
                 <div className="flex items-center justify-between">
-                  <p className="font-medium">{activity.action}</p>
-                  <span className="text-xs text-muted-foreground">{activity.time}</span>
+                  <p className="font-medium">{activity.title}</p>
+                  <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
                 </div>
                 <p className="text-sm text-muted-foreground">{activity.description}</p>
                 <div className="flex items-center mt-1">
                   <Avatar className="h-5 w-5 mr-1">
-                    <AvatarFallback>{activity.user?.charAt(0) || "?"}</AvatarFallback>
+                    <AvatarFallback>{activity.userName?.charAt(0) || "?"}</AvatarFallback>
                   </Avatar>
-                  <span className="text-xs text-muted-foreground">{activity.user}</span>
+                  <span className="text-xs text-muted-foreground">{activity.userName}</span>
                 </div>
               </div>
             </div>
